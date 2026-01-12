@@ -16,6 +16,20 @@ export default function RegisterPage() {
     const [error, setError] = useState("");
     const [loading, setLoading] = useState(false);
 
+    const getErrorMessage = (err: any) => {
+        const detail = err?.response?.data?.detail;
+        if (typeof detail === "string") {
+            return detail;
+        }
+        if (Array.isArray(detail)) {
+            return detail.map((item) => item?.msg || "Invalid input").join(", ");
+        }
+        if (detail && typeof detail === "object") {
+            return JSON.stringify(detail);
+        }
+        return "Registration failed. Please try again.";
+    };
+
     const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         setFormData({
             ...formData,
@@ -39,7 +53,7 @@ export default function RegisterPage() {
             // Redirect to dashboard
             router.push("/dashboard");
         } catch (err: any) {
-            setError(err.response?.data?.detail || "Registration failed. Please try again.");
+            setError(getErrorMessage(err));
         } finally {
             setLoading(false);
         }
@@ -59,7 +73,7 @@ export default function RegisterPage() {
                     <form onSubmit={handleSubmit} className="space-y-6">
                         {error && (
                             <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">
-                                {error}
+                                {typeof error === "string" ? error : JSON.stringify(error)}
                             </div>
                         )}
 

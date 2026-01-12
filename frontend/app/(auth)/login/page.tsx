@@ -12,6 +12,20 @@ export default function LoginPage() {
     const [error, setError] = useState("");
     const [loading, setLoading] = useState(false);
 
+    const getErrorMessage = (err: any) => {
+        const detail = err?.response?.data?.detail;
+        if (typeof detail === "string") {
+            return detail;
+        }
+        if (Array.isArray(detail)) {
+            return detail.map((item) => item?.msg || "Invalid input").join(", ");
+        }
+        if (detail && typeof detail === "object") {
+            return JSON.stringify(detail);
+        }
+        return "Login failed. Please try again.";
+    };
+
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setError("");
@@ -28,7 +42,7 @@ export default function LoginPage() {
             // Redirect to dashboard
             router.push("/dashboard");
         } catch (err: any) {
-            setError(err.response?.data?.detail || "Login failed. Please try again.");
+            setError(getErrorMessage(err));
         } finally {
             setLoading(false);
         }
@@ -48,7 +62,7 @@ export default function LoginPage() {
                     <form onSubmit={handleSubmit} className="space-y-6">
                         {error && (
                             <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">
-                                {error}
+                                {typeof error === "string" ? error : JSON.stringify(error)}
                             </div>
                         )}
 

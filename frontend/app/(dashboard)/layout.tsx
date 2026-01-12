@@ -13,6 +13,7 @@ export default function DashboardLayout({
     const router = useRouter();
     const [user, setUser] = useState<any>(null);
     const [loading, setLoading] = useState(true);
+    const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
     useEffect(() => {
         // Check authentication
@@ -43,7 +44,7 @@ export default function DashboardLayout({
     return (
         <div className="min-h-screen bg-gray-50">
             {/* Sidebar */}
-            <aside className="fixed left-0 top-0 h-full w-64 bg-white border-r border-gray-200 p-6">
+            <aside className="fixed left-0 top-0 h-full w-64 bg-white border-r border-gray-200 p-6 hidden md:block">
                 <div className="mb-8">
                     <h1 className="text-2xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
                         TalentPilot
@@ -73,7 +74,49 @@ export default function DashboardLayout({
             </aside>
 
             {/* Main content */}
-            <div className="ml-64">
+            {mobileMenuOpen && (
+                <div className="fixed inset-0 z-40 bg-slate-900/40 md:hidden" onClick={() => setMobileMenuOpen(false)} />
+            )}
+            <aside
+                className={`fixed left-0 top-0 z-50 h-full w-64 bg-white border-r border-gray-200 p-6 transition-transform md:hidden ${
+                    mobileMenuOpen ? "translate-x-0" : "-translate-x-full"
+                }`}
+            >
+                <div className="mb-8 flex items-center justify-between">
+                    <h1 className="text-2xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
+                        TalentPilot
+                    </h1>
+                    <button
+                        onClick={() => setMobileMenuOpen(false)}
+                        className="rounded-lg border border-gray-200 px-2 py-1 text-sm text-gray-600"
+                    >
+                        Close
+                    </button>
+                </div>
+
+                <nav className="space-y-2">
+                    <Link
+                        href="/dashboard"
+                        className="block px-4 py-2 rounded-lg hover:bg-gray-100 transition-colors"
+                    >
+                        Dashboard
+                    </Link>
+                    <Link
+                        href="/dashboard/teams"
+                        className="block px-4 py-2 rounded-lg hover:bg-gray-100 transition-colors"
+                    >
+                        Teams
+                    </Link>
+                    <Link
+                        href="/dashboard/users"
+                        className="block px-4 py-2 rounded-lg hover:bg-gray-100 transition-colors"
+                    >
+                        Users
+                    </Link>
+                </nav>
+            </aside>
+
+            <div className="ml-0 md:ml-64">
                 {/* Header */}
                 <header className="bg-white border-b border-gray-200 px-8 py-4">
                     <div className="flex items-center justify-between">
@@ -83,17 +126,25 @@ export default function DashboardLayout({
                                 <p className="text-sm text-gray-600">{user.full_name}</p>
                             )}
                         </div>
+                        <div className="flex items-center gap-2">
+                            <button
+                                onClick={() => setMobileMenuOpen(true)}
+                                className="md:hidden px-3 py-2 text-sm text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+                            >
+                                Menu
+                            </button>
                         <button
                             onClick={handleLogout}
                             className="px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
                         >
                             Logout
                         </button>
+                        </div>
                     </div>
                 </header>
 
                 {/* Page content */}
-                <main className="p-8">{children}</main>
+                <main className="p-6 md:p-8">{children}</main>
             </div>
         </div>
     );

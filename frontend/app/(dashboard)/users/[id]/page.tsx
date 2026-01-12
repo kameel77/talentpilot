@@ -3,6 +3,9 @@
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { api } from "@/lib/api";
+import DomainChart from "@/components/dashboard/DomainChart";
+import TalentBadge from "@/components/dashboard/TalentBadge";
+import UserManualCard from "@/components/dashboard/UserManualCard";
 
 interface User {
     id: number;
@@ -62,57 +65,67 @@ export default function UserProfilePage() {
     }
 
     return (
-        <div>
-            <h1 className="text-3xl font-bold text-gray-900 mb-2">{user.full_name}</h1>
-            <p className="text-gray-600 mb-6">{user.email}</p>
-
-            {/* Top 5 Talents */}
-            <div className="bg-white rounded-lg shadow p-6 mb-6">
-                <h2 className="text-xl font-semibold text-gray-900 mb-4">Top 5 Talents</h2>
-                {talents.length === 0 ? (
-                    <p className="text-gray-600">No talents assigned yet</p>
-                ) : (
-                    <div className="space-y-3">
-                        {talents.map((ut) => (
-                            <div key={ut.id} className="flex items-start gap-4 p-3 border border-gray-200 rounded-lg">
-                                <div className="flex-shrink-0 w-8 h-8 bg-indigo-600 text-white rounded-full flex items-center justify-center font-semibold">
-                                    {ut.rank}
-                                </div>
-                                <div className="flex-1">
-                                    <h3 className="font-semibold text-gray-900">{ut.talent.name}</h3>
-                                    <p className="text-sm text-gray-600 mt-1">{ut.talent.description}</p>
-                                    <span className="inline-block mt-2 px-2 py-1 bg-gray-100 text-gray-700 text-xs rounded">
-                                        {ut.talent.domain.replace("_", " ")}
-                                    </span>
-                                </div>
-                            </div>
-                        ))}
-                    </div>
-                )}
+        <div className="space-y-8">
+            <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+                <h1 className="text-3xl font-bold text-slate-900 mb-2">
+                    {user.full_name}
+                </h1>
+                <p className="text-slate-500">{user.email}</p>
             </div>
 
-            {/* User Manual */}
-            <div className="bg-white rounded-lg shadow p-6">
-                <h2 className="text-xl font-semibold text-gray-900 mb-4">User Manual</h2>
-                <div className="space-y-4">
-                    <div>
-                        <h3 className="font-semibold text-gray-700 mb-2">💪 Superpowers</h3>
-                        <p className="text-gray-600">{user.superpowers || "Not set yet"}</p>
+            <div className="grid gap-6 lg:grid-cols-[2fr_1fr]">
+                <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+                    <div className="flex items-center justify-between">
+                        <h2 className="text-xl font-semibold text-slate-900">
+                            Top 5 Talents
+                        </h2>
+                        <span className="text-xs uppercase tracking-wide text-slate-400">
+                            CliftonStrengths
+                        </span>
                     </div>
-                    <div>
-                        <h3 className="font-semibold text-gray-700 mb-2">🔥 Motivators</h3>
-                        <p className="text-gray-600">{user.motivators || "Not set yet"}</p>
-                    </div>
-                    <div>
-                        <h3 className="font-semibold text-gray-700 mb-2">🚫 Blockers</h3>
-                        <p className="text-gray-600">{user.blockers || "Not set yet"}</p>
-                    </div>
-                    <div>
-                        <h3 className="font-semibold text-gray-700 mb-2">💬 Feedback Style</h3>
-                        <p className="text-gray-600">{user.feedback_style || "Not set yet"}</p>
-                    </div>
+                    {talents.length === 0 ? (
+                        <p className="mt-6 text-sm text-slate-500">
+                            No talents assigned yet.
+                        </p>
+                    ) : (
+                        <div className="mt-6 grid gap-4">
+                            {talents.map((ut) => (
+                                <div
+                                    key={ut.id}
+                                    className="rounded-xl border border-slate-100 bg-slate-50 p-4"
+                                >
+                                    <div className="flex items-start gap-4">
+                                        <div className="flex h-10 w-10 items-center justify-center rounded-full bg-indigo-600 text-sm font-semibold text-white">
+                                            {ut.rank}
+                                        </div>
+                                        <div className="space-y-2">
+                                            <TalentBadge
+                                                name={ut.talent.name}
+                                                domain={ut.talent.domain}
+                                                description={ut.talent.description}
+                                            />
+                                            <p className="text-sm text-slate-600">
+                                                {ut.talent.description}
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    )}
                 </div>
+
+                <DomainChart talents={talents.map((ut) => ut.talent)} />
             </div>
+
+            <UserManualCard
+                data={{
+                    superpowers: user.superpowers,
+                    motivators: user.motivators,
+                    blockers: user.blockers,
+                    feedback_style: user.feedback_style,
+                }}
+            />
         </div>
     );
 }

@@ -1,8 +1,6 @@
 """Authentication router with register, login, and user info endpoints."""
-from fastapi import APIRouter, Depends, HTTPException, status
-from fastapi.security import OAuth2PasswordRequestForm
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy.orm import Session
-from typing import Annotated
 
 from database import get_db
 from models import User, Organization, UserRole
@@ -66,8 +64,8 @@ def register(
 
 
 @router.post("/login", response_model=Token)
-def login(
-    form_data: Annotated[OAuth2PasswordRequestForm, Depends()],
+async def login(
+    request: Request,
     db: Session = Depends(get_db)
 ):
     """
@@ -76,10 +74,24 @@ def login(
     - Validates credentials
     - Returns JWT token
     """
-    # Find user by email (OAuth2PasswordRequestForm uses 'username' field)
-    user = db.query(User).filter(User.email == form_data.username).first()
+    try:
+        payload = await request.json()
+    except Exception:
+        form = await request.form()
+        payload = dict(form)
+
+    email = payload.get("email") or payload.get("username")
+    password = payload.get("password")
+    if not email or not password:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="Email and password are required",
+        )
+
+    # Find user by email
+    user = db.query(User).filter(User.email == email).first()
     
-    if not user or not verify_password(form_data.password, user.hashed_password):
+    if not user or not verify_password(password, user.hashed_password):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Incorrect email or password",

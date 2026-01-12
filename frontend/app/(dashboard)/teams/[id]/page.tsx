@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { api } from "@/lib/api";
+import TeamGrid from "@/components/dashboard/TeamGrid";
 
 interface Team {
     id: number;
@@ -53,33 +54,39 @@ export default function TeamDetailPage() {
     }
 
     return (
-        <div>
-            <h1 className="text-3xl font-bold text-gray-900 mb-2">{team.name}</h1>
-            {team.description && (
-                <p className="text-gray-600 mb-6">{team.description}</p>
-            )}
+        <div className="space-y-6">
+            <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+                <h1 className="text-3xl font-bold text-slate-900 mb-2">{team.name}</h1>
+                {team.description && (
+                    <p className="text-slate-500">{team.description}</p>
+                )}
+            </div>
 
-            <div className="bg-white rounded-lg shadow p-6">
-                <h2 className="text-xl font-semibold text-gray-900 mb-4">
-                    Team Members ({members.length})
-                </h2>
+            <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+                <div className="flex items-center justify-between">
+                    <h2 className="text-xl font-semibold text-slate-900">
+                        Team Members ({members.length})
+                    </h2>
+                    <span className="text-xs uppercase tracking-wide text-slate-400">
+                        Talent snapshot
+                    </span>
+                </div>
 
                 {members.length === 0 ? (
-                    <p className="text-gray-600">No members yet</p>
+                    <p className="mt-6 text-sm text-slate-500">No members yet</p>
                 ) : (
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                        {members.map((member) => (
-                            <div
-                                key={member.id}
-                                className="border border-gray-200 rounded-lg p-4 hover:border-indigo-300 transition-colors"
-                            >
-                                <h3 className="font-semibold text-gray-900">{member.full_name}</h3>
-                                <p className="text-sm text-gray-600">{member.email}</p>
-                                <span className="inline-block mt-2 px-2 py-1 bg-gray-100 text-gray-700 text-xs rounded">
-                                    {member.role}
-                                </span>
-                            </div>
-                        ))}
+                    <div className="mt-6">
+                        <TeamGrid
+                            members={members.map((member) => ({
+                                id: member.id,
+                                full_name: member.full_name,
+                                role: member.role,
+                                talents: [],
+                            }))}
+                        />
+                        <p className="mt-4 text-xs text-slate-400">
+                            Assign top talents to reveal the team grid.
+                        </p>
                     </div>
                 )}
             </div>

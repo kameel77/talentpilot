@@ -139,7 +139,7 @@ class KnowledgeBase(Base):
     # embedding = Column(Vector(384))  # For multilingual-e5-small or text-embedding-3-small
     
     # Metadata for filtering
-    metadata = Column(JSON, nullable=False)  # e.g., {"talent_id": 1, "context": "motivation"}
+    metadata_json = Column(JSON, nullable=False)  # e.g., {"talent_id": 1, "context": "motivation"}
     
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
