@@ -40,14 +40,14 @@ def health_check():
     }
 
 
-# Import routers (will be added in Week 2)
-# from routers import auth, organizations, teams, users, talents, tips
-# app.include_router(auth.router, prefix="/api/auth", tags=["Authentication"])
-# app.include_router(organizations.router, prefix="/api/organizations", tags=["Organizations"])
-# app.include_router(teams.router, prefix="/api/teams", tags=["Teams"])
-# app.include_router(users.router, prefix="/api/users", tags=["Users"])
-# app.include_router(talents.router, prefix="/api/talents", tags=["Talents"])
-# app.include_router(tips.router, prefix="/api/tips", tags=["AI Tips"])
+# Import routers
+from routers import auth, organizations, teams, users, talents
+
+app.include_router(auth.router, prefix="/api/auth", tags=["Authentication"])
+app.include_router(organizations.router, prefix="/api/organizations", tags=["Organizations"])
+app.include_router(teams.router, prefix="/api/teams", tags=["Teams"])
+app.include_router(users.router, prefix="/api/users", tags=["Users"])
+app.include_router(talents.router, prefix="/api", tags=["Talents"])
 
 
 if __name__ == "__main__":
