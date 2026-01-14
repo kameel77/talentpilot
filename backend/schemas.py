@@ -171,4 +171,6 @@ class AITipFeedback(BaseModel):
 
 class GallupPdfParseResponse(BaseModel):
     page_index: Optional[int] = None
-    rankings: dict[str, int]
+    rankings: dict[str, int]  # Internal code -> rank
+    translated_rankings: dict[str, int]  # Translated name -> rank
+    language: str

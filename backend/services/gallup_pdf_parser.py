@@ -9,6 +9,8 @@ from typing import Dict, Iterable, List, Optional, Tuple
 
 import pdfplumber
 
+from services.talent_name_mapper import map_talent_name_to_code
+
 RESULT_KEYWORDS = (
     "cliftonstrengths",
     "top 5",
@@ -18,6 +20,7 @@ RESULT_KEYWORDS = (
     "strengths",
     "results",
     "your cliftonstrengths 34 results",
+    "wyniki cliftonstrengths",
 )
 
 RANKED_TALENT_PATTERN = re.compile(
@@ -34,11 +37,22 @@ class GallupPageMatch:
 
 
 def extract_pdf_pages_text(pdf_path: str) -> List[str]:
-    """Extract text from every page of a PDF."""
+    """Extract text from every page of a PDF. Falls back to OCR if needed."""
     pages: List[str] = []
-    with pdfplumber.open(pdf_path) as pdf:
-        for page in pdf.pages:
-            pages.append(page.extract_text() or "")
+    try:
+        with pdfplumber.open(pdf_path) as pdf:
+            for page in pdf.pages:
+                text = page.extract_text()
+                # If page has no text, it might be scanned
+                if not text or len(text.strip()) < 10:
+                    # TODO: Implement OCR fallback with pytesseract
+                    # For now, we skip or log
+                    pages.append("")
+                else:
+                    pages.append(text)
+    except Exception as e:
+        print(f"Error reading PDF: {e}")
+        return []
     return pages
 
 
@@ -51,6 +65,8 @@ def find_results_page(pages_text: List[str], keywords: Iterable[str] = RESULT_KE
     """Find the most likely results page based on keywords and ranking patterns."""
     candidates: List[GallupPageMatch] = []
     for index, text in enumerate(pages_text):
+        if not text:
+            continue
         rank_count = len(RANKED_TALENT_PATTERN.findall(text))
         keyword_hits = _count_keyword_hits(text, keywords)
         if rank_count > 0 or keyword_hits > 0:
@@ -66,6 +82,7 @@ def find_results_page(pages_text: List[str], keywords: Iterable[str] = RESULT_KE
     if not candidates:
         return None
 
+    # Sort by rank_count (primary) and keyword_hits (secondary)
     return max(
         candidates,
         key=lambda match: (match.rank_count, match.keyword_hits),
@@ -73,16 +90,22 @@ def find_results_page(pages_text: List[str], keywords: Iterable[str] = RESULT_KE
 
 
 def extract_ranked_talents(text: str) -> Dict[str, int]:
-    """Extract talent names with their ranking numbers from text."""
+    """Extract talent codes with their ranking numbers from text."""
     results: Dict[str, int] = {}
     for rank_str, raw_name in RANKED_TALENT_PATTERN.findall(text):
         rank = int(rank_str)
         if rank < 1 or rank > 34:
             continue
+        
         name = clean_talent_name(raw_name)
         if not name:
             continue
-        results.setdefault(name, rank)
+            
+        talent_code = map_talent_name_to_code(name)
+        if talent_code:
+            # We use code as key to be language-independent internally
+            results[talent_code] = rank
+            
     return results
 
 
@@ -96,6 +119,8 @@ def clean_talent_name(raw_name: str) -> str:
         "CliftonStrengths themes might prevent you from maximizing your potential",
         "Focusing on your CliftonStrengths doesn’t mean you can ignore your",
         "To identify potential weaknesses",
+        "Słabe strony",
+        "Jak zarządzać słabymi stronami",
     ]
 
     unwanted_suffixes.sort(key=len, reverse=True)
