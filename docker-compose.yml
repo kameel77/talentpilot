@@ -8,7 +8,7 @@ services:
       POSTGRES_PASSWORD: talentpilot
       POSTGRES_DB: talentpilot
     ports:
-      - "5432:5432"
+      - "${POSTGRES_PORT:-5432}:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
@@ -22,7 +22,7 @@ services:
     image: redis:7-alpine
     container_name: talentpilot-redis
     ports:
-      - "6379:6379"
+      - "${REDIS_PORT:-6379}:6379"
     volumes:
       - redis_data:/data
     healthcheck:
@@ -46,7 +46,7 @@ services:
       CORS_ORIGINS: http://localhost:3000
       REDIS_URL: redis://redis:6379/0
     ports:
-      - "8000:8000"
+      - "${BACKEND_PORT:-8000}:8000"
     volumes:
       - ./backend:/app
     depends_on:
@@ -63,9 +63,9 @@ services:
       dockerfile: Dockerfile
     container_name: talentpilot-frontend
     environment:
-      NEXT_PUBLIC_API_URL: http://localhost:8000
+      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL}
     ports:
-      - "3000:3000"
+      - "${FRONTEND_PORT:-3000}:3000"
     volumes:
       - ./frontend:/app
       - /app/node_modules
