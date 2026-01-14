@@ -101,8 +101,14 @@ class TalentResponse(BaseModel):
     domain: GallupDomain
     description: str
     short_description: Optional[str] = None
+    order_number: Optional[int] = None
     
     model_config = {"from_attributes": True}
+
+
+class TalentOrderUpdate(BaseModel):
+    name: str
+    order_number: Optional[int] = Field(default=None, ge=1, le=34)
 
 
 class UserTalentCreate(BaseModel):

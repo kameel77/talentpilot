@@ -107,6 +107,7 @@ class Talent(Base):
     domain = Column(SQLEnum(GallupDomain), nullable=False)
     description = Column(Text, nullable=False)
     short_description = Column(String(500), nullable=True)
+    order_number = Column(Integer, nullable=True)
     
     # Relationships
     user_talents = relationship("UserTalent", back_populates="talent")

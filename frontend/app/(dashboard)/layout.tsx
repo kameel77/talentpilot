@@ -70,6 +70,14 @@ export default function DashboardLayout({
                     >
                         Users
                     </Link>
+                    {user?.role === "admin" && (
+                        <Link
+                            href="/dashboard/talents"
+                            className="block px-4 py-2 rounded-lg hover:bg-gray-100 transition-colors"
+                        >
+                            Talents
+                        </Link>
+                    )}
                 </nav>
             </aside>
 
@@ -113,6 +121,14 @@ export default function DashboardLayout({
                     >
                         Users
                     </Link>
+                    {user?.role === "admin" && (
+                        <Link
+                            href="/dashboard/talents"
+                            className="block px-4 py-2 rounded-lg hover:bg-gray-100 transition-colors"
+                        >
+                            Talents
+                        </Link>
+                    )}
                 </nav>
             </aside>
 

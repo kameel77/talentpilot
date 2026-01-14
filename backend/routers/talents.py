@@ -1,12 +1,14 @@
 """Talents router for listing talents and assigning them to users."""
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
+from sqlalchemy import nulls_last
 from typing import List
 
 from database import get_db
 from models import User, Talent, UserTalent, GallupDomain
 from schemas import (
     TalentResponse,
+    TalentOrderUpdate,
     UserTalentCreate,
     UserTalentResponse,
     DomainDistribution
@@ -22,10 +24,91 @@ def list_talents(db: Session = Depends(get_db)):
     List all 34 CliftonStrengths talents.
     
     - Public endpoint (no auth required for reading talents)
-    - Ordered by domain and name
+    - Ordered by Gallup order number when provided
     """
-    talents = db.query(Talent).order_by(Talent.domain, Talent.name).all()
+    talents = db.query(Talent).order_by(
+        nulls_last(Talent.order_number),
+        Talent.domain,
+        Talent.name
+    ).all()
     return talents
+
+
+@router.put("/talents/order-numbers", response_model=List[TalentResponse])
+def update_talent_order_numbers(
+    updates: List[TalentOrderUpdate],
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_role(["admin"]))
+):
+    """
+    Update Gallup order numbers for talents (admin only).
+    
+    - Accepts a list of talent name + order number pairs
+    - Allows clearing the order number by sending null
+    """
+    if not updates:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="No updates provided"
+        )
+
+    names = [update.name for update in updates]
+    if len(set(names)) != len(names):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Talent names must be unique in the update payload"
+        )
+
+    order_numbers = [update.order_number for update in updates if update.order_number is not None]
+    if len(set(order_numbers)) != len(order_numbers):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Order numbers must be unique in the update payload"
+        )
+
+    invalid_numbers = [number for number in order_numbers if number < 1 or number > 34]
+    if invalid_numbers:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Order numbers must be between 1 and 34"
+        )
+
+    talents = db.query(Talent).filter(Talent.name.in_(names)).all()
+    if len(talents) != len(names):
+        existing_names = {talent.name for talent in talents}
+        missing = sorted(set(names) - existing_names)
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Talents not found: {', '.join(missing)}"
+        )
+
+    if order_numbers:
+        conflicts = db.query(Talent).filter(
+            Talent.order_number.in_(order_numbers),
+            ~Talent.name.in_(names)
+        ).all()
+        if conflicts:
+            conflict_details = ", ".join(
+                f"{talent.name} ({talent.order_number})" for talent in conflicts
+            )
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Order numbers already assigned: {conflict_details}"
+            )
+
+    talents_by_name = {talent.name: talent for talent in talents}
+    for update in updates:
+        talent = talents_by_name[update.name]
+        talent.order_number = update.order_number
+
+    db.commit()
+
+    updated_talents = db.query(Talent).order_by(
+        nulls_last(Talent.order_number),
+        Talent.domain,
+        Talent.name
+    ).all()
+    return updated_talents
 
 
 @router.get("/domains", response_model=List[str])

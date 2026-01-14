@@ -102,6 +102,7 @@ backend/
 - `GET /api/talents` - List all 34 talents
 - `GET /api/domains` - List 4 Gallup domains
 - `POST /api/users/{id}/talents` - Assign Top 5 talents to user
+- `PUT /api/talents/order-numbers` - Update Gallup order numbers for talents
 
 ### AI Tips (Week 4)
 - `GET /api/tips/daily` - Get daily AI tip
@@ -112,7 +113,7 @@ backend/
 - **Organization** - Multi-tenant organization
 - **User** - User with role (admin/manager/user)
 - **Team** - Team within organization
-- **Talent** - 34 CliftonStrengths talents (read-only)
+- **Talent** - 34 CliftonStrengths talents with optional Gallup order number
 - **UserTalent** - User's Top 5 talents with ranking
 - **KnowledgeBase** - RAG knowledge base with embeddings
 - **AITip** - AI-generated tips with user feedback
