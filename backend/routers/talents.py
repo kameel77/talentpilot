@@ -1,12 +1,13 @@
 """Talents router for listing talents and assigning them to users."""
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 from typing import List
 
 from database import get_db
-from models import User, Talent, UserTalent, GallupDomain
+from models import User, Talent, TalentTranslation, UserTalent, GallupDomain
 from schemas import (
     TalentResponse,
+    TalentTranslationResponse,
     UserTalentCreate,
     UserTalentResponse,
     DomainDistribution
@@ -16,16 +17,63 @@ from auth import get_current_user, require_role
 router = APIRouter()
 
 
+def _fetch_translation(
+    db: Session,
+    talent_id: int,
+    language: str,
+    fallback_language: str = "en",
+) -> TalentTranslation:
+    translation = (
+        db.query(TalentTranslation)
+        .filter(
+            TalentTranslation.talent_id == talent_id,
+            TalentTranslation.language == language,
+        )
+        .first()
+    )
+    if translation or language == fallback_language:
+        return translation
+    return (
+        db.query(TalentTranslation)
+        .filter(
+            TalentTranslation.talent_id == talent_id,
+            TalentTranslation.language == fallback_language,
+        )
+        .first()
+    )
+
+
+def _build_talent_response(
+    talent: Talent,
+    translation: TalentTranslation,
+) -> TalentResponse:
+    return TalentResponse(
+        id=talent.id,
+        code=talent.code,
+        domain=talent.domain,
+        translation=TalentTranslationResponse.from_orm(translation),
+    )
+
+
 @router.get("/talents", response_model=List[TalentResponse])
-def list_talents(db: Session = Depends(get_db)):
+def list_talents(
+    language: str = Query("en", min_length=2, max_length=10),
+    db: Session = Depends(get_db),
+):
     """
     List all 34 CliftonStrengths talents.
     
     - Public endpoint (no auth required for reading talents)
     - Ordered by domain and name
     """
-    talents = db.query(Talent).order_by(Talent.domain, Talent.name).all()
-    return talents
+    talents = db.query(Talent).order_by(Talent.domain, Talent.code).all()
+    responses: List[TalentResponse] = []
+    for talent in talents:
+        translation = _fetch_translation(db, talent.id, language)
+        if not translation:
+            continue
+        responses.append(_build_talent_response(talent, translation))
+    return responses
 
 
 @router.get("/domains", response_model=List[str])
@@ -43,7 +91,8 @@ def assign_talents_to_user(
     user_id: int,
     talents: List[UserTalentCreate],
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_role(["admin", "manager"]))
+    current_user: User = Depends(require_role(["admin", "manager"])),
+    language: str = Query("en", min_length=2, max_length=10),
 ):
     """
     Assign Top 5 talents to user (admin or manager).
@@ -110,15 +159,30 @@ def assign_talents_to_user(
     # Refresh to get talent relationships
     for ut in user_talents:
         db.refresh(ut)
-    
-    return user_talents
+
+    response_payload: List[UserTalentResponse] = []
+    for ut in user_talents:
+        translation = _fetch_translation(db, ut.talent_id, language)
+        if not translation:
+            continue
+        response_payload.append(
+            UserTalentResponse(
+                id=ut.id,
+                talent_id=ut.talent_id,
+                rank=ut.rank,
+                talent=_build_talent_response(ut.talent, translation),
+            )
+        )
+
+    return response_payload
 
 
 @router.get("/users/{user_id}/talents", response_model=List[UserTalentResponse])
 def get_user_talents(
     user_id: int,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user),
+    language: str = Query("en", min_length=2, max_length=10),
 ):
     """
     Get user's Top 5 talents.
@@ -144,7 +208,21 @@ def get_user_talents(
         UserTalent.user_id == user_id
     ).order_by(UserTalent.rank).all()
     
-    return user_talents
+    response_payload: List[UserTalentResponse] = []
+    for ut in user_talents:
+        translation = _fetch_translation(db, ut.talent_id, language)
+        if not translation:
+            continue
+        response_payload.append(
+            UserTalentResponse(
+                id=ut.id,
+                talent_id=ut.talent_id,
+                rank=ut.rank,
+                talent=_build_talent_response(ut.talent, translation),
+            )
+        )
+
+    return response_payload
 
 
 @router.get("/users/{user_id}/domains", response_model=DomainDistribution)
