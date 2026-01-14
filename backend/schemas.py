@@ -95,13 +95,21 @@ class TeamResponse(BaseModel):
 
 
 # Talent Schemas
+class TalentTranslationResponse(BaseModel):
+    language: str
+    name: str
+    description: Optional[str] = None
+    short_description: Optional[str] = None
+
+    model_config = {"from_attributes": True}
+
+
 class TalentResponse(BaseModel):
     id: int
-    name: str
+    code: str
     domain: GallupDomain
-    description: str
-    short_description: Optional[str] = None
-    
+    translation: TalentTranslationResponse
+
     model_config = {"from_attributes": True}
 
 
@@ -159,3 +167,10 @@ class AITipResponse(BaseModel):
 
 class AITipFeedback(BaseModel):
     helpful: bool
+
+
+class GallupPdfParseResponse(BaseModel):
+    page_index: Optional[int] = None
+    rankings: dict[str, int]  # Internal code -> rank
+    translated_rankings: dict[str, int]  # Translated name -> rank
+    language: str

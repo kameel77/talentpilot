@@ -1,5 +1,17 @@
 """SQLAlchemy models for the TalentPilot application."""
-from sqlalchemy import Column, Integer, String, Boolean, ForeignKey, Table, Text, JSON, DateTime, Enum as SQLEnum
+from sqlalchemy import (
+    Column,
+    Integer,
+    String,
+    Boolean,
+    ForeignKey,
+    Table,
+    Text,
+    JSON,
+    DateTime,
+    Enum as SQLEnum,
+    UniqueConstraint,
+)
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from database import Base
@@ -103,13 +115,33 @@ class Talent(Base):
     __tablename__ = "talents"
     
     id = Column(Integer, primary_key=True, index=True)
-    name = Column(String(100), unique=True, nullable=False)  # e.g., "Achiever"
+    code = Column(String(100), unique=True, nullable=False)  # e.g., "achiever"
     domain = Column(SQLEnum(GallupDomain), nullable=False)
-    description = Column(Text, nullable=False)
-    short_description = Column(String(500), nullable=True)
     
     # Relationships
     user_talents = relationship("UserTalent", back_populates="talent")
+    translations = relationship(
+        "TalentTranslation",
+        back_populates="talent",
+        cascade="all, delete-orphan",
+    )
+
+
+class TalentTranslation(Base):
+    """Talent translations for multi-language support."""
+    __tablename__ = "talent_translations"
+    __table_args__ = (
+        UniqueConstraint("talent_id", "language", name="uq_talent_translation_language"),
+    )
+
+    id = Column(Integer, primary_key=True, index=True)
+    talent_id = Column(Integer, ForeignKey('talents.id', ondelete='CASCADE'), nullable=False)
+    language = Column(String(10), nullable=False)  # e.g., "en", "pl"
+    name = Column(String(100), nullable=False)
+    short_description = Column(String(500), nullable=True)
+    description = Column(Text, nullable=True)
+
+    talent = relationship("Talent", back_populates="translations")
 
 
 class UserTalent(Base):
