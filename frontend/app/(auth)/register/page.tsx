@@ -16,8 +16,9 @@ export default function RegisterPage() {
     const [error, setError] = useState("");
     const [loading, setLoading] = useState(false);
 
-    const getErrorMessage = (err: any) => {
-        const detail = err?.response?.data?.detail;
+    const getErrorMessage = (err: unknown) => {
+        const error = err as any;
+        const detail = error?.response?.data?.detail;
         if (typeof detail === "string") {
             return detail;
         }
@@ -52,7 +53,7 @@ export default function RegisterPage() {
 
             // Redirect to dashboard
             router.push("/dashboard");
-        } catch (err: any) {
+        } catch (err) {
             setError(getErrorMessage(err));
         } finally {
             setLoading(false);
@@ -60,25 +61,25 @@ export default function RegisterPage() {
     };
 
     return (
-        <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-indigo-50 via-white to-purple-50 p-4">
+        <div className="min-h-screen flex items-center justify-center bg-slate-50 p-4 font-sans">
             <div className="w-full max-w-md">
-                <div className="text-center mb-8">
-                    <h1 className="text-3xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
+                <div className="text-center mb-10">
+                    <h1 className="text-4xl font-bold font-heading text-primary tracking-tight">
                         TalentPilot
                     </h1>
-                    <p className="text-gray-600 mt-2">Create your organization account</p>
+                    <p className="text-slate-500 mt-2 font-medium">Build a strength-based culture</p>
                 </div>
 
-                <div className="bg-white rounded-2xl shadow-xl p-8">
-                    <form onSubmit={handleSubmit} className="space-y-6">
+                <div className="bg-white rounded-3xl shadow-xl shadow-blue-500/5 border border-slate-200 p-10 animate-fade-up">
+                    <form onSubmit={handleSubmit} className="space-y-5">
                         {error && (
-                            <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">
+                            <div className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-medium text-rose-700">
                                 {typeof error === "string" ? error : JSON.stringify(error)}
                             </div>
                         )}
 
-                        <div>
-                            <label htmlFor="organization_name" className="block text-sm font-medium text-gray-700 mb-2">
+                        <div className="space-y-1.5">
+                            <label htmlFor="organization_name" className="block text-sm font-semibold text-slate-700 ml-1">
                                 Organization Name
                             </label>
                             <input
@@ -88,13 +89,13 @@ export default function RegisterPage() {
                                 value={formData.organization_name}
                                 onChange={handleChange}
                                 required
-                                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
+                                className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-primary focus:bg-white focus:border-transparent transition-all outline-none text-slate-900"
                                 placeholder="Acme Inc."
                             />
                         </div>
 
-                        <div>
-                            <label htmlFor="full_name" className="block text-sm font-medium text-gray-700 mb-2">
+                        <div className="space-y-1.5">
+                            <label htmlFor="full_name" className="block text-sm font-semibold text-slate-700 ml-1">
                                 Your Full Name
                             </label>
                             <input
@@ -104,13 +105,13 @@ export default function RegisterPage() {
                                 value={formData.full_name}
                                 onChange={handleChange}
                                 required
-                                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
+                                className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-primary focus:bg-white focus:border-transparent transition-all outline-none text-slate-900"
                                 placeholder="John Doe"
                             />
                         </div>
 
-                        <div>
-                            <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
+                        <div className="space-y-1.5">
+                            <label htmlFor="email" className="block text-sm font-semibold text-slate-700 ml-1">
                                 Email
                             </label>
                             <input
@@ -120,13 +121,13 @@ export default function RegisterPage() {
                                 value={formData.email}
                                 onChange={handleChange}
                                 required
-                                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
-                                placeholder="you@example.com"
+                                className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-primary focus:bg-white focus:border-transparent transition-all outline-none text-slate-900"
+                                placeholder="name@company.com"
                             />
                         </div>
 
-                        <div>
-                            <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-2">
+                        <div className="space-y-1.5">
+                            <label htmlFor="password" className="block text-sm font-semibold text-slate-700 ml-1">
                                 Password
                             </label>
                             <input
@@ -137,24 +138,24 @@ export default function RegisterPage() {
                                 onChange={handleChange}
                                 required
                                 minLength={8}
-                                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
+                                className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-primary focus:bg-white focus:border-transparent transition-all outline-none text-slate-900"
                                 placeholder="••••••••"
                             />
-                            <p className="text-xs text-gray-500 mt-1">Minimum 8 characters</p>
+                            <p className="text-[10px] text-slate-400 font-bold uppercase tracking-tight ml-1">Min. 8 characters</p>
                         </div>
 
                         <button
                             type="submit"
                             disabled={loading}
-                            className="w-full bg-gradient-to-r from-indigo-600 to-purple-600 text-white py-3 rounded-lg font-medium hover:from-indigo-700 hover:to-purple-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                            className="w-full bg-primary text-white py-3.5 mt-2 rounded-xl font-bold hover:bg-blue-700 transition-all shadow-lg shadow-blue-500/10 disabled:opacity-50 disabled:cursor-not-allowed active:scale-[0.98]"
                         >
                             {loading ? "Creating account..." : "Create Account"}
                         </button>
                     </form>
 
-                    <div className="mt-6 text-center text-sm text-gray-600">
+                    <div className="mt-8 text-center text-sm text-slate-500 font-medium">
                         Already have an account?{" "}
-                        <Link href="/login" className="text-indigo-600 hover:text-indigo-700 font-medium">
+                        <Link href="/login" className="text-primary hover:text-blue-700 font-bold transition-colors">
                             Sign in
                         </Link>
                     </div>
