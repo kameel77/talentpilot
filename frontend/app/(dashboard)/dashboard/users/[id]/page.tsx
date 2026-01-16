@@ -38,23 +38,23 @@ export default function UserProfilePage() {
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
+        const loadUserData = async () => {
+            try {
+                const [userData, talentsData] = await Promise.all([
+                    api.users.get(userId),
+                    api.talents.getUserTalents(userId),
+                ]);
+                setUser(userData);
+                setTalents(talentsData);
+            } catch (err) {
+                console.error("Failed to load user data", err);
+            } finally {
+                setLoading(false);
+            }
+        };
+
         loadUserData();
     }, [userId]);
-
-    const loadUserData = async () => {
-        try {
-            const [userData, talentsData] = await Promise.all([
-                api.users.get(userId),
-                api.talents.getUserTalents(userId),
-            ]);
-            setUser(userData);
-            setTalents(talentsData);
-        } catch (err) {
-            console.error("Failed to load user data", err);
-        } finally {
-            setLoading(false);
-        }
-    };
 
     if (loading) {
         return <div className="text-gray-600">Loading profile...</div>;

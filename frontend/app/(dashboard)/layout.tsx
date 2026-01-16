@@ -11,8 +11,6 @@ import {
     Settings,
     LogOut,
     Bell,
-    ChevronLeft,
-    Menu
 } from "lucide-react";
 import { tokenManager, User } from "@/lib/api";
 import { cn } from "@/lib/utils";
@@ -26,7 +24,6 @@ export default function DashboardLayout({
     const pathname = usePathname();
     const [user, setUser] = useState<User | null>(null);
     const [loading, setLoading] = useState(true);
-    const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
     useEffect(() => {
         const checkAuth = () => {
@@ -109,11 +106,22 @@ export default function DashboardLayout({
                     })}
                 </nav>
 
-                <div className="p-4 border-t border-white/5 space-y-1 mt-auto">
-                    <button className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-slate-400 hover:text-white hover:bg-white/5">
-                        <Settings className="h-5 w-5" />
+                <div className="p-4 border-t border-white/5 mt-auto space-y-1">
+                    <Link
+                        href="/dashboard/settings"
+                        className={cn(
+                            "flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 group text-sm font-medium",
+                            pathname === "/dashboard/settings"
+                                ? "bg-blue-600 text-white"
+                                : "text-slate-400 hover:text-white hover:bg-white/5"
+                        )}
+                    >
+                        <Settings className={cn(
+                            "h-5 w-5",
+                            pathname === "/dashboard/settings" ? "text-white" : "text-slate-500 group-hover:text-white"
+                        )} />
                         Ustawienia
-                    </button>
+                    </Link>
                     <button
                         onClick={handleLogout}
                         className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-slate-400 hover:text-white hover:bg-white/5"

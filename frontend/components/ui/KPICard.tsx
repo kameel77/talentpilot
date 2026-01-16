@@ -6,8 +6,8 @@ interface KPICardProps {
     value: string | number;
     description?: string;
     trend?: {
-        value: number;
-        isPositive: boolean;
+        value: string | number;
+        isUp: boolean;
     };
     icon?: React.ReactNode;
     className?: string;
@@ -15,7 +15,7 @@ interface KPICardProps {
 
 export function KPICard({ title, value, description, trend, icon, className }: KPICardProps) {
     return (
-        <div className={cn("rounded-2xl border border-slate-200 bg-white p-6 shadow-sm transition hover:shadow-md", className)}>
+        <div className={cn("bg-white rounded-3xl border border-slate-200/60 p-8 shadow-sm", className)}>
             <div className="flex items-start justify-between">
                 <div>
                     <p className="text-sm font-medium text-slate-500">{title}</p>
@@ -28,9 +28,9 @@ export function KPICard({ title, value, description, trend, icon, className }: K
                     {trend && (
                         <div className={cn(
                             "mt-2 flex items-center text-xs font-medium",
-                            trend.isPositive ? "text-emerald-600" : "text-rose-600"
+                            trend.isUp ? "text-emerald-600" : "text-rose-600"
                         )}>
-                            <span>{trend.isPositive ? "↑" : "↓"} {trend.value}%</span>
+                            <span>{trend.isUp ? "↑" : "↓"} {trend.value}</span>
                             <span className="ml-1 text-slate-400 font-normal">vs last month</span>
                         </div>
                     )}

@@ -13,6 +13,7 @@ export default function LoginPage() {
     const [loading, setLoading] = useState(false);
 
     const getErrorMessage = (err: unknown) => {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const error = err as any;
         const detail = error?.response?.data?.detail;
         if (typeof detail === "string") {
