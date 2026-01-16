@@ -18,7 +18,7 @@ interface ManualTalentInputProps {
 
 const DOMAINS: GallupDomain[] = ['executing', 'influencing', 'relationship', 'strategic'];
 
-type RankingView = '5' | '15' | '34';
+type RankingView = '5' | '10' | '34';
 
 export function ManualTalentInput({ onSave, initialTalents = [] }: ManualTalentInputProps) {
     const [searchQuery, setSearchQuery] = useState('');
@@ -26,12 +26,16 @@ export function ManualTalentInput({ onSave, initialTalents = [] }: ManualTalentI
     const [activeTab, setActiveTab] = useState<GallupDomain | 'all'>('all');
     const [rankingView, setRankingView] = useState<RankingView>('5');
 
-    const filteredTalents = GALLUP_TALENTS.filter(talent => {
-        const matchesSearch = talent.namePl.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            talent.name.toLowerCase().includes(searchQuery.toLowerCase());
-        const matchesDomain = activeTab === 'all' || talent.domain === activeTab;
-        return matchesSearch && matchesDomain;
-    });
+    const filteredTalents = useMemo(() => {
+        return GALLUP_TALENTS
+            .filter((talent) => {
+                const matchesSearch = talent.namePl.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                    talent.name.toLowerCase().includes(searchQuery.toLowerCase());
+                const matchesDomain = activeTab === 'all' || talent.domain === activeTab;
+                return matchesSearch && matchesDomain;
+            })
+            .sort((a, b) => a.namePl.localeCompare(b.namePl, 'pl'));
+    }, [searchQuery, activeTab]);
 
     const getRank = (talentId: string) => selectedTalents.find(t => t.talentId === talentId)?.rank;
 
@@ -101,13 +105,6 @@ export function ManualTalentInput({ onSave, initialTalents = [] }: ManualTalentI
             })
             .filter((t): t is (UserTalent & { talent: any }) => t !== null && !!t.talent);
     }, [selectedTalents, rankingView]);
-
-    const getRankLabel = (rank: number) => {
-        if (rank <= 5) return 'top5';
-        if (rank <= 10) return 'top10';
-        if (rank <= 15) return 'top15';
-        return 'other';
-    };
 
     return (
         <div className="space-y-6">
@@ -184,8 +181,10 @@ export function ManualTalentInput({ onSave, initialTalents = [] }: ManualTalentI
                                     <div
                                         key={talent.id}
                                         className={cn(
-                                            "flex items-center gap-2 p-2 rounded-lg transition-all",
-                                            hasRank ? "bg-primary/10 ring-1 ring-primary/30" : "bg-slate-50 hover:bg-slate-100"
+                                            "flex items-center gap-2 p-2 rounded-xl transition-all border",
+                                            hasRank
+                                                ? "bg-primary/10 border-primary/30"
+                                                : "bg-slate-50 border-transparent hover:bg-slate-100"
                                         )}
                                     >
                                         {/* Rank input */}
@@ -198,7 +197,7 @@ export function ManualTalentInput({ onSave, initialTalents = [] }: ManualTalentI
                                                 onChange={(e) => handleRankInput(talent.id, e.target.value)}
                                                 placeholder="#"
                                                 className={cn(
-                                                    "w-14 h-9 text-center font-bold text-sm",
+                                                    "w-12 h-9 text-center font-bold text-sm [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none",
                                                     hasRank && "border-primary bg-primary/5"
                                                 )}
                                             />
@@ -209,7 +208,7 @@ export function ManualTalentInput({ onSave, initialTalents = [] }: ManualTalentI
                                             <p className="text-[10px] text-muted-foreground truncate">{talent.name}</p>
                                         </div>
                                         <div className="shrink-0">
-                                            <DomainBadge domain={talent.domain} size="sm" showLabel={false} />
+                                            <DomainBadge domain={talent.domain} size="sm" />
                                         </div>
                                     </div>
                                 );
@@ -236,18 +235,18 @@ export function ManualTalentInput({ onSave, initialTalents = [] }: ManualTalentI
                                             : "hover:bg-background/80"
                                     )}
                                 >
-                                    Top 5
+                                    Top5
                                 </button>
                                 <button
-                                    onClick={() => setRankingView('15')}
+                                    onClick={() => setRankingView('10')}
                                     className={cn(
                                         "px-3 py-1 text-xs font-medium rounded-md transition-all",
-                                        rankingView === '15'
+                                        rankingView === '10'
                                             ? "bg-primary text-primary-foreground"
                                             : "hover:bg-background/80"
                                     )}
                                 >
-                                    Top 15
+                                    Top10
                                 </button>
                                 <button
                                     onClick={() => setRankingView('34')}
@@ -281,44 +280,28 @@ export function ManualTalentInput({ onSave, initialTalents = [] }: ManualTalentI
                             </div>
                         ) : (
                             <div className="space-y-2">
-                                {rankedTalents.map(({ talentId, rank, talent }) => {
-                                    const rankLabel = getRankLabel(rank);
-
-                                    return (
-                                        <div
-                                            key={talentId}
-                                            className={cn(
-                                                "flex items-center gap-2 p-2.5 rounded-lg bg-slate-50 group",
-                                                rankLabel === 'top5' && "ring-2 ring-primary/50 bg-primary/5",
-                                                rankLabel === 'top10' && "ring-1 ring-primary/30 bg-primary/3",
-                                                rankLabel === 'top15' && "ring-1 ring-primary/20"
-                                            )}
-                                        >
-                                            <div className={cn(
-                                                "w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold shrink-0",
-                                                rankLabel === 'top5' ? "bg-primary text-primary-foreground" :
-                                                    rankLabel === 'top10' ? "bg-primary/60 text-primary-foreground" :
-                                                        rankLabel === 'top15' ? "bg-primary/40 text-primary-foreground" :
-                                                            "bg-muted text-muted-foreground"
-                                            )}>
-                                                {rank}
-                                            </div>
-                                            <div className="flex-1 min-w-0">
-                                                <p className="font-medium text-sm truncate">{talent.namePl}</p>
-                                                <p className="text-[10px] text-muted-foreground truncate">{talent.name}</p>
-                                            </div>
-                                            <div className="shrink-0">
-                                                <DomainBadge domain={talent.domain} size="sm" showLabel={false} />
-                                            </div>
-                                            <button
-                                                onClick={() => setRank(talentId, null)}
-                                                className="p-1 hover:bg-destructive/10 rounded opacity-0 group-hover:opacity-100 transition-opacity"
-                                            >
-                                                <X className="h-4 w-4 text-destructive" />
-                                            </button>
+                                {rankedTalents.map(({ talentId, rank, talent }) => (
+                                    <div
+                                        key={talentId}
+                                    className="flex items-center gap-2 p-2 rounded-xl transition-all border bg-primary/10 border-primary/30"
+                                >
+                                        <div className="relative">
+                                            <Input
+                                                type="number"
+                                                value={rank}
+                                                readOnly
+                                                className="w-12 h-9 text-center font-bold text-sm border-primary bg-primary/5 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                                            />
                                         </div>
-                                    );
-                                })}
+                                        <div className="flex-1 min-w-0">
+                                            <p className="font-medium text-sm truncate">{talent.namePl}</p>
+                                            <p className="text-[10px] text-muted-foreground truncate">{talent.name}</p>
+                                        </div>
+                                        <div className="shrink-0">
+                                            <DomainBadge domain={talent.domain} size="sm" />
+                                        </div>
+                                    </div>
+                                ))}
                             </div>
                         )}
                     </ScrollArea>
@@ -335,7 +318,7 @@ export function ManualTalentInput({ onSave, initialTalents = [] }: ManualTalentI
                         </div>
                         <div className="flex items-center gap-1.5">
                             <Medal className="h-3.5 w-3.5 text-primary/40" />
-                            <span>11-15 - Pomocnicze</span>
+                            <span>11-34 - Pozostałe</span>
                         </div>
                     </div>
                 </div>
