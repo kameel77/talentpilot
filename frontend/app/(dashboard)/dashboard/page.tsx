@@ -1,5 +1,6 @@
 import { KPICard } from "@/components/ui/KPICard";
 import { DomainBadge } from "@/components/ui/DomainBadge";
+import type { DomainType } from "@/components/ui/DomainBadge";
 import {
     Users,
     Database,
@@ -62,7 +63,7 @@ export default function DashboardPage() {
 
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
                 {/* Domain Area */}
-                <div className="lg:col-span-4 bg-white rounded-3xl border border-slate-100 p-8 shadow-sm">
+                <div className="lg:col-span-4 bg-white rounded-3xl border border-slate-200/60 p-8 shadow-sm">
                     <h3 className="text-xl font-bold font-heading text-slate-900 mb-6 tracking-tight">
                         Rozkład domenowy zespołu
                     </h3>
@@ -167,7 +168,7 @@ function DomainProgress({ label, value, color }: { label: string, value: number,
 
 function MemberCard({ name, role, domains, initials }: { name: string, role: string, domains: string[], initials: string }) {
     return (
-        <div className="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm hover:shadow-lg transition-all">
+        <div className="bg-white p-6 rounded-3xl border border-slate-200/60 shadow-sm hover:shadow-md transition-all">
             <div className="flex items-center gap-4 mb-6">
                 <div className="h-14 w-14 bg-indigo-600 text-white rounded-full flex items-center justify-center font-bold text-xl relative">
                     {initials}
@@ -183,7 +184,7 @@ function MemberCard({ name, role, domains, initials }: { name: string, role: str
 
             <div className="flex flex-wrap gap-2">
                 {domains.map(d => (
-                    <DomainBadge key={d} domain={d as any} size="sm" />
+                    <DomainBadge key={d} domain={d as DomainType} size="sm" />
                 ))}
                 {domains.length > 2 && (
                     <span className="text-[10px] font-bold text-slate-400">+2 więcej</span>

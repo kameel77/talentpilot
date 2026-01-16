@@ -27,23 +27,23 @@ export default function TeamDetailPage() {
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
+        const loadTeamData = async () => {
+            try {
+                const [teamData, usersData] = await Promise.all([
+                    api.teams.get(teamId),
+                    api.users.list(teamId),
+                ]);
+                setTeam(teamData);
+                setMembers(usersData);
+            } catch (err) {
+                console.error("Failed to load team data", err);
+            } finally {
+                setLoading(false);
+            }
+        };
+
         loadTeamData();
     }, [teamId]);
-
-    const loadTeamData = async () => {
-        try {
-            const [teamData, usersData] = await Promise.all([
-                api.teams.get(teamId),
-                api.users.list(teamId),
-            ]);
-            setTeam(teamData);
-            setMembers(usersData);
-        } catch (err) {
-            console.error("Failed to load team data", err);
-        } finally {
-            setLoading(false);
-        }
-    };
 
     if (loading) {
         return <div className="text-gray-600">Loading team...</div>;

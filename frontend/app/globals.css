@@ -1,19 +1,129 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
+@theme {
+  /* Talent-Navigator Design System Sync */
+  --color-background: hsl(210 20% 98%);
+  --color-foreground: hsl(220 25% 10%);
+
+  --color-card: hsl(0 0% 100%);
+  --color-card-foreground: hsl(220 25% 10%);
+
+  --color-popover: hsl(0 0% 100%);
+  --color-popover-foreground: hsl(220 25% 10%);
+
+  --color-primary: hsl(220 70% 45%);
+  --color-primary-foreground: hsl(0 0% 100%);
+
+  --color-secondary: hsl(30 15% 95%);
+  --color-secondary-foreground: hsl(220 25% 20%);
+
+  --color-muted: hsl(210 15% 93%);
+  --color-muted-foreground: hsl(220 10% 45%);
+
+  --color-accent: hsl(15 85% 55%);
+  --color-accent-foreground: hsl(0 0% 100%);
+
+  --color-border: hsl(220 13% 88%);
+  --color-input: hsl(220 13% 88%);
+  --color-ring: hsl(220 70% 45%);
+
+  --radius: 0.75rem;
+
+  /* Domain colors */
+  --color-domain-executing: hsl(262 60% 50%);
+  --color-domain-executing-light: hsl(262 60% 95%);
+  --color-domain-influencing: hsl(25 95% 53%);
+  --color-domain-influencing-light: hsl(25 95% 95%);
+  --color-domain-relationship: hsl(168 70% 40%);
+  --color-domain-relationship-light: hsl(168 70% 94%);
+  --color-domain-strategic: hsl(210 80% 50%);
+  --color-domain-strategic-light: hsl(210 80% 95%);
+
+  /* Status colors */
+  --color-success: hsl(152 60% 42%);
+  --color-success-foreground: hsl(0 0% 100%);
+  --color-warning: hsl(38 92% 50%);
+  --color-warning-foreground: hsl(0 0% 10%);
+
+  /* Gradients */
+  --gradient-primary: linear-gradient(135deg, hsl(220 70% 45%), hsl(250 60% 55%));
+  --gradient-warm: linear-gradient(135deg, hsl(15 85% 55%), hsl(35 90% 55%));
+  --gradient-hero: linear-gradient(160deg, hsl(220 25% 10%) 0%, hsl(220 40% 20%) 100%);
+
+  /* Shadows */
+  --shadow-soft: 0 4px 6px -1px hsl(220 25% 10% / 0.07),
+    0 2px 4px -1px hsl(220 25% 10% / 0.05);
+  --shadow-elevated: 0 10px 25px -5px hsl(220 25% 10% / 0.1),
+    0 8px 10px -6px hsl(220 25% 10% / 0.05);
+  --shadow-glow: 0 0 40px -10px hsl(220 70% 45% / 0.3);
 }
 
-@theme {
-  --color-domain-executing: #6366f1;
-  --color-domain-influencing: #f97316;
-  --color-domain-relationship: #0d9488;
-  --color-domain-strategic: #2563eb;
+/* Custom Typography Utilities */
+.text-display {
+  @apply text-4xl md:text-5xl lg:text-6xl font-bold tracking-tight leading-tight;
+}
 
-  --color-primary: #3b82f6;
-  --color-primary-dark: #2563eb;
-  --color-sidebar-bg: #111827;
+.text-headline {
+  @apply text-2xl md:text-3xl font-semibold tracking-tight;
+}
+
+.text-title {
+  @apply text-lg md:text-xl font-semibold;
+}
+
+.text-body-lg {
+  @apply text-base md:text-lg text-muted-foreground leading-relaxed;
+}
+
+.text-body {
+  @apply text-sm md:text-base text-muted-foreground;
+}
+
+.text-label {
+  @apply text-xs font-medium uppercase tracking-wider text-muted-foreground;
+}
+
+/* Domain Badge Utilities */
+.domain-executing {
+  @apply bg-domain-executing-light text-domain-executing border-domain-executing/30;
+}
+
+.domain-influencing {
+  @apply bg-domain-influencing-light text-domain-influencing border-domain-influencing/30;
+}
+
+.domain-relationship {
+  @apply bg-domain-relationship-light text-domain-relationship border-domain-relationship/30;
+}
+
+.domain-strategic {
+  @apply bg-domain-strategic-light text-domain-strategic border-domain-strategic/30;
+}
+
+/* Gradient Backgrounds */
+.bg-gradient-primary {
+  background: var(--gradient-primary);
+}
+
+.bg-gradient-warm {
+  background: var(--gradient-warm);
+}
+
+.bg-gradient-hero {
+  background: var(--gradient-hero);
+}
+
+/* Shadows */
+.shadow-soft {
+  box-shadow: var(--shadow-soft);
+}
+
+.shadow-elevated {
+  box-shadow: var(--shadow-lg);
+}
+
+.shadow-glow {
+  box-shadow: var(--shadow-glow);
 }
 
 @layer base {
