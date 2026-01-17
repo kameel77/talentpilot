@@ -20,6 +20,8 @@ interface TalentImportDialogProps {
   onSave: (talents: UserTalent[]) => void;
   initialTalents?: UserTalent[];
   memberName?: string;
+  userId?: number;
+  onUsersChange?: () => void;
 }
 
 export function TalentImportDialog({
@@ -27,7 +29,9 @@ export function TalentImportDialog({
   onOpenChange,
   onSave,
   initialTalents = [],
-  memberName
+  memberName,
+  userId,
+  onUsersChange
 }: TalentImportDialogProps) {
   const [activeTab, setActiveTab] = useState<'pdf' | 'manual'>('pdf');
   const [prefilledTalents, setPrefilledTalents] = useState<UserTalent[]>(initialTalents);
@@ -73,6 +77,8 @@ export function TalentImportDialog({
 
           <TabsContent value="pdf" className="mt-6">
             <PdfTalentImport
+              userId={userId}
+              onUsersChange={onUsersChange}
               onImportComplete={handlePdfImportComplete}
               onSwitchToManual={handleSwitchToManual}
             />

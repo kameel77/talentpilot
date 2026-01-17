@@ -22,7 +22,7 @@ import {
 import { SettingsSection } from "@/components/dashboard/SettingsSection";
 import { GALLUP_TALENTS } from "@/data/gallupTalents";
 import { UserTalent } from "@/types/talent";
-import { cn } from "@/lib/utils";
+import { tokenManager } from "@/lib/api";
 
 export default function SettingsPage() {
   const [talentImportOpen, setTalentImportOpen] = useState(false);
@@ -306,6 +306,7 @@ export default function SettingsPage() {
         onSave={handleTalentsSave}
         initialTalents={myTalents}
         memberName="Moje talenty"
+        userId={tokenManager.getUser()?.id}
       />
     </div>
   );
