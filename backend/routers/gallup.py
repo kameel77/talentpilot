@@ -4,14 +4,16 @@ from __future__ import annotations
 
 import os
 import tempfile
-from fastapi import APIRouter, File, HTTPException, UploadFile, status, Depends
+from fastapi import APIRouter, File, HTTPException, UploadFile, status, Depends, Query
+from pydantic import BaseModel
 from sqlalchemy.orm import Session
+from typing import List, Optional
 
-from schemas import GallupPdfParseResponse
+from schemas import GallupPdfParseResponse, UserTalentCreate, UserTalentResponse, TalentResponse, TalentTranslationResponse
 from services.gallup_pdf_parser import extract_gallup_rankings
-from auth import get_current_user
+from auth import get_current_user, require_role
 from database import get_db
-from models import User, Talent, TalentTranslation
+from models import User, Talent, TalentTranslation, UserTalent
 
 router = APIRouter()
 
@@ -64,3 +66,110 @@ def parse_gallup_pdf(
         translated_rankings=translated_rankings,
         language=language
     )
+
+
+class GallupSaveTalentsRequest(BaseModel):
+    rankings: dict[str, int]  # talent_code -> rank
+    language: str = "pl"
+
+
+@router.post("/gallup/save-talents/{user_id}", response_model=List[UserTalentResponse], status_code=status.HTTP_201_CREATED)
+def save_gallup_talents(
+    user_id: int,
+    request: GallupSaveTalentsRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_role(["admin", "manager"])),
+    language: str = Query("en", min_length=2, max_length=10),
+) -> List[UserTalentResponse]:
+    """Save parsed Gallup rankings to user talents (replaces existing talents)."""
+    # Get target user
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="User not found"
+        )
+    
+    # Check organization access
+    if user.organization_id != current_user.organization_id:  # type: ignore
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Access denied to this user"
+        )
+    
+    # Convert rankings (talent_code -> rank) to UserTalentCreate objects
+    # Only take top 5 talents
+    sorted_rankings = sorted(request.rankings.items(), key=lambda x: x[1])
+    top_5 = sorted_rankings[:5]
+    
+    # Get talent IDs from codes
+    talent_codes = [code for code, _ in top_5]
+    talents = db.query(Talent).filter(Talent.code.in_(talent_codes)).all()
+    talent_code_to_id = {t.code: t.id for t in talents}
+    
+    if len(talents) != len(talent_codes):
+        talent_codes_set = set(talent_codes)
+        found_codes_set = set(str(k) for k in talent_code_to_id.keys())
+        missing = talent_codes_set - found_codes_set
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Invalid talent codes: {missing}"
+        )
+    
+    user_talents_create = []
+    for code, rank in top_5:
+        user_talents_create.append(
+            UserTalentCreate(talent_id=talent_code_to_id[code], rank=rank)  # type: ignore
+        )
+    
+    # Delete existing user talents
+    db.query(UserTalent).filter(UserTalent.user_id == user_id).delete()
+    
+    # Create new user talents
+    user_talents = []
+    for talent_data in user_talents_create:
+        user_talent = UserTalent(
+            user_id=user_id,
+            talent_id=talent_data.talent_id,
+            rank=talent_data.rank
+        )
+        db.add(user_talent)
+        user_talents.append(user_talent)
+    
+    db.commit()
+    
+    # Refresh and build response
+    def _fetch_translation(db: Session, talent_id: int, lang: str):
+        return (
+            db.query(TalentTranslation)
+            .filter(
+                TalentTranslation.talent_id == talent_id,
+                TalentTranslation.language == lang,
+            )
+            .first()
+        )
+    
+    def _build_talent_response(talent: Talent, translation: TalentTranslation):
+        from schemas import TalentResponse, TalentTranslationResponse
+        return TalentResponse(
+            id=talent.id,  # type: ignore
+            code=talent.code,  # type: ignore
+            domain=talent.domain,  # type: ignore
+            translation=TalentTranslationResponse.from_orm(translation),
+        )
+    
+    response_payload: List[UserTalentResponse] = []
+    for ut in user_talents:
+        translation = _fetch_translation(db, ut.talent_id, language)
+        if not translation:
+            continue
+        response_payload.append(
+            UserTalentResponse(
+                id=ut.id,
+                talent_id=ut.talent_id,
+                rank=ut.rank,
+                talent=_build_talent_response(ut.talent, translation),
+            )
+        )
+    
+    return response_payload

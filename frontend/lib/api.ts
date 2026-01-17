@@ -209,6 +209,27 @@ export const api = {
             return response.data;
         },
     },
+
+    // Gallup
+    gallup: {
+        parsePdf: async (file: File, language: string = 'pl') => {
+            const formData = new FormData();
+            formData.append('file', file);
+            formData.append('language', language);
+            const response = await apiClient.post('/api/gallup/parse-pdf', formData, {
+                headers: { 'Content-Type': 'multipart/form-data' },
+            });
+            return response.data;
+        },
+
+        saveTalents: async (userId: number, rankings: Record<string, number>, language: string = 'en') => {
+            const response = await apiClient.post(`/api/gallup/save-talents/${userId}`, {
+                rankings,
+                language,
+            });
+            return response.data;
+        },
+    },
 };
 
 export default apiClient;
