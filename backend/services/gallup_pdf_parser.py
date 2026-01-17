@@ -80,19 +80,26 @@ def find_results_page(pages_text: List[str], keywords: Iterable[str] = RESULT_KE
             )
 
     if not candidates:
+        print("[PDF Parser] No results page candidates found")
         return None
 
     # Sort by rank_count (primary) and keyword_hits (secondary)
-    return max(
+    best = max(
         candidates,
         key=lambda match: (match.rank_count, match.keyword_hits),
     )
+    print(f"[PDF Parser] Selected page {best.index} with {best.rank_count} talent matches, {best.keyword_hits} keyword hits")
+    return best
 
 
 def extract_ranked_talents(text: str) -> Dict[str, int]:
     """Extract talent codes with their ranking numbers from text."""
     results: Dict[str, int] = {}
-    for rank_str, raw_name in RANKED_TALENT_PATTERN.findall(text):
+    matches = RANKED_TALENT_PATTERN.findall(text)
+    
+    print(f"[PDF Parser] Found {len(matches)} ranking matches in text")
+    
+    for rank_str, raw_name in matches:
         rank = int(rank_str)
         if rank < 1 or rank > 34:
             continue
@@ -103,9 +110,11 @@ def extract_ranked_talents(text: str) -> Dict[str, int]:
             
         talent_code = map_talent_name_to_code(name)
         if talent_code:
-            # We use code as key to be language-independent internally
             results[talent_code] = rank
+        else:
+            print(f"[PDF Parser] Could not map talent: rank={rank}, name='{raw_name}' -> cleaned='{name}'")
             
+    print(f"[PDF Parser] Mapped {len(results)} talents: {results}")
     return results
 
 

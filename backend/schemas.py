@@ -53,8 +53,10 @@ class UserResponse(BaseModel):
     id: int
     email: str
     full_name: str
+    job_title: Optional[str] = None
     role: UserRole
     is_active: bool
+    is_ghost: bool
     avatar_url: Optional[str] = None
     organization_id: int
     created_at: datetime
@@ -68,6 +70,28 @@ class UserDetailResponse(UserResponse):
     motivators: Optional[str] = None
     blockers: Optional[str] = None
     feedback_style: Optional[str] = None
+
+
+# Invitation Schemas
+class GhostInviteTalent(BaseModel):
+    talent_id: int
+    rank: int = Field(..., ge=1, le=5)
+
+
+class GhostInviteCreate(BaseModel):
+    email: EmailStr
+    full_name: str = Field(..., min_length=1, max_length=255)
+    job_title: Optional[str] = None
+    team_id: int
+    talents: Optional[List[GhostInviteTalent]] = None
+
+
+class GhostInviteResponse(BaseModel):
+    invitation_id: int
+    user_id: int
+    invite_token: str
+    expires_at: datetime
+    status: str
 
 
 # Team Schemas

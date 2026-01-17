@@ -25,6 +25,12 @@ class UserRole(str, enum.Enum):
     USER = "user"
 
 
+class InvitationStatus(str, enum.Enum):
+    ACTIVE = "active"
+    REVOKED = "revoked"
+    EXPIRED = "expired"
+
+
 # Enum for Gallup domains
 class GallupDomain(str, enum.Enum):
     EXECUTING = "executing"
@@ -64,8 +70,10 @@ class User(Base):
     email = Column(String(255), unique=True, index=True, nullable=False)
     hashed_password = Column(String(255), nullable=False)
     full_name = Column(String(255), nullable=False)
+    job_title = Column(String(255), nullable=True)
     role = Column(SQLEnum(UserRole), nullable=False, default=UserRole.USER)
     is_active = Column(Boolean, default=True)
+    is_ghost = Column(Boolean, default=False)
     avatar_url = Column(String(500), nullable=True)
     
     # Multi-tenancy
@@ -85,6 +93,12 @@ class User(Base):
     teams = relationship("Team", secondary=user_teams, back_populates="members")
     user_talents = relationship("UserTalent", back_populates="user", cascade="all, delete-orphan")
     managed_teams = relationship("Team", back_populates="manager", foreign_keys="Team.manager_id")
+    invitations = relationship(
+        "TeamInvitation",
+        back_populates="user",
+        cascade="all, delete-orphan",
+        foreign_keys="TeamInvitation.user_id",
+    )
 
 
 class Team(Base):
@@ -108,6 +122,26 @@ class Team(Base):
     organization = relationship("Organization", back_populates="teams")
     manager = relationship("User", back_populates="managed_teams", foreign_keys=[manager_id])
     members = relationship("User", secondary=user_teams, back_populates="teams")
+    invitations = relationship("TeamInvitation", back_populates="team", cascade="all, delete-orphan")
+
+
+class TeamInvitation(Base):
+    """Invitation for a user to join a team."""
+    __tablename__ = "team_invitations"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey('users.id', ondelete='CASCADE'), nullable=False)
+    team_id = Column(Integer, ForeignKey('teams.id', ondelete='CASCADE'), nullable=False)
+    token_hash = Column(String(64), unique=True, nullable=False)
+    status = Column(SQLEnum(InvitationStatus), nullable=False, default=InvitationStatus.ACTIVE)
+    expires_at = Column(DateTime(timezone=True), nullable=False)
+    created_by = Column(Integer, ForeignKey('users.id', ondelete='SET NULL'), nullable=True)
+    revoked_at = Column(DateTime(timezone=True), nullable=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+    user = relationship("User", back_populates="invitations", foreign_keys=[user_id])
+    team = relationship("Team", back_populates="invitations")
+    created_by_user = relationship("User", foreign_keys=[created_by])
 
 
 class Talent(Base):

@@ -12,8 +12,10 @@ export interface User {
     id: number;
     email: string;
     full_name: string;
+    job_title?: string;
     role: 'admin' | 'manager' | 'user';
     is_active: boolean;
+    is_ghost: boolean;
     avatar_url?: string;
     organization_id: number;
     created_at: string;
@@ -34,6 +36,50 @@ export interface RegisterData {
 export interface AuthResponse {
     access_token: string;
     token_type: string;
+}
+
+export interface Team {
+    id: number;
+    name: string;
+    description?: string;
+    organization_id: number;
+    manager_id?: number;
+    created_at: string;
+}
+
+export interface TalentTranslation {
+    language: string;
+    name: string;
+    description?: string;
+    short_description?: string;
+}
+
+export interface Talent {
+    id: number;
+    code: string;
+    domain: 'executing' | 'influencing' | 'relationship_building' | 'strategic_thinking';
+    translation: TalentTranslation;
+}
+
+export interface GhostInviteTalent {
+    talent_id: number;
+    rank: number;
+}
+
+export interface GhostInviteRequest {
+    email: string;
+    full_name: string;
+    job_title?: string;
+    team_id: number;
+    talents?: GhostInviteTalent[];
+}
+
+export interface GhostInviteResponse {
+    invitation_id: number;
+    user_id: number;
+    invite_token: string;
+    expires_at: string;
+    status: string;
 }
 
 // Token management
@@ -143,8 +189,8 @@ export const api = {
 
     // Teams
     teams: {
-        list: async () => {
-            const response = await apiClient.get('/api/teams');
+        list: async (): Promise<Team[]> => {
+            const response = await apiClient.get<Team[]>('/api/teams');
             return response.data;
         },
 
@@ -180,8 +226,8 @@ export const api = {
 
     // Talents
     talents: {
-        list: async () => {
-            const response = await apiClient.get('/api/talents');
+        list: async (): Promise<Talent[]> => {
+            const response = await apiClient.get<Talent[]>('/api/talents');
             return response.data;
         },
 
@@ -192,6 +238,14 @@ export const api = {
 
         getUserTalents: async (userId: number) => {
             const response = await apiClient.get(`/api/users/${userId}/talents`);
+            return response.data;
+        },
+    },
+
+    // Invitations
+    invitations: {
+        createGhostInvite: async (data: GhostInviteRequest): Promise<GhostInviteResponse> => {
+            const response = await apiClient.post<GhostInviteResponse>('/api/invitations/ghost', data);
             return response.data;
         },
     },

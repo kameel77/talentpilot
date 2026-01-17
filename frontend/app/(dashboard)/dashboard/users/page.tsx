@@ -1,10 +1,14 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { api } from "@/lib/api";
+import { api, GhostInviteRequest, Talent, Team } from "@/lib/api";
 import { cn } from "@/lib/utils";
 import { KPICard } from "@/components/ui/KPICard";
+import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Users, UserPlus, Shield, UserCheck } from "lucide-react";
 
 interface UserSummary {
@@ -17,11 +21,33 @@ interface UserSummary {
 
 export default function UsersPage() {
     const [users, setUsers] = useState<UserSummary[]>([]);
+    const [teams, setTeams] = useState<Team[]>([]);
+    const [talents, setTalents] = useState<Talent[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState("");
+    const [inviteOpen, setInviteOpen] = useState(false);
+    const [teamOpen, setTeamOpen] = useState(false);
+    const [inviteError, setInviteError] = useState("");
+    const [inviteLoading, setInviteLoading] = useState(false);
+    const [inviteToken, setInviteToken] = useState<string | null>(null);
+    const [inviteData, setInviteData] = useState({
+        email: "",
+        full_name: "",
+        job_title: "",
+        team_id: "",
+        talents: Array(5).fill(""),
+    });
+    const [teamError, setTeamError] = useState("");
+    const [teamLoading, setTeamLoading] = useState(false);
+    const [teamData, setTeamData] = useState({
+        name: "",
+        description: "",
+    });
 
     useEffect(() => {
         loadUsers();
+        loadTeams();
+        loadTalents();
     }, []);
 
     const loadUsers = async () => {
@@ -34,6 +60,124 @@ export default function UsersPage() {
             setLoading(false);
         }
     };
+
+    const loadTeams = async () => {
+        try {
+            const data = await api.teams.list();
+            setTeams(data);
+        } catch (_err) {
+            setTeams([]);
+        }
+    };
+
+    const loadTalents = async () => {
+        try {
+            const data = await api.talents.list();
+            setTalents(data);
+        } catch (_err) {
+            setTalents([]);
+        }
+    };
+
+    const sortedTalents = useMemo(() => {
+        return [...talents].sort((a, b) =>
+            a.translation.name.localeCompare(b.translation.name, "pl")
+        );
+    }, [talents]);
+
+    const resetInvite = () => {
+        setInviteData({
+            email: "",
+            full_name: "",
+            job_title: "",
+            team_id: "",
+            talents: Array(5).fill(""),
+        });
+        setInviteError("");
+        setInviteToken(null);
+    };
+
+    const resetTeam = () => {
+        setTeamData({
+            name: "",
+            description: "",
+        });
+        setTeamError("");
+    };
+
+    const handleCreateTeam = async () => {
+        setTeamError("");
+
+        if (!teamData.name.trim()) {
+            setTeamError("Team name is required.");
+            return;
+        }
+
+        try {
+            setTeamLoading(true);
+            await api.teams.create({
+                name: teamData.name.trim(),
+                description: teamData.description.trim() || undefined,
+            });
+            await loadTeams();
+            setTeamOpen(false);
+            resetTeam();
+        } catch (_err) {
+            setTeamError("Failed to create team. Please try again.");
+        } finally {
+            setTeamLoading(false);
+        }
+    };
+
+    const handleInviteSubmit = async () => {
+        setInviteError("");
+        setInviteToken(null);
+
+        if (!inviteData.email || !inviteData.full_name || !inviteData.team_id) {
+            setInviteError("Email, name, and team are required.");
+            return;
+        }
+
+        const selectedTalents = inviteData.talents.filter(Boolean);
+        if (selectedTalents.length > 0 && selectedTalents.length !== 5) {
+            setInviteError("Select exactly 5 talents or leave all empty.");
+            return;
+        }
+
+        const uniqueTalentIds = new Set(selectedTalents);
+        if (uniqueTalentIds.size !== selectedTalents.length) {
+            setInviteError("Talents must be unique.");
+            return;
+        }
+
+        const payload: GhostInviteRequest = {
+            email: inviteData.email,
+            full_name: inviteData.full_name,
+            job_title: inviteData.job_title || undefined,
+            team_id: Number(inviteData.team_id),
+            talents: selectedTalents.length
+                ? selectedTalents.map((talentId, index) => ({
+                      talent_id: Number(talentId),
+                      rank: index + 1,
+                  }))
+                : undefined,
+        };
+
+        try {
+            setInviteLoading(true);
+            const response = await api.invitations.createGhostInvite(payload);
+            setInviteToken(response.invite_token);
+            await loadUsers();
+        } catch (_err) {
+            setInviteError("Failed to create invite. Please try again.");
+        } finally {
+            setInviteLoading(false);
+        }
+    };
+
+    const inviteLink = inviteToken && typeof window !== "undefined"
+        ? `${window.location.origin}/join?token=${inviteToken}`
+        : null;
 
     if (loading) {
         return (
@@ -55,10 +199,207 @@ export default function UsersPage() {
                         Manage your organization&apos;s members, assign roles, and track talent development progress across teams.
                     </p>
                 </div>
-                <button className="inline-flex items-center gap-2 rounded-xl bg-primary px-5 py-2.5 text-sm font-semibold text-white hover:bg-blue-700 transition-all shadow-sm hover:shadow-md active:scale-95">
-                    <UserPlus className="h-4 w-4" />
-                    Invite User
-                </button>
+                <div className="flex flex-wrap items-center gap-3">
+                    <Dialog open={teamOpen} onOpenChange={(open) => {
+                        setTeamOpen(open);
+                        if (!open) resetTeam();
+                    }}>
+                        <DialogTrigger asChild>
+                            <Button variant="outline" className="inline-flex items-center gap-2">
+                                <Users className="h-4 w-4" />
+                                New Team
+                            </Button>
+                        </DialogTrigger>
+                        <DialogContent className="max-w-lg">
+                            <DialogHeader>
+                                <DialogTitle>Create a team</DialogTitle>
+                                <DialogDescription>
+                                    Teams help you organize members and comparisons.
+                                </DialogDescription>
+                            </DialogHeader>
+                            <div className="grid gap-4">
+                                <div className="grid gap-2">
+                                    <Label htmlFor="team-name">Team name</Label>
+                                    <Input
+                                        id="team-name"
+                                        placeholder="Product"
+                                        value={teamData.name}
+                                        onChange={(event) =>
+                                            setTeamData((prev) => ({ ...prev, name: event.target.value }))
+                                        }
+                                    />
+                                </div>
+                                <div className="grid gap-2">
+                                    <Label htmlFor="team-description">Description (optional)</Label>
+                                    <Input
+                                        id="team-description"
+                                        placeholder="Core product team"
+                                        value={teamData.description}
+                                        onChange={(event) =>
+                                            setTeamData((prev) => ({ ...prev, description: event.target.value }))
+                                        }
+                                    />
+                                </div>
+                                {teamError && (
+                                    <div className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-2 text-sm text-rose-700">
+                                        {teamError}
+                                    </div>
+                                )}
+                                <div className="flex flex-wrap gap-3 justify-end">
+                                    <Button type="button" variant="outline" onClick={() => setTeamOpen(false)}>
+                                        Cancel
+                                    </Button>
+                                    <Button type="button" onClick={handleCreateTeam} disabled={teamLoading}>
+                                        {teamLoading ? "Creating..." : "Create team"}
+                                    </Button>
+                                </div>
+                            </div>
+                        </DialogContent>
+                    </Dialog>
+                    <Dialog open={inviteOpen} onOpenChange={(open) => {
+                    setInviteOpen(open);
+                    if (!open) resetInvite();
+                }}>
+                        <DialogTrigger asChild>
+                            <Button className="inline-flex items-center gap-2 rounded-xl bg-primary px-5 py-2.5 text-sm font-semibold text-white hover:bg-blue-700 transition-all shadow-sm hover:shadow-md active:scale-95">
+                                <UserPlus className="h-4 w-4" />
+                                Invite User
+                            </Button>
+                        </DialogTrigger>
+                        <DialogContent className="max-w-2xl">
+                            <DialogHeader>
+                                <DialogTitle>Invite team member</DialogTitle>
+                                <DialogDescription>
+                                    Add a ghost profile and generate a 7-day invite link.
+                                </DialogDescription>
+                            </DialogHeader>
+                            <div className="grid gap-4">
+                                <div className="grid gap-2">
+                                    <Label htmlFor="invite-email">Email</Label>
+                                    <Input
+                                        id="invite-email"
+                                        type="email"
+                                        placeholder="user@company.com"
+                                        value={inviteData.email}
+                                        onChange={(event) =>
+                                            setInviteData((prev) => ({ ...prev, email: event.target.value }))
+                                        }
+                                    />
+                                </div>
+                                <div className="grid gap-2">
+                                    <Label htmlFor="invite-name">Full name</Label>
+                                    <Input
+                                        id="invite-name"
+                                        placeholder="Jane Doe"
+                                        value={inviteData.full_name}
+                                        onChange={(event) =>
+                                            setInviteData((prev) => ({ ...prev, full_name: event.target.value }))
+                                        }
+                                    />
+                                </div>
+                                <div className="grid gap-2">
+                                    <Label htmlFor="invite-title">Job title (optional)</Label>
+                                    <Input
+                                        id="invite-title"
+                                        placeholder="Product Manager"
+                                        value={inviteData.job_title}
+                                        onChange={(event) =>
+                                            setInviteData((prev) => ({ ...prev, job_title: event.target.value }))
+                                        }
+                                    />
+                                </div>
+                                <div className="grid gap-2">
+                                    <Label htmlFor="invite-team">Team</Label>
+                                    <select
+                                        id="invite-team"
+                                        className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+                                        value={inviteData.team_id}
+                                        onChange={(event) =>
+                                            setInviteData((prev) => ({ ...prev, team_id: event.target.value }))
+                                        }
+                                    >
+                                        <option value="">Select team</option>
+                                        {teams.map((team) => (
+                                            <option key={team.id} value={team.id}>
+                                                {team.name}
+                                            </option>
+                                        ))}
+                                    </select>
+                                </div>
+                                <div className="grid gap-3">
+                                    <div>
+                                        <Label>Talents (Top 5)</Label>
+                                        <p className="text-xs text-slate-500">Optional. Fill all five or leave empty.</p>
+                                    </div>
+                                    <div className="grid gap-3 sm:grid-cols-2">
+                                        {inviteData.talents.map((talentId, index) => (
+                                            <div key={`talent-${index}`} className="grid gap-1">
+                                                <Label className="text-xs text-slate-500">Rank {index + 1}</Label>
+                                                <select
+                                                    className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+                                                    value={talentId}
+                                                    onChange={(event) => {
+                                                        const value = event.target.value;
+                                                        setInviteData((prev) => {
+                                                            const next = [...prev.talents];
+                                                            next[index] = value;
+                                                            return { ...prev, talents: next };
+                                                        });
+                                                    }}
+                                                >
+                                                    <option value="">Select talent</option>
+                                                    {sortedTalents.map((talent) => {
+                                                        const selectedElsewhere = inviteData.talents.some(
+                                                            (selected, selectedIndex) =>
+                                                                selectedIndex !== index && selected === talent.id.toString()
+                                                        );
+                                                        return (
+                                                            <option
+                                                                key={talent.id}
+                                                                value={talent.id}
+                                                                disabled={selectedElsewhere}
+                                                            >
+                                                                {talent.translation.name}
+                                                            </option>
+                                                        );
+                                                    })}
+                                                </select>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                                {inviteError && (
+                                    <div className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-2 text-sm text-rose-700">
+                                        {inviteError}
+                                    </div>
+                                )}
+                                {inviteLink && (
+                                    <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
+                                        <p className="font-semibold">Invite link (valid 7 days)</p>
+                                        <div className="mt-2 flex flex-col gap-2 sm:flex-row sm:items-center">
+                                            <Input readOnly value={inviteLink} />
+                                            <Button
+                                                type="button"
+                                                variant="outline"
+                                                onClick={() => navigator.clipboard.writeText(inviteLink)}
+                                            >
+                                                Copy
+                                            </Button>
+                                        </div>
+                                    </div>
+                                )}
+                                <div className="flex flex-wrap gap-3 justify-end">
+                                    <Button type="button" variant="outline" onClick={() => setInviteOpen(false)}>
+                                        Cancel
+                                    </Button>
+                                    <Button type="button" onClick={handleInviteSubmit} disabled={inviteLoading}>
+                                        {inviteLoading ? "Creating..." : "Generate link"}
+                                    </Button>
+                                </div>
+                            </div>
+                        </DialogContent>
+                    </Dialog>
+                </div>
             </div>
 
             {/* Metrics Overview */}
@@ -101,7 +442,10 @@ export default function UsersPage() {
                     <p className="mt-2 text-slate-500 max-w-xs mx-auto">
                         Your organization is empty. Start by inviting your first team member.
                     </p>
-                    <button className="mt-6 inline-flex items-center gap-2 rounded-xl bg-primary px-6 py-3 text-sm font-semibold text-white hover:bg-blue-700 transition-all shadow-sm hover:shadow-md">
+                    <button
+                        className="mt-6 inline-flex items-center gap-2 rounded-xl bg-primary px-6 py-3 text-sm font-semibold text-white hover:bg-blue-700 transition-all shadow-sm hover:shadow-md"
+                        onClick={() => setInviteOpen(true)}
+                    >
                         <UserPlus className="h-4 w-4" />
                         Invite First User
                     </button>
