@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Dialog,
   DialogContent,
@@ -35,6 +35,13 @@ export function TalentImportDialog({
 }: TalentImportDialogProps) {
   const [activeTab, setActiveTab] = useState<'pdf' | 'manual'>('pdf');
   const [prefilledTalents, setPrefilledTalents] = useState<UserTalent[]>(initialTalents);
+
+  useEffect(() => {
+    if (open) {
+      setActiveTab('pdf');
+      setPrefilledTalents(initialTalents);
+    }
+  }, [open, initialTalents]);
 
   const handlePdfImportComplete = (talents: UserTalent[]) => {
     onSave(talents);

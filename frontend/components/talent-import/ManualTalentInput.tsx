@@ -25,6 +25,8 @@ export function ManualTalentInput({ onSave, initialTalents = [] }: ManualTalentI
     const [selectedTalents, setSelectedTalents] = useState<UserTalent[]>(initialTalents);
     const [activeTab, setActiveTab] = useState<GallupDomain | 'all'>('all');
     const [rankingView, setRankingView] = useState<RankingView>('5');
+    const [editingTalentId, setEditingTalentId] = useState<string | null>(null);
+    const [editingValue, setEditingValue] = useState('');
 
     const filteredTalents = useMemo(() => {
         return GALLUP_TALENTS
@@ -41,7 +43,6 @@ export function ManualTalentInput({ onSave, initialTalents = [] }: ManualTalentI
 
     const setRank = (talentId: string, rank: number | null) => {
         if (rank === null) {
-            // Remove talent
             setSelectedTalents(prev => prev.filter(t => t.talentId !== talentId));
             return;
         }
@@ -49,41 +50,53 @@ export function ManualTalentInput({ onSave, initialTalents = [] }: ManualTalentI
         // Validate rank (1-34)
         if (rank < 1 || rank > 34) return;
 
-        // Check if rank is already taken
-        const existingWithRank = selectedTalents.find(t => t.rank === rank && t.talentId !== talentId);
-
         setSelectedTalents(prev => {
+            // Remove this talent from the list (will re-add with new rank)
             let newTalents = prev.filter(t => t.talentId !== talentId);
-
-            // If rank is taken, swap
+            
+            // Check if rank is already taken by ANOTHER talent
+            const existingWithRank = prev.find(t => t.rank === rank && t.talentId !== talentId);
+            
+            // If rank is taken by another talent, remove that talent too
             if (existingWithRank) {
-                const oldRank = prev.find(t => t.talentId === talentId)?.rank;
-                if (oldRank) {
-                    newTalents = newTalents.map(t =>
-                        t.talentId === existingWithRank.talentId
-                            ? { ...t, rank: oldRank }
-                            : t
-                    );
-                } else {
-                    // Remove the talent that had this rank
-                    newTalents = newTalents.filter(t => t.talentId !== existingWithRank.talentId);
-                }
+                newTalents = newTalents.filter(t => t.talentId !== existingWithRank.talentId);
             }
 
             return [...newTalents, { talentId, rank }].sort((a, b) => a.rank - b.rank);
         });
     };
 
-    const handleRankInput = (talentId: string, value: string) => {
-        if (value === '') {
-            setRank(talentId, null);
-            return;
-        }
+    const handleFocus = (talentId: string, currentRank: number | undefined) => {
+        setEditingTalentId(talentId);
+        setEditingValue(currentRank ? currentRank.toString() : '');
+    };
 
-        const rank = parseInt(value, 10);
-        if (!isNaN(rank)) {
-            setRank(talentId, rank);
+    const handleBlur = () => {
+        if (editingTalentId !== null && editingValue !== '') {
+            const rank = parseInt(editingValue, 10);
+            if (!isNaN(rank) && rank >= 1 && rank <= 34) {
+                setRank(editingTalentId, rank);
+            }
         }
+        setEditingTalentId(null);
+        setEditingValue('');
+    };
+
+    const handleKeyDown = (e: React.KeyboardEvent) => {
+        if (e.key === 'Enter' || e.key === 'Tab') {
+            if (editingTalentId !== null && editingValue !== '') {
+                const rank = parseInt(editingValue, 10);
+                if (!isNaN(rank) && rank >= 1 && rank <= 34) {
+                    setRank(editingTalentId, rank);
+                }
+            }
+            setEditingTalentId(null);
+            setEditingValue('');
+        }
+    };
+
+    const handleChange = (value: string) => {
+        setEditingValue(value);
     };
 
     const clearAll = () => setSelectedTalents([]);
@@ -193,11 +206,14 @@ export function ManualTalentInput({ onSave, initialTalents = [] }: ManualTalentI
                                                 type="number"
                                                 min={1}
                                                 max={34}
-                                                value={rank ?? ''}
-                                                onChange={(e) => handleRankInput(talent.id, e.target.value)}
+                                                value={editingTalentId === talent.id ? editingValue : (rank ?? '')}
+                                                onFocus={() => handleFocus(talent.id, rank)}
+                                                onBlur={handleBlur}
+                                                onKeyDown={handleKeyDown}
+                                                onChange={(e) => handleChange(e.target.value)}
                                                 placeholder="#"
                                                 className={cn(
-                                                    "w-12 h-9 text-center font-bold text-sm [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none",
+                                                    "w-14 h-9 text-center font-bold text-sm [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none",
                                                     hasRank && "border-primary bg-primary/5"
                                                 )}
                                             />

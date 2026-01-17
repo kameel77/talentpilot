@@ -23,6 +23,7 @@ import { SettingsSection } from "@/components/dashboard/SettingsSection";
 import { GALLUP_TALENTS } from "@/data/gallupTalents";
 import { UserTalent } from "@/types/talent";
 import { tokenManager } from "@/lib/api";
+import { cn } from "@/lib/utils";
 
 export default function SettingsPage() {
   const [talentImportOpen, setTalentImportOpen] = useState(false);
