@@ -125,6 +125,13 @@ class Team(Base):
     invitations = relationship("TeamInvitation", back_populates="team", cascade="all, delete-orphan")
 
 
+INVITATION_STATUS_ENUM = SQLEnum(
+    InvitationStatus,
+    values_callable=lambda enum_cls: [member.value for member in enum_cls],
+    name="invitationstatus",
+)
+
+
 class TeamInvitation(Base):
     """Invitation for a user to join a team."""
     __tablename__ = "team_invitations"
@@ -133,7 +140,7 @@ class TeamInvitation(Base):
     user_id = Column(Integer, ForeignKey('users.id', ondelete='CASCADE'), nullable=False)
     team_id = Column(Integer, ForeignKey('teams.id', ondelete='CASCADE'), nullable=False)
     token_hash = Column(String(64), unique=True, nullable=False)
-    status = Column(SQLEnum(InvitationStatus), nullable=False, default=InvitationStatus.ACTIVE)
+    status = Column(INVITATION_STATUS_ENUM, nullable=False, default=InvitationStatus.ACTIVE)
     expires_at = Column(DateTime(timezone=True), nullable=False)
     created_by = Column(Integer, ForeignKey('users.id', ondelete='SET NULL'), nullable=True)
     revoked_at = Column(DateTime(timezone=True), nullable=True)
