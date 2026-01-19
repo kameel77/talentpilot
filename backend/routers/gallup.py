@@ -78,10 +78,13 @@ def save_gallup_talents(
     user_id: int,
     request: GallupSaveTalentsRequest,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_role(["admin", "manager"])),
+    current_user: User = Depends(get_current_user),
     language: str = Query("en", min_length=2, max_length=10),
 ) -> List[UserTalentResponse]:
-    """Save parsed Gallup rankings to user talents (replaces existing talents)."""
+    """Save parsed Gallup rankings to user talents (replaces existing talents).
+    
+    Users can save their own talents. Admin/manager can save any user's talents.
+    """
     # Get target user
     user = db.query(User).filter(User.id == user_id).first()
     if not user:
@@ -95,6 +98,16 @@ def save_gallup_talents(
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Access denied to this user"
+        )
+    
+    # Permission check: users can save their own talents, admin/manager can save anyone's
+    is_self = user_id == current_user.id  # type: ignore
+    is_privileged = current_user.role in ["admin", "manager"]  # type: ignore
+    
+    if not is_self and not is_privileged:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You can only save your own talents"
         )
     
     # Convert rankings (talent_code -> rank) to UserTalentCreate objects
