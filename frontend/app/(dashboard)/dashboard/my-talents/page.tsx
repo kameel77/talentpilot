@@ -252,8 +252,35 @@ export default function MyTalentsPage() {
         return () => clearTimeout(timer);
     }, []);
 
-    const handleTalentsSave = (talents: UserTalent[]) => {
-        setMyTalents(talents);
+    const handleTalentsSave = async (talents: UserTalent[]) => {
+        console.log('[MyTalentsPage] handleTalentsSave called with talents:', talents);
+
+        if (!currentUser) {
+            console.error('[MyTalentsPage] No current user available');
+            return;
+        }
+
+        try {
+            // Convert UserTalent[] to rankings object (code -> rank)
+            const rankings: Record<string, number> = {};
+            talents.forEach(t => {
+                rankings[t.talentId] = t.rank;
+            });
+
+            console.log('[MyTalentsPage] Saving to backend for user', currentUser.id, 'rankings:', rankings);
+
+            // Save to backend
+            await api.gallup.saveTalents(currentUser.id, rankings, 'pl');
+
+            console.log('[MyTalentsPage] Saved successfully, updating local state');
+
+            // Update local state
+            setMyTalents(talents);
+        } catch (error) {
+            console.error('[MyTalentsPage] Error saving talents:', error);
+            // Still update local state even if backend save fails
+            setMyTalents(talents);
+        }
     };
 
     const hasTalents = myTalents.length > 0;
