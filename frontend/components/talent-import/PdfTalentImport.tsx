@@ -145,13 +145,28 @@ export function PdfTalentImport({ userId, onUsersChange, onImportComplete, onSwi
     };
 
     const handleConfirm = async () => {
-        if (!parsedData || (!selectedUserId && !userId)) return;
+        console.log('[PdfTalentImport] handleConfirm called', { parsedData: !!parsedData, selectedUserId, userId });
+
+        if (!parsedData) {
+            console.error('[PdfTalentImport] No parsed data available');
+            setErrorMessage('Brak danych do zapisania. Spróbuj ponownie zaimportować plik.');
+            setStatus('error');
+            return;
+        }
 
         const targetUserId = selectedUserId || userId;
-        if (!targetUserId) return;
+        if (!targetUserId) {
+            console.error('[PdfTalentImport] No user ID available', { selectedUserId, userId });
+            setErrorMessage('Błąd: Nie można zidentyfikować użytkownika. Odśwież stronę i spróbuj ponownie.');
+            setStatus('error');
+            return;
+        }
+
+        console.log('[PdfTalentImport] Saving talents for user', targetUserId, 'rankings:', parsedData.rankings);
 
         try {
             await api.gallup.saveTalents(targetUserId, parsedData.rankings, language);
+            console.log('[PdfTalentImport] Talents saved successfully');
             if (onUsersChange) {
                 onUsersChange();
             }
@@ -161,6 +176,7 @@ export function PdfTalentImport({ userId, onUsersChange, onImportComplete, onSwi
             }));
             onImportComplete(talents);
         } catch (error) {
+            console.error('[PdfTalentImport] Error saving talents:', error);
             setErrorMessage('Nie udało się zapisać talentów. Spróbuj ponownie.');
             setStatus('error');
         }
