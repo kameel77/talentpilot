@@ -7,7 +7,7 @@ import { DOMAIN_LABELS, GALLUP_TALENTS } from '@/data/gallupTalents';
 import { UserTalent, GallupDomain } from '@/types/talent';
 import { Card } from '@/components/ui/card';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { tokenManager, User } from '@/lib/api';
+import { api, tokenManager, User } from '@/lib/api';
 import {
     Upload,
     Sparkles,
@@ -158,7 +158,7 @@ function DomainSummary({ talents }: { talents: UserTalent[] }) {
 
 function EmptyTalentsView({ onImport }: { onImport: () => void }) {
     return (
-        <Card className="p-8 text-center">
+        <Card className="p-8 text-center border-slate-200/60 shadow-sm">
             <div className="max-w-md mx-auto space-y-6">
                 <div className="w-20 h-20 rounded-2xl bg-primary/10 flex items-center justify-center mx-auto">
                     <Sparkles className="h-10 w-10 text-primary" />
@@ -180,7 +180,7 @@ function EmptyTalentsView({ onImport }: { onImport: () => void }) {
                 </div>
 
                 {/* Benefits preview */}
-                <div className="pt-6 border-t space-y-3 text-left">
+                <div className="pt-6 border-t border-slate-200/60 space-y-3 text-left">
                     <p className="text-sm font-medium text-center text-muted-foreground">Co zyskasz?</p>
                     <div className="grid gap-3">
                         <div className="flex items-start gap-3 text-sm">
@@ -224,10 +224,31 @@ export default function MyTalentsPage() {
     const [currentUser, setCurrentUser] = useState<User | null>(null);
 
     useEffect(() => {
-        const timer = setTimeout(() => {
+        const loadUserData = async () => {
             const user = tokenManager.getUser();
             setCurrentUser(user);
-        }, 0);
+
+            if (user) {
+                try {
+                    // Fetch user talents from backend
+                    const userTalentsData = await api.talents.getUserTalents(user.id);
+
+                    // Map backend response to frontend UserTalent type
+                    // Backend returns: { talent: { code: string }, rank: number, ... }
+                    // Frontend expects: { talentId: string, rank: number }
+                    const mappedTalents: UserTalent[] = userTalentsData.map((ut: any) => ({
+                        talentId: ut.talent.code,
+                        rank: ut.rank
+                    }));
+
+                    setMyTalents(mappedTalents);
+                } catch (error) {
+                    console.error('Error fetching user talents:', error);
+                }
+            }
+        };
+
+        const timer = setTimeout(loadUserData, 0);
         return () => clearTimeout(timer);
     }, []);
 
@@ -289,7 +310,7 @@ export default function MyTalentsPage() {
                     {/* Left column - Talents */}
                     <div className="lg:col-span-2 space-y-6">
                         {/* Top Talents Card */}
-                        <Card className="p-6">
+                        <Card className="p-6 border-slate-200/60 shadow-sm">
                             <div className="flex items-center justify-between mb-4">
                                 <div className="flex items-center gap-3">
                                     <div className="rounded-xl bg-primary/10 p-2.5 text-primary">
@@ -316,7 +337,7 @@ export default function MyTalentsPage() {
                         </Card>
 
                         {/* Strengths */}
-                        <Card className="p-6 bg-emerald-50/20 dark:bg-emerald-950/20">
+                        <Card className="p-6 bg-emerald-50/20 dark:bg-emerald-950/20 border-slate-200/60 shadow-sm">
                             <div className="flex items-center gap-3 mb-4">
                                 <div className="rounded-xl bg-emerald-500/10 p-2.5 text-emerald-600 dark:text-emerald-400">
                                     <ThumbsUp className="h-5 w-5" />
@@ -336,7 +357,7 @@ export default function MyTalentsPage() {
                         {/* Two column grid for Triggers and Blockers */}
                         <div className="grid gap-6 md:grid-cols-2">
                             {/* Triggers */}
-                            <Card className="p-6 bg-amber-50/20 dark:bg-amber-950/20">
+                            <Card className="p-6 bg-amber-50/20 dark:bg-amber-950/20 border-slate-200/60 shadow-sm">
                                 <div className="flex items-center gap-3 mb-4">
                                     <div className="rounded-xl bg-amber-500/10 p-2.5 text-amber-600 dark:text-amber-400">
                                         <AlertTriangle className="h-5 w-5" />
@@ -354,7 +375,7 @@ export default function MyTalentsPage() {
                             </Card>
 
                             {/* Blockers */}
-                            <Card className="p-6 bg-rose-50/20 dark:bg-rose-950/20">
+                            <Card className="p-6 bg-rose-50/20 dark:bg-rose-950/20 border-slate-200/60 shadow-sm">
                                 <div className="flex items-center gap-3 mb-4">
                                     <div className="rounded-xl bg-rose-500/10 p-2.5 text-rose-600 dark:text-rose-400">
                                         <Ban className="h-5 w-5" />
@@ -373,7 +394,7 @@ export default function MyTalentsPage() {
                         </div>
 
                         {/* Feedback Guidance */}
-                        <Card className="p-6">
+                        <Card className="p-6 border-slate-200/60 shadow-sm">
                             <div className="flex items-center gap-3 mb-4">
                                 <div className="rounded-xl bg-primary/10 p-2.5 text-primary">
                                     <MessageCircle className="h-5 w-5" />
@@ -389,7 +410,7 @@ export default function MyTalentsPage() {
                     {/* Right column - Quick Tips & Domain Summary */}
                     <div className="space-y-6">
                         {/* Domain Distribution */}
-                        <Card className="p-6">
+                        <Card className="p-6 border-slate-200/60 shadow-sm">
                             <div className="flex items-center gap-3 mb-4">
                                 <div className="rounded-xl bg-primary/10 p-2.5 text-primary">
                                     <Star className="h-5 w-5" />
@@ -400,7 +421,7 @@ export default function MyTalentsPage() {
                         </Card>
 
                         {/* Quick Tips */}
-                        <Card className="p-6">
+                        <Card className="p-6 border-slate-200/60 shadow-sm">
                             <div className="flex items-center gap-3 mb-4">
                                 <div className="rounded-xl bg-domain-strategic-light p-2.5 text-domain-strategic">
                                     <Lightbulb className="h-5 w-5" />
@@ -433,7 +454,7 @@ export default function MyTalentsPage() {
                         </Card>
 
                         {/* Share Profile Card */}
-                        <Card className="p-6 bg-gradient-to-br from-primary/5 to-primary/10">
+                        <Card className="p-6 bg-gradient-to-br from-primary/5 to-primary/10 border-slate-200/60 shadow-sm">
                             <h3 className="font-semibold mb-2">Udostępnij swój profil</h3>
                             <p className="text-sm text-muted-foreground mb-4">
                                 Pozwól zespołowi lepiej zrozumieć Twoje talenty i preferencje współpracy
