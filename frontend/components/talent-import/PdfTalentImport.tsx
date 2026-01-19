@@ -56,10 +56,13 @@ export function PdfTalentImport({ userId, onUsersChange, onImportComplete, onSwi
     };
 
     useEffect(() => {
+        console.log('[PdfTalentImport] useEffect triggered - userId prop:', userId);
         const timer = setTimeout(() => {
             if (userId) {
+                console.log('[PdfTalentImport] Setting selectedUserId to:', userId);
                 setSelectedUserId(userId);
             } else {
+                console.log('[PdfTalentImport] userId is falsy, loading users list');
                 loadUsers();
             }
         }, 0);
