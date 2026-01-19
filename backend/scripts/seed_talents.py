@@ -31,7 +31,7 @@ PL_TALENT_NAMES = {
     "communication": "Komunikatywność",
     "competition": "Rywalizacja",
     "maximizer": "Maksymalista",
-    "self_assurance": "Pewność siebie",
+    "self-assurance": "Pewność siebie",
     "significance": "Ważność",
     "woo": "Czar",
     "adaptability": "Elastyczność",
@@ -156,7 +156,7 @@ TALENTS_DATA = [
         "description": "People exceptionally talented in the Maximizer theme focus on strengths as a way to stimulate personal and group excellence. They seek to transform something strong into something superb."
     },
     {
-        "code": "self_assurance",
+        "code": "self-assurance",
         "name": "Self-Assurance",
         "domain": GallupDomain.INFLUENCING,
         "short_description": "Confidence in abilities",
