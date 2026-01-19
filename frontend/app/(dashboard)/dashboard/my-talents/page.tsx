@@ -92,18 +92,14 @@ function TalentListView({ talents, viewMode }: TalentListViewProps) {
                                 <div
                                     key={talent.id}
                                     className={cn(
-                                        "inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium",
-                                        rank <= 5
-                                            ? "bg-primary/10 text-primary ring-1 ring-primary/30"
-                                            : rank <= 10
-                                                ? "bg-secondary/50 text-foreground"
-                                                : "bg-muted text-muted-foreground"
+                                        "inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium border transition-colors",
+                                        `domain-${domain}`
                                     )}
                                 >
-                                    <span className={cn(
-                                        "w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold",
-                                        rank <= 5 ? "bg-primary text-primary-foreground" : "bg-muted-foreground/20 text-muted-foreground"
-                                    )}>
+                                    <span
+                                        className="w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold text-white shadow-sm"
+                                        style={{ backgroundColor: `var(--color-domain-${domain})` }}
+                                    >
                                         {rank}
                                     </span>
                                     {talent.namePl}
@@ -188,7 +184,7 @@ function EmptyTalentsView({ onImport }: { onImport: () => void }) {
                     <p className="text-sm font-medium text-center text-muted-foreground">Co zyskasz?</p>
                     <div className="grid gap-3">
                         <div className="flex items-start gap-3 text-sm">
-                            <div className="rounded-lg bg-domain-executing-light p-1.5 text-domain-executing">
+                            <div className="rounded-lg p-1.5 domain-executing">
                                 <Star className="h-4 w-4" />
                             </div>
                             <div>
@@ -197,7 +193,7 @@ function EmptyTalentsView({ onImport }: { onImport: () => void }) {
                             </div>
                         </div>
                         <div className="flex items-start gap-3 text-sm">
-                            <div className="rounded-lg bg-domain-influencing-light p-1.5 text-domain-influencing">
+                            <div className="rounded-lg p-1.5 domain-influencing">
                                 <Lightbulb className="h-4 w-4" />
                             </div>
                             <div>
@@ -206,7 +202,7 @@ function EmptyTalentsView({ onImport }: { onImport: () => void }) {
                             </div>
                         </div>
                         <div className="flex items-start gap-3 text-sm">
-                            <div className="rounded-lg bg-domain-relationship-light p-1.5 text-domain-relationship">
+                            <div className="rounded-lg p-1.5 domain-relationship">
                                 <MessageCircle className="h-4 w-4" />
                             </div>
                             <div>
@@ -320,7 +316,7 @@ export default function MyTalentsPage() {
                         </Card>
 
                         {/* Strengths */}
-                        <Card className="p-6 bg-emerald-50/50 dark:bg-emerald-950/20 border-emerald-200/50 dark:border-emerald-800/30">
+                        <Card className="p-6 bg-emerald-50/20 dark:bg-emerald-950/20">
                             <div className="flex items-center gap-3 mb-4">
                                 <div className="rounded-xl bg-emerald-500/10 p-2.5 text-emerald-600 dark:text-emerald-400">
                                     <ThumbsUp className="h-5 w-5" />
@@ -340,7 +336,7 @@ export default function MyTalentsPage() {
                         {/* Two column grid for Triggers and Blockers */}
                         <div className="grid gap-6 md:grid-cols-2">
                             {/* Triggers */}
-                            <Card className="p-6 bg-amber-50/50 dark:bg-amber-950/20 border-amber-200/50 dark:border-amber-800/30">
+                            <Card className="p-6 bg-amber-50/20 dark:bg-amber-950/20">
                                 <div className="flex items-center gap-3 mb-4">
                                     <div className="rounded-xl bg-amber-500/10 p-2.5 text-amber-600 dark:text-amber-400">
                                         <AlertTriangle className="h-5 w-5" />
@@ -358,7 +354,7 @@ export default function MyTalentsPage() {
                             </Card>
 
                             {/* Blockers */}
-                            <Card className="p-6 bg-rose-50/50 dark:bg-rose-950/20 border-rose-200/50 dark:border-rose-800/30">
+                            <Card className="p-6 bg-rose-50/20 dark:bg-rose-950/20">
                                 <div className="flex items-center gap-3 mb-4">
                                     <div className="rounded-xl bg-rose-500/10 p-2.5 text-rose-600 dark:text-rose-400">
                                         <Ban className="h-5 w-5" />
@@ -437,7 +433,7 @@ export default function MyTalentsPage() {
                         </Card>
 
                         {/* Share Profile Card */}
-                        <Card className="p-6 bg-gradient-to-br from-primary/5 to-primary/10 border-primary/20">
+                        <Card className="p-6 bg-gradient-to-br from-primary/5 to-primary/10">
                             <h3 className="font-semibold mb-2">Udostępnij swój profil</h3>
                             <p className="text-sm text-muted-foreground mb-4">
                                 Pozwól zespołowi lepiej zrozumieć Twoje talenty i preferencje współpracy
