@@ -7,7 +7,7 @@ import { Label } from '@/components/ui/label';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { DomainBadge } from '@/components/ui/DomainBadge';
 import { GALLUP_TALENTS, getTalentsByDomain, DOMAIN_LABELS } from '@/data/gallupTalents';
-import { GallupDomain, UserTalent } from '@/types/talent';
+import { GallupDomain, UserTalent, GallupTalent } from '@/types/talent';
 import { Search, X, Lightbulb, Trophy, Star, Medal } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -53,10 +53,10 @@ export function ManualTalentInput({ onSave, initialTalents = [] }: ManualTalentI
         setSelectedTalents(prev => {
             // Remove this talent from the list (will re-add with new rank)
             let newTalents = prev.filter(t => t.talentId !== talentId);
-            
+
             // Check if rank is already taken by ANOTHER talent
             const existingWithRank = prev.find(t => t.rank === rank && t.talentId !== talentId);
-            
+
             // If rank is taken by another talent, remove that talent too
             if (existingWithRank) {
                 newTalents = newTalents.filter(t => t.talentId !== existingWithRank.talentId);
@@ -116,7 +116,7 @@ export function ManualTalentInput({ onSave, initialTalents = [] }: ManualTalentI
                 const talent = GALLUP_TALENTS.find(t => t.id === ut.talentId);
                 return talent ? { ...ut, talent } : null;
             })
-            .filter((t): t is (UserTalent & { talent: any }) => t !== null && !!t.talent);
+            .filter((t): t is (UserTalent & { talent: GallupTalent }) => t !== null && !!t.talent);
     }, [selectedTalents, rankingView]);
 
     return (
@@ -299,8 +299,8 @@ export function ManualTalentInput({ onSave, initialTalents = [] }: ManualTalentI
                                 {rankedTalents.map(({ talentId, rank, talent }) => (
                                     <div
                                         key={talentId}
-                                    className="flex items-center gap-2 p-2 rounded-xl transition-all border bg-primary/10 border-primary/30"
-                                >
+                                        className="flex items-center gap-2 p-2 rounded-xl transition-all border bg-primary/10 border-primary/30"
+                                    >
                                         <div className="relative">
                                             <Input
                                                 type="number"

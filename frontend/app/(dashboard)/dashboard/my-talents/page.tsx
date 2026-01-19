@@ -1,12 +1,13 @@
 "use client";
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { TalentImportDialog } from '@/components/talent-import/TalentImportDialog';
 import { DOMAIN_LABELS, GALLUP_TALENTS } from '@/data/gallupTalents';
 import { UserTalent, GallupDomain } from '@/types/talent';
 import { Card } from '@/components/ui/card';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { tokenManager, User } from '@/lib/api';
 import {
     Upload,
     Sparkles,
@@ -224,6 +225,15 @@ export default function MyTalentsPage() {
     const [talentImportOpen, setTalentImportOpen] = useState(false);
     const [myTalents, setMyTalents] = useState<UserTalent[]>([]);
     const [talentViewMode, setTalentViewMode] = useState<'top5' | 'top10' | 'all'>('top10');
+    const [currentUser, setCurrentUser] = useState<User | null>(null);
+
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            const user = tokenManager.getUser();
+            setCurrentUser(user);
+        }, 0);
+        return () => clearTimeout(timer);
+    }, []);
 
     const handleTalentsSave = (talents: UserTalent[]) => {
         setMyTalents(talents);
@@ -259,6 +269,7 @@ export default function MyTalentsPage() {
                 onSave={handleTalentsSave}
                 initialTalents={myTalents}
                 memberName="Moje talenty"
+                userId={currentUser?.id}
             />
 
             {/* Header */}

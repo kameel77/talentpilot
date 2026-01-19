@@ -37,10 +37,13 @@ export function TalentImportDialog({
   const [prefilledTalents, setPrefilledTalents] = useState<UserTalent[]>(initialTalents);
 
   useEffect(() => {
-    if (open) {
-      setActiveTab('pdf');
-      setPrefilledTalents(initialTalents);
-    }
+    const timer = setTimeout(() => {
+      if (open) {
+        setActiveTab('pdf');
+        setPrefilledTalents(initialTalents);
+      }
+    }, 0);
+    return () => clearTimeout(timer);
   }, [open, initialTalents]);
 
   const handlePdfImportComplete = (talents: UserTalent[]) => {

@@ -56,9 +56,14 @@ export function PdfTalentImport({ userId, onUsersChange, onImportComplete, onSwi
     };
 
     useEffect(() => {
-        if (!userId) {
-            loadUsers();
-        }
+        const timer = setTimeout(() => {
+            if (userId) {
+                setSelectedUserId(userId);
+            } else {
+                loadUsers();
+            }
+        }, 0);
+        return () => clearTimeout(timer);
     }, [userId]);
 
     const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
