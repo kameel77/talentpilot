@@ -102,6 +102,7 @@ export function ManualTalentInput({ onSave, initialTalents = [] }: ManualTalentI
     const clearAll = () => setSelectedTalents([]);
 
     const handleSave = () => {
+        console.log('[ManualTalentInput] handleSave called with talents:', selectedTalents);
         onSave(selectedTalents);
     };
 

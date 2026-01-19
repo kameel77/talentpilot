@@ -186,6 +186,7 @@ export function PdfTalentImport({ userId, onUsersChange, onImportComplete, onSwi
     };
 
     const handleEditManually = () => {
+        console.log('[PdfTalentImport] handleEditManually called');
         if (parsedData) {
             const talents: UserTalent[] = Object.entries(parsedData.rankings).map(([code, rank]) => ({
                 talentId: code,
