@@ -111,12 +111,11 @@ def save_gallup_talents(
         )
     
     # Convert rankings (talent_code -> rank) to UserTalentCreate objects
-    # Only take top 5 talents
+    # Save all provided talents (not just top 5)
     sorted_rankings = sorted(request.rankings.items(), key=lambda x: x[1])
-    top_5 = sorted_rankings[:5]
     
     # Get talent IDs from codes
-    talent_codes = [code for code, _ in top_5]
+    talent_codes = [code for code, _ in sorted_rankings]
     talents = db.query(Talent).filter(Talent.code.in_(talent_codes)).all()
     talent_code_to_id = {t.code: t.id for t in talents}
     
@@ -130,7 +129,7 @@ def save_gallup_talents(
         )
     
     user_talents_create = []
-    for code, rank in top_5:
+    for code, rank in sorted_rankings:
         user_talents_create.append(
             UserTalentCreate(talent_id=talent_code_to_id[code], rank=rank)  # type: ignore
         )
