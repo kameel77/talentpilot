@@ -93,39 +93,42 @@ def query_qa(
     db: Session = Depends(get_db),
     current_user=Depends(get_current_user),
 ):
+    logger.info(f"--- QA QUERY START --- User: {current_user.email}, Q: {request.question}, Context: {request.context}")
+    
     language = request.language or "pl"
     target_user_id = request.target_user_id or current_user.id
     target_user = get_user_in_organization(db, target_user_id, current_user.organization_id)
     if not target_user:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
 
-    # Reuse logic for history/caching if needed, but for MVP v1 we generate fresh or from cache
+    # Reuse logic for history/caching if needed
     question_hash = compute_question_hash(request.question)
     
-    # Check for exact match in recent queries
-    existing_query = (
-        db.query(UserQuery)
-        .filter(
-            UserQuery.organization_id == current_user.organization_id,
-            UserQuery.question_hash == question_hash,
-            UserQuery.language == language,
-        )
-        .order_by(UserQuery.created_at.desc())
-        .first()
-    )
-    
-    if existing_query:
-        existing_answer = (
-            db.query(GeneratedAnswer)
-            .filter(GeneratedAnswer.query_id == existing_query.id)
-            .first()
-        )
-        if existing_answer:
-            return QAQueryResponse(
-                query_id=existing_query.id,
-                answer_id=existing_answer.id,
-                answer=parse_structured_answer(existing_answer.answer_text)
-            )
+    # DEBUG: Temporarily commented out cache to force regeneration
+    # existing_query = (
+    #     db.query(UserQuery)
+    #     .filter(
+    #         UserQuery.organization_id == current_user.organization_id,
+    #         UserQuery.question_hash == question_hash,
+    #         UserQuery.language == language,
+    #     )
+    #     .order_by(UserQuery.created_at.desc())
+    #     .first()
+    # )
+    # 
+    # if existing_query:
+    #     existing_answer = (
+    #         db.query(GeneratedAnswer)
+    #         .filter(GeneratedAnswer.query_id == existing_query.id)
+    #         .first()
+    #     )
+    #     if existing_answer:
+    #         logger.info(f"--- QA CACHE HIT --- Query ID: {existing_query.id}")
+    #         return QAQueryResponse(
+    #             query_id=existing_query.id,
+    #             answer_id=existing_answer.id,
+    #             answer=parse_structured_answer(existing_answer.answer_text)
+    #         )
 
     # Generate new
     query_embedding = get_embedding(db, request.question)
