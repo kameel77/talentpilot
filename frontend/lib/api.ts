@@ -82,6 +82,35 @@ export interface GhostInviteResponse {
     status: string;
 }
 
+export interface QueryReview {
+    query_id: number;
+    question: string;
+    language: string;
+    created_at: string;
+    answer_id: number;
+    answer_text: string;
+    model_name: string;
+    status: 'pending' | 'approved' | 'rejected';
+    edited_text?: string;
+}
+
+export interface AdminSettings {
+    settings: Record<string, string>;
+}
+
+export interface AdminSettingUpdate {
+    key: string;
+    value: string;
+}
+
+export interface KnowledgeItem {
+    id: number;
+    content: string;
+    language: string;
+    is_active: boolean;
+    created_at: string;
+}
+
 // Token management
 export const tokenManager = {
     getToken: (): string | null => {
@@ -280,6 +309,41 @@ export const api = {
             const response = await apiClient.post(`/api/gallup/save-talents/${userId}`, {
                 rankings,
                 language,
+            });
+            return response.data;
+        },
+    },
+
+    // Admin
+    admin: {
+        listQueries: async (): Promise<QueryReview[]> => {
+            const response = await apiClient.get<QueryReview[]>('/api/admin/queries');
+            return response.data;
+        },
+
+        reviewAnswer: async (answerId: number, status: 'approved' | 'rejected', edited_text?: string) => {
+            const response = await apiClient.patch(`/api/admin/answers/${answerId}`, {
+                status,
+                edited_text,
+            });
+            return response.data;
+        },
+
+        getSettings: async (): Promise<AdminSettings> => {
+            const response = await apiClient.get<AdminSettings>('/api/admin/settings');
+            return response.data;
+        },
+
+        updateSettings: async (settings: AdminSettingUpdate[]) => {
+            const response = await apiClient.patch<AdminSettings>('/api/admin/settings', settings);
+            return response.data;
+        },
+
+        createKnowledge: async (content: string, language: string = 'pl', metadata_json: any = {}) => {
+            const response = await apiClient.post<KnowledgeItem>('/api/admin/knowledge', {
+                content,
+                language,
+                metadata_json,
             });
             return response.data;
         },
