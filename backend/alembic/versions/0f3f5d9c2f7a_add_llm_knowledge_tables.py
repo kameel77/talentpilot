@@ -68,11 +68,12 @@ def upgrade() -> None:
         sa.ForeignKeyConstraint(["source_query_id"], ["user_queries.id"], ondelete="SET NULL"),
     )
 
-    # Safe creation of Enum type for PostgreSQL
-    op.execute("DO $$ BEGIN IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'reviewstatus') THEN CREATE TYPE reviewstatus AS ENUM ('pending', 'approved', 'rejected'); END IF; END $$;")
+    # Definitive fix for duplicate Enum type: drop it if it exists before creation.
+    # This is safe because the table using it (answer_reviews) is about to be created for the first time.
+    op.execute("DROP TYPE IF EXISTS reviewstatus CASCADE")
     
-    # Define the enum for use in create_table - create_type=False prevents SQLAlchemy from emitting CREATE TYPE automatically
-    review_status = sa.Enum("pending", "approved", "rejected", name="reviewstatus", create_type=False)
+    # Define the enum for use in create_table
+    review_status = sa.Enum("pending", "approved", "rejected", name="reviewstatus")
 
     op.create_table(
         "generated_answers",
