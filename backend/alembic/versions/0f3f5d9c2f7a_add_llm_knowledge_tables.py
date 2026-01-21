@@ -71,8 +71,8 @@ def upgrade() -> None:
     # Safe creation of Enum type for PostgreSQL
     op.execute("DO $$ BEGIN IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'reviewstatus') THEN CREATE TYPE reviewstatus AS ENUM ('pending', 'approved', 'rejected'); END IF; END $$;")
     
-    # Define the enum for use in create_table
-    review_status = sa.Enum("pending", "approved", "rejected", name="reviewstatus")
+    # Define the enum for use in create_table - create_type=False prevents SQLAlchemy from emitting CREATE TYPE automatically
+    review_status = sa.Enum("pending", "approved", "rejected", name="reviewstatus", create_type=False)
 
     op.create_table(
         "generated_answers",
