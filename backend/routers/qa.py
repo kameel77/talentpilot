@@ -51,11 +51,11 @@ def parse_structured_answer(text: str) -> QAAnswer:
         # Simple regex-based parsing
         talent_match = re.search(r"Talent:\s*(.*)", text, re.IGNORECASE)
         if talent_match:
-            talent = talent_match.group(1).strip()
+            talent = talent_match.group(1).split("\n")[0].strip()
         
         comp_match = re.search(r"Kompetencja:\s*(.*)", text, re.IGNORECASE)
         if comp_match:
-            competency = comp_match.group(1).strip()
+            competency = comp_match.group(1).split("\n")[0].strip()
             
         # Actions - look for numbered list or bullet points
         action_parts = re.split(r"Akcja:\s*", text, flags=re.IGNORECASE)
@@ -64,6 +64,10 @@ def parse_structured_answer(text: str) -> QAAnswer:
             # Match 1) or - or *
             items = re.findall(r"(?:^\d+[\)\.]\s*|^\-\s*|^[•*]\s*)(.*)", actions_text, re.MULTILINE)
             actions = [i.strip() for i in items if i.strip()]
+        
+        # Clean up keys if LLM included them in text (sometimes happens with weak models)
+        talent = re.sub(r"^\*\*|\*\*$|^\[|\]$", "", talent)
+        competency = re.sub(r"^\*\*|\*\*$|^\[|\]$", "", competency)
         
         if not actions:
             # Fallback if parsing fails but text exists

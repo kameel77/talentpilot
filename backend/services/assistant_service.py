@@ -186,6 +186,11 @@ def generate_answer(
         client = get_openrouter_client()
         model_name = get_setting(db, "openrouter_chat_model")
         messages = build_prompt(db, question, talents, knowledge_items, language)
+        
+        # DEBUG: Log the prompt for developers
+        import json
+        logger.info(f"--- LLM REQUEST (Model: {model_name}) ---\n" + json.dumps(messages, indent=2, ensure_ascii=False))
+
         response = client.chat.completions.create(
             model=model_name,
             messages=messages,
