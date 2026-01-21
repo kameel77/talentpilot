@@ -22,7 +22,16 @@ TOP_K_SOURCES = 5
 
 
 def get_openrouter_client() -> OpenAI:
-    """Initialize OpenRouter client via OpenAI SDK."""
+    """Initialize OpenRouter client via OpenAI SDK.
+    
+    Raises:
+        HTTPException: If OpenRouter API key is not configured.
+    """
+    if not settings.openrouter_api_key:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="AI assistant is not configured. Please set OPENROUTER_API_KEY in environment."
+        )
     return OpenAI(
         api_key=settings.openrouter_api_key,
         base_url=settings.openrouter_base_url,

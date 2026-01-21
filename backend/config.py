@@ -17,8 +17,8 @@ class Settings(BaseSettings):
     # OpenAI (legacy)
     openai_api_key: str
 
-    # OpenRouter
-    openrouter_api_key: str
+    # OpenRouter (optional - for AI assistant functionality)
+    openrouter_api_key: str | None = None
     openrouter_base_url: str = "https://openrouter.ai/api/v1"
     
     # Application
