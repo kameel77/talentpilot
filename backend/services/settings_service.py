@@ -1,7 +1,9 @@
-"""Service helpers for app settings."""
+import logging
 from sqlalchemy.orm import Session
 
 from models import AppSetting
+
+logger = logging.getLogger(__name__)
 
 
 DEFAULT_SETTINGS = {
