@@ -325,3 +325,23 @@ class AnswerReview(Base):
 
     generated_answer = relationship("GeneratedAnswer")
     reviewer = relationship("User", foreign_keys=[reviewed_by])
+
+
+class UserFeedback(Base) :
+    """User feedback for generated answers (1-5 scale)."""
+    __tablename__ = "user_feedbacks"
+
+    id = Column(Integer, primary_key=True, index=True)
+    query_id = Column(Integer, ForeignKey('user_queries.id', ondelete='CASCADE'), nullable=False)
+    answer_id = Column(Integer, ForeignKey('generated_answers.id', ondelete='CASCADE'), nullable=False)
+    user_id = Column(Integer, ForeignKey('users.id', ondelete='CASCADE'), nullable=False)
+    
+    rating = Column(Integer, nullable=True)  # 1-5
+    is_effective = Column(Boolean, nullable=True)  # Tak/Nie
+    comment = Column(Text, nullable=True)
+    
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+    query = relationship("UserQuery")
+    answer = relationship("GeneratedAnswer")
+    user = relationship("User")
