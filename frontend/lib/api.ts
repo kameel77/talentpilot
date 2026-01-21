@@ -159,10 +159,7 @@ apiClient.interceptors.request.use(
     (config) => {
         const token = tokenManager.getToken();
         if (token) {
-            config.headers = {
-                ...(config.headers || {}),
-                Authorization: `Bearer ${token}`,
-            };
+            config.headers.Authorization = `Bearer ${token}`;
         }
         return config;
     },
@@ -359,7 +356,7 @@ export const api = {
                 section: string;
                 content: string;
                 language?: string;
-                metadata_json?: Record<string, any>;
+                metadata_json?: Record<string, unknown>;
             }
         ) => {
             const response = await apiClient.post<KnowledgeItem>('/api/admin/knowledge', {
@@ -384,7 +381,7 @@ export const api = {
                 content?: string;
                 language?: string;
                 is_active?: boolean;
-                metadata_json?: Record<string, any>;
+                metadata_json?: Record<string, unknown>;
             }
         ) => {
             const response = await apiClient.patch<KnowledgeItem>(`/api/admin/knowledge/${knowledgeId}`, payload);

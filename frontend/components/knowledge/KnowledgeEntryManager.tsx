@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 
 import { api, KnowledgeItem } from "@/lib/api";
 import { Badge } from "@/components/ui/badge";
@@ -39,12 +39,7 @@ export function KnowledgeEntryManager({ section, title, description }: Knowledge
     const [form, setForm] = useState<KnowledgeFormState>(DEFAULT_FORM);
     const [editingId, setEditingId] = useState<number | null>(null);
     const [editForm, setEditForm] = useState<KnowledgeFormState>(DEFAULT_FORM);
-
-    useEffect(() => {
-        void fetchEntries();
-    }, [section]);
-
-    const fetchEntries = async () => {
+    const fetchEntries = useCallback(async () => {
         try {
             setLoading(true);
             const data = await api.admin.listKnowledge(section);
@@ -54,7 +49,11 @@ export function KnowledgeEntryManager({ section, title, description }: Knowledge
         } finally {
             setLoading(false);
         }
-    };
+    }, [section]);
+
+    useEffect(() => {
+        void fetchEntries();
+    }, [fetchEntries]);
 
     const categorySuggestions = useMemo(() => {
         const categories = entries.map((entry) => entry.category).filter(Boolean);
