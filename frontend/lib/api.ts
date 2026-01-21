@@ -116,6 +116,37 @@ export interface KnowledgeItem {
     updated_at?: string | null;
 }
 
+// QA v1 Types
+export interface QAAnswer {
+    talent: string;
+    competency: string;
+    actions: string[];
+    fallback: boolean;
+}
+
+export interface QAQueryResponse {
+    query_id: number;
+    answer_id: number;
+    answer: QAAnswer;
+    source: string;
+}
+
+export interface QAHistoryItem {
+    query_id: number;
+    question: string;
+    context: 'self' | 'team';
+    answer: QAAnswer;
+    created_at: string;
+}
+
+export interface QAFeedbackRequest {
+    query_id: number;
+    answer_id: number;
+    rating?: number;
+    is_effective?: boolean;
+    comment?: string;
+}
+
 // Token management
 export const tokenManager = {
     getToken: (): string | null => {
@@ -158,7 +189,7 @@ const apiClient: AxiosInstance = axios.create({
 apiClient.interceptors.request.use(
     (config) => {
         const token = tokenManager.getToken();
-        if (token) {
+        if (token && config.headers) {
             config.headers.Authorization = `Bearer ${token}`;
         }
         return config;
@@ -388,6 +419,25 @@ export const api = {
             return response.data;
         },
     },
+
+    // QA v1
+    qa: {
+        query: async (data: { context: string; question: string; target_user_id?: number; language?: string }): Promise<QAQueryResponse> => {
+            const response = await apiClient.post<QAQueryResponse>('/api/v1/qa/query', data);
+            return response.data;
+        },
+
+        submitFeedback: async (feedback: QAFeedbackRequest) => {
+            const response = await apiClient.post('/api/v1/qa/feedback', feedback);
+            return response.data;
+        },
+
+        getHistory: async (): Promise<QAHistoryItem[]> => {
+            const response = await apiClient.get<QAHistoryItem[]>('/api/v1/qa/history');
+            return response.data;
+        },
+    },
+    tokenManager,
 };
 
 export default apiClient;

@@ -41,7 +41,7 @@ def health_check():
 
 
 # Import routers
-from routers import auth, organizations, teams, users, talents, gallup, invitations, assistant, admin
+from routers import auth, organizations, teams, users, talents, gallup, invitations, assistant, admin, qa
 
 app.include_router(auth.router, prefix="/api/auth", tags=["Authentication"])
 app.include_router(organizations.router, prefix="/api/organizations", tags=["Organizations"])
@@ -51,7 +51,8 @@ app.include_router(talents.router, prefix="/api", tags=["Talents"])
 app.include_router(gallup.router, prefix="/api", tags=["Gallup"])
 app.include_router(invitations.router, prefix="/api/invitations", tags=["Invitations"])
 app.include_router(assistant.router, prefix="/api", tags=["Assistant"])
-app.include_router(admin.router, prefix="/api", tags=["Admin"])
+app.include_router(admin.router, prefix="/api/admin", tags=["Admin"])
+app.include_router(qa.router, prefix="/api", tags=["QA v1"])
 
 
 if __name__ == "__main__":

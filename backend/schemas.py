@@ -287,3 +287,47 @@ class QueryReviewResponse(BaseModel):
 class ReviewUpdate(BaseModel):
     status: ReviewStatus
     edited_text: Optional[str] = None
+
+
+# QA v1 Schemas
+class QAQueryRequest(BaseModel):
+    context: str = Field(..., description="'self' or 'team'")
+    question: str = Field(..., min_length=1, max_length=2000)
+    target_user_id: Optional[int] = None
+    language: str = Field(default="pl", min_length=2, max_length=10)
+
+
+class QAAction(BaseModel):
+    action: str
+
+
+class QAAnswer(BaseModel):
+    talent: str
+    competency: str
+    actions: List[str]
+    fallback: bool = False
+
+
+class QAQueryResponse(BaseModel):
+    query_id: int
+    answer_id: int
+    answer: QAAnswer
+    source: str = "ai+talent-mapping"
+
+
+class QAFeedbackRequest(BaseModel):
+    query_id: int
+    answer_id: int
+    rating: Optional[int] = Field(None, ge=1, le=5)
+    is_effective: Optional[bool] = None
+    comment: Optional[str] = None
+
+
+class QAHistoryItem(BaseModel):
+    query_id: int
+    question: str
+    context: str
+    answer: QAAnswer
+    created_at: datetime
+
+    model_config = {"from_attributes": True}
