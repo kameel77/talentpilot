@@ -11,7 +11,7 @@ from openai import OpenAI, OpenAIError
 from sqlalchemy.orm import Session
 
 from config import settings
-from models import KnowledgeItem, TalentTranslation, User, UserQuery, UserTalent
+from models import KnowledgeItem, Talent, TalentTranslation, User, UserQuery, UserTalent
 from services.settings_service import get_setting
 
 
@@ -51,18 +51,26 @@ def compute_question_hash(question: str) -> str:
     return hashlib.sha256(normalized.encode("utf-8")).hexdigest()
 
 
-def get_user_talents(db: Session, user_id: int, language: str) -> list[str]:
-    """Return ordered talent names for a user in a given language."""
+def get_user_talents(db: Session, user_id: int, language: str) -> list[dict]:
+    """Return ordered talent info for a user in a given language."""
     talents = (
-        db.query(UserTalent, TalentTranslation)
+        db.query(UserTalent, TalentTranslation, Talent)
         .join(TalentTranslation, UserTalent.talent_id == TalentTranslation.talent_id)
+        .join(Talent, UserTalent.talent_id == Talent.id)
         .filter(UserTalent.user_id == user_id, TalentTranslation.language == language)
         .order_by(UserTalent.rank.asc())
         .all()
     )
     if not talents:
         return []
-    return [translation.name for _, translation in talents]
+    return [
+        {
+            "name": trans.name,
+            "rank": ut.rank,
+            "domain": t.domain.value if hasattr(t.domain, "value") else str(t.domain)
+        }
+        for ut, trans, t in talents
+    ]
 
 
 def get_embedding(db: Session, text: str) -> list[float]:
@@ -113,15 +121,34 @@ def retrieve_knowledge(
     )
 
 
+DOMAIN_LABELS = {
+    "executing": "Realizacja (Executing)",
+    "influencing": "Wywieranie wpływu (Influencing)",
+    "relationship_building": "Budowanie relacji (Relationship Building)",
+    "strategic_thinking": "Myślenie strategiczne (Strategic Thinking)",
+}
+
+
 def build_prompt(
     db: Session,
     question: str,
-    talents: Iterable[str],
+    talents: Iterable[dict],
     knowledge_items: Iterable[KnowledgeItem],
     language: str,
 ) -> list[dict]:
     """Build chat prompt messages for LLM using configurable system prompt."""
-    talents_section = ", ".join(talents) if talents else "Brak danych o talentach."
+    if talents:
+        talents_lines = []
+        for t in talents:
+            domain_label = DOMAIN_LABELS.get(t["domain"], t["domain"])
+            line = f"Rank {t['rank']}: {t['name']} (Domena: {domain_label})"
+            if t["rank"] <= 5:
+                line = f"[TOP 5] {line}"
+            talents_lines.append(line)
+        talents_section = "\n".join(talents_lines)
+    else:
+        talents_section = "Brak danych o talentach."
+
     knowledge_section = "\n".join(f"- {item.content}" for item in knowledge_items) or "Brak dodatkowej wiedzy."
 
     # Get configurable system prompt from settings (editable by admin)
@@ -146,7 +173,7 @@ def build_prompt(
 def generate_answer(
     db: Session,
     question: str,
-    talents: Iterable[str],
+    talents: Iterable[dict],
     knowledge_items: Iterable[KnowledgeItem],
     language: str,
 ) -> tuple[str, str]:
