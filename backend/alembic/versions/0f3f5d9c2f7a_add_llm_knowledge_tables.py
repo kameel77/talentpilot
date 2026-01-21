@@ -68,8 +68,11 @@ def upgrade() -> None:
         sa.ForeignKeyConstraint(["source_query_id"], ["user_queries.id"], ondelete="SET NULL"),
     )
 
+    # Safe creation of Enum type for PostgreSQL
+    op.execute("DO $$ BEGIN IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'reviewstatus') THEN CREATE TYPE reviewstatus AS ENUM ('pending', 'approved', 'rejected'); END IF; END $$;")
+    
+    # Define the enum for use in create_table
     review_status = sa.Enum("pending", "approved", "rejected", name="reviewstatus")
-    review_status.create(op.get_bind(), checkfirst=True)
 
     op.create_table(
         "generated_answers",
