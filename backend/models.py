@@ -249,6 +249,10 @@ class KnowledgeItem(Base):
     __tablename__ = "knowledge_items"
 
     id = Column(Integer, primary_key=True, index=True)
+    title = Column(String(200), nullable=False, default="Wpis bez tytułu")
+    category = Column(String(120), nullable=False, default="Ogólne")
+    tags = Column(JSON, nullable=False, default=list)
+    section = Column(String(40), nullable=False, default="merytoryka")
     content = Column(Text, nullable=False)
     embedding = Column(Vector(1536), nullable=False)
     language = Column(String(10), nullable=False, default="pl")
@@ -260,6 +264,7 @@ class KnowledgeItem(Base):
     metadata_json = Column(JSON, nullable=False, default=dict)
 
     created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
 
     created_by_user = relationship("User", foreign_keys=[created_by])
 

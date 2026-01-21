@@ -240,6 +240,9 @@ class TestAdminReviewAnswer:
             KnowledgeItem.source_query_id == user_query.id
         ).first()
         assert knowledge is not None
+        assert knowledge.title == "Test question?"
+        assert knowledge.section == "faq"
+        assert knowledge.category == "FAQ"
         assert knowledge.content == "Improved answer"
 
     def test_review_answer_tenant_isolation(self, client, db_session, test_admin, test_organization, auth_headers_admin):
@@ -299,6 +302,10 @@ class TestAdminKnowledge:
         response = client.post(
             "/api/admin/knowledge",
             json={
+                "title": "Jak wspierać zaangażowanie?",
+                "category": "Motywacja",
+                "tags": ["zaangażowanie", "feedback"],
+                "section": "merytoryka",
                 "content": "Test knowledge content about talent management.",
                 "language": "pl",
                 "metadata_json": {"category": "motivation"},
@@ -307,6 +314,10 @@ class TestAdminKnowledge:
         )
         assert response.status_code == 200
         data = response.json()
+        assert data["title"] == "Jak wspierać zaangażowanie?"
+        assert data["category"] == "Motywacja"
+        assert data["tags"] == ["zaangażowanie", "feedback"]
+        assert data["section"] == "merytoryka"
         assert data["content"] == "Test knowledge content about talent management."
         assert data["language"] == "pl"
         assert data["is_active"] is True

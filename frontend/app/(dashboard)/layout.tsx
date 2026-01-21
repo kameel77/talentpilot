@@ -68,8 +68,12 @@ export default function DashboardLayout({
         { name: "Dzienna wskazówka", href: "/dashboard/tips", icon: Zap },
     ];
 
+    const knowledgeLinks = [
+        { name: "FAQ", href: "/dashboard/admin/knowledge/faq" },
+        { name: "Merytoryka", href: "/dashboard/admin/knowledge/merytoryka" },
+    ];
+
     const adminNavigation = [
-        { name: "Baza wiedzy", href: "/dashboard/admin/knowledge", icon: Database },
         { name: "Ustawienia AI", href: "/dashboard/admin/settings", icon: Shield },
     ];
 
@@ -121,28 +125,68 @@ export default function DashboardLayout({
                             <h3 className="px-4 text-[10px] font-bold uppercase tracking-widest text-slate-500 mb-2">
                                 Administracja
                             </h3>
-                            <div className="space-y-1">
-                                {adminNavigation.map((item) => {
-                                    const isActive = pathname === item.href;
-                                    return (
-                                        <Link
-                                            key={item.name}
-                                            href={item.href}
-                                            className={cn(
-                                                "flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 group text-sm font-medium",
-                                                isActive
-                                                    ? "bg-blue-600 text-white"
-                                                    : "text-slate-400 hover:text-white hover:bg-white/5"
-                                            )}
-                                        >
-                                            <item.icon className={cn(
-                                                "h-5 w-5",
-                                                isActive ? "text-white" : "text-slate-500 group-hover:text-white"
-                                            )} />
-                                            {item.name}
-                                        </Link>
-                                    );
-                                })}
+                            <div className="space-y-3">
+                                <div className="space-y-1">
+                                    <Link
+                                        href="/dashboard/admin/knowledge"
+                                        className={cn(
+                                            "flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 group text-sm font-medium",
+                                            pathname === "/dashboard/admin/knowledge"
+                                                ? "bg-blue-600 text-white"
+                                                : "text-slate-400 hover:text-white hover:bg-white/5"
+                                        )}
+                                    >
+                                        <Database className={cn(
+                                            "h-5 w-5",
+                                            pathname === "/dashboard/admin/knowledge"
+                                                ? "text-white"
+                                                : "text-slate-500 group-hover:text-white"
+                                        )} />
+                                        Baza wiedzy
+                                    </Link>
+                                    <div className="ml-8 space-y-1">
+                                        {knowledgeLinks.map((item) => {
+                                            const isActive = pathname === item.href;
+                                            return (
+                                                <Link
+                                                    key={item.name}
+                                                    href={item.href}
+                                                    className={cn(
+                                                        "flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-semibold tracking-wide transition-all",
+                                                        isActive
+                                                            ? "bg-white/10 text-white"
+                                                            : "text-slate-400 hover:text-white hover:bg-white/5"
+                                                    )}
+                                                >
+                                                    {item.name}
+                                                </Link>
+                                            );
+                                        })}
+                                    </div>
+                                </div>
+                                <div className="space-y-1">
+                                    {adminNavigation.map((item) => {
+                                        const isActive = pathname === item.href;
+                                        return (
+                                            <Link
+                                                key={item.name}
+                                                href={item.href}
+                                                className={cn(
+                                                    "flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 group text-sm font-medium",
+                                                    isActive
+                                                        ? "bg-blue-600 text-white"
+                                                        : "text-slate-400 hover:text-white hover:bg-white/5"
+                                                )}
+                                            >
+                                                <item.icon className={cn(
+                                                    "h-5 w-5",
+                                                    isActive ? "text-white" : "text-slate-500 group-hover:text-white"
+                                                )} />
+                                                {item.name}
+                                            </Link>
+                                        );
+                                    })}
+                                </div>
                             </div>
                         </div>
                     )}

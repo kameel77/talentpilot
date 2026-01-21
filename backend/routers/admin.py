@@ -11,6 +11,7 @@ from schemas import (
     AdminSettingUpdate,
     AdminSettingsResponse,
     KnowledgeItemCreate,
+    KnowledgeItemUpdate,
     KnowledgeItemResponse,
     QueryReviewResponse,
     ReviewUpdate,
@@ -96,6 +97,10 @@ def review_answer(
         content = review.edited_text or answer.answer_text
         embedding = get_embedding(db, content)
         knowledge_item = KnowledgeItem(
+            title=query.question,
+            category="FAQ",
+            tags=[],
+            section="faq",
             content=content,
             embedding=embedding,
             language=query.language,
@@ -118,6 +123,10 @@ def create_knowledge(
 ):
     embedding = get_embedding(db, payload.content)
     knowledge_item = KnowledgeItem(
+        title=payload.title,
+        category=payload.category,
+        tags=payload.tags,
+        section=payload.section,
         content=payload.content,
         embedding=embedding,
         language=payload.language,
@@ -126,6 +135,56 @@ def create_knowledge(
         metadata_json=payload.metadata_json,
     )
     db.add(knowledge_item)
+    db.commit()
+    db.refresh(knowledge_item)
+    return knowledge_item
+
+
+@router.get("/admin/knowledge", response_model=list[KnowledgeItemResponse])
+def list_knowledge(
+    section: str | None = None,
+    db: Session = Depends(get_db),
+    current_user=Depends(require_role(["admin"])),
+):
+    query = db.query(KnowledgeItem).filter(KnowledgeItem.organization_id.is_(None))
+    if section:
+        query = query.filter(KnowledgeItem.section == section)
+    return query.order_by(KnowledgeItem.created_at.desc()).all()
+
+
+@router.patch("/admin/knowledge/{knowledge_id}", response_model=KnowledgeItemResponse)
+def update_knowledge(
+    knowledge_id: int,
+    payload: KnowledgeItemUpdate,
+    db: Session = Depends(get_db),
+    current_user=Depends(require_role(["admin"])),
+):
+    knowledge_item = (
+        db.query(KnowledgeItem)
+        .filter(KnowledgeItem.id == knowledge_id, KnowledgeItem.organization_id.is_(None))
+        .first()
+    )
+    if not knowledge_item:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Knowledge item not found")
+
+    if payload.title is not None:
+        knowledge_item.title = payload.title
+    if payload.category is not None:
+        knowledge_item.category = payload.category
+    if payload.tags is not None:
+        knowledge_item.tags = payload.tags
+    if payload.section is not None:
+        knowledge_item.section = payload.section
+    if payload.language is not None:
+        knowledge_item.language = payload.language
+    if payload.is_active is not None:
+        knowledge_item.is_active = payload.is_active
+    if payload.metadata_json is not None:
+        knowledge_item.metadata_json = payload.metadata_json
+    if payload.content is not None and payload.content != knowledge_item.content:
+        knowledge_item.content = payload.content
+        knowledge_item.embedding = get_embedding(db, payload.content)
+
     db.commit()
     db.refresh(knowledge_item)
     return knowledge_item

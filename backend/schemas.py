@@ -221,17 +221,37 @@ class AssistantQueryResponse(BaseModel):
 
 
 class KnowledgeItemCreate(BaseModel):
+    title: str = Field(..., min_length=1, max_length=200)
+    category: str = Field(..., min_length=1, max_length=120)
+    tags: List[str] = Field(default_factory=list)
+    section: str = Field(..., min_length=1, max_length=40)
     content: str = Field(..., min_length=1)
     language: str = Field(default="pl", min_length=2, max_length=10)
     metadata_json: dict = Field(default_factory=dict)
 
 
+class KnowledgeItemUpdate(BaseModel):
+    title: Optional[str] = Field(default=None, min_length=1, max_length=200)
+    category: Optional[str] = Field(default=None, min_length=1, max_length=120)
+    tags: Optional[List[str]] = None
+    section: Optional[str] = Field(default=None, min_length=1, max_length=40)
+    content: Optional[str] = Field(default=None, min_length=1)
+    language: Optional[str] = Field(default=None, min_length=2, max_length=10)
+    is_active: Optional[bool] = None
+    metadata_json: Optional[dict] = None
+
+
 class KnowledgeItemResponse(BaseModel):
     id: int
+    title: str
+    category: str
+    tags: List[str]
+    section: str
     content: str
     language: str
     is_active: bool
     created_at: datetime
+    updated_at: Optional[datetime] = None
 
     model_config = {"from_attributes": True}
 

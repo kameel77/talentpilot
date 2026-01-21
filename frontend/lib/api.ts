@@ -105,10 +105,15 @@ export interface AdminSettingUpdate {
 
 export interface KnowledgeItem {
     id: number;
+    title: string;
+    category: string;
+    tags: string[];
+    section: string;
     content: string;
     language: string;
     is_active: boolean;
     created_at: string;
+    updated_at?: string | null;
 }
 
 // Token management
@@ -339,12 +344,50 @@ export const api = {
             return response.data;
         },
 
-        createKnowledge: async (content: string, language: string = 'pl', metadata_json: any = {}) => {
-            const response = await apiClient.post<KnowledgeItem>('/api/admin/knowledge', {
-                content,
-                language,
-                metadata_json,
+        listKnowledge: async (section?: string): Promise<KnowledgeItem[]> => {
+            const response = await apiClient.get<KnowledgeItem[]>('/api/admin/knowledge', {
+                params: section ? { section } : undefined,
             });
+            return response.data;
+        },
+
+        createKnowledge: async (
+            payload: {
+                title: string;
+                category: string;
+                tags: string[];
+                section: string;
+                content: string;
+                language?: string;
+                metadata_json?: Record<string, any>;
+            }
+        ) => {
+            const response = await apiClient.post<KnowledgeItem>('/api/admin/knowledge', {
+                title: payload.title,
+                category: payload.category,
+                tags: payload.tags,
+                section: payload.section,
+                content: payload.content,
+                language: payload.language ?? 'pl',
+                metadata_json: payload.metadata_json ?? {},
+            });
+            return response.data;
+        },
+
+        updateKnowledge: async (
+            knowledgeId: number,
+            payload: {
+                title?: string;
+                category?: string;
+                tags?: string[];
+                section?: string;
+                content?: string;
+                language?: string;
+                is_active?: boolean;
+                metadata_json?: Record<string, any>;
+            }
+        ) => {
+            const response = await apiClient.patch<KnowledgeItem>(`/api/admin/knowledge/${knowledgeId}`, payload);
             return response.data;
         },
     },

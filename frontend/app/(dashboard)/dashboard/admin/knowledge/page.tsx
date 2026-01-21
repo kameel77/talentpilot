@@ -1,12 +1,14 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useState } from "react";
-import { api, QueryReview } from "@/lib/api";
+import { Check, X, Loader2, MessageSquare, Database } from "lucide-react";
+
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
-import { Check, X, Loader2, MessageSquare, Database, AlertCircle } from "lucide-react";
+import { api, QueryReview } from "@/lib/api";
 
 export default function AdminKnowledgePage() {
     const [queries, setQueries] = useState<QueryReview[]>([]);
@@ -73,7 +75,7 @@ export default function AdminKnowledgePage() {
         <div className="space-y-8 max-w-5xl mx-auto">
             <div className="flex items-center justify-between">
                 <div>
-                    <h1 className="text-3xl font-bold font-heading text-slate-900 tracking-tight">Zarządzanie wiedzą</h1>
+                    <h1 className="text-3xl font-bold font-heading text-slate-900 tracking-tight">Nowe pytania</h1>
                     <p className="mt-1 text-slate-500 font-medium">
                         Przeglądaj i zatwierdzaj automatyczne odpowiedzi AI do bazy wiedzy.
                     </p>
@@ -81,6 +83,35 @@ export default function AdminKnowledgePage() {
                 <Badge variant="outline" className="px-4 py-1 text-sm bg-blue-50 text-blue-700 border-blue-200">
                     {queries.length} nowych zapytań
                 </Badge>
+            </div>
+
+            <div className="grid gap-4 md:grid-cols-2">
+                <Card className="border-slate-200/70 shadow-sm">
+                    <CardHeader className="pb-2">
+                        <CardTitle className="text-base">FAQ</CardTitle>
+                        <CardDescription>
+                            Edytuj odpowiedzi na najczęstsze pytania użytkowników.
+                        </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                        <Button asChild variant="outline" size="sm">
+                            <Link href="/dashboard/admin/knowledge/faq">Przejdź do FAQ</Link>
+                        </Button>
+                    </CardContent>
+                </Card>
+                <Card className="border-slate-200/70 shadow-sm">
+                    <CardHeader className="pb-2">
+                        <CardTitle className="text-base">Merytoryka</CardTitle>
+                        <CardDescription>
+                            Zarządzaj bazą wiedzy eksperckiej dla asystenta AI.
+                        </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                        <Button asChild variant="outline" size="sm">
+                            <Link href="/dashboard/admin/knowledge/merytoryka">Przejdź do Merytoryki</Link>
+                        </Button>
+                    </CardContent>
+                </Card>
             </div>
 
             {queries.length === 0 ? (
