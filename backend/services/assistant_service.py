@@ -2,16 +2,20 @@
 from __future__ import annotations
 
 import hashlib
+import logging
 import re
 from typing import Iterable
 
-from openai import OpenAI
+from fastapi import HTTPException, status
+from openai import OpenAI, OpenAIError
 from sqlalchemy.orm import Session
 
 from config import settings
 from models import KnowledgeItem, TalentTranslation, User, UserQuery, UserTalent
 from services.settings_service import get_setting
 
+
+logger = logging.getLogger(__name__)
 
 DEFAULT_LANGUAGE = "pl"
 TOP_K_SOURCES = 5
@@ -53,14 +57,25 @@ def get_user_talents(db: Session, user_id: int, language: str) -> list[str]:
 
 
 def get_embedding(db: Session, text: str) -> list[float]:
-    """Generate embedding for the given text using OpenRouter."""
-    client = get_openrouter_client()
-    embedding_model = get_setting(db, "openrouter_embedding_model")
-    response = client.embeddings.create(
-        model=embedding_model,
-        input=text,
-    )
-    return response.data[0].embedding
+    """Generate embedding for the given text using OpenRouter.
+    
+    Raises:
+        HTTPException: If embedding generation fails.
+    """
+    try:
+        client = get_openrouter_client()
+        embedding_model = get_setting(db, "openrouter_embedding_model")
+        response = client.embeddings.create(
+            model=embedding_model,
+            input=text,
+        )
+        return response.data[0].embedding
+    except OpenAIError as e:
+        logger.error(f"OpenRouter embedding error: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Usługa generowania embeddingów jest chwilowo niedostępna. Spróbuj ponownie za chwilę."
+        )
 
 
 def retrieve_knowledge(
@@ -70,7 +85,12 @@ def retrieve_knowledge(
     language: str,
     top_k: int = TOP_K_SOURCES,
 ) -> list[KnowledgeItem]:
-    """Retrieve curated knowledge items using vector similarity."""
+    """Retrieve curated knowledge items using vector similarity.
+    
+    Returns both global knowledge (organization_id=null) and org-specific knowledge.
+    Global knowledge contains general talent management advice.
+    Org-specific knowledge contains cultural/team-specific context added by org admins.
+    """
     return (
         db.query(KnowledgeItem)
         .filter(
@@ -84,17 +104,20 @@ def retrieve_knowledge(
     )
 
 
-def build_prompt(question: str, talents: Iterable[str], knowledge_items: Iterable[KnowledgeItem], language: str) -> list[dict]:
-    """Build chat prompt messages for LLM."""
+def build_prompt(
+    db: Session,
+    question: str,
+    talents: Iterable[str],
+    knowledge_items: Iterable[KnowledgeItem],
+    language: str,
+) -> list[dict]:
+    """Build chat prompt messages for LLM using configurable system prompt."""
     talents_section = ", ".join(talents) if talents else "Brak danych o talentach."
     knowledge_section = "\n".join(f"- {item.content}" for item in knowledge_items) or "Brak dodatkowej wiedzy."
 
-    system_message = (
-        "Jesteś profesjonalnym doradcą managerskim w aplikacji TalentPilot. "
-        "Twoim celem jest przetłumaczenie talentów na praktyczne kompetencje i działania. "
-        "Odpowiadaj z empatią, konkretnie i bez ogólników. "
-        f"Odpowiedzi udzielaj w języku: {language}."
-    )
+    # Get configurable system prompt from settings (editable by admin)
+    system_prompt_base = get_setting(db, "system_prompt")
+    system_message = f"{system_prompt_base} Odpowiedzi udzielaj w języku: {language}."
 
     user_message = (
         "Kontekst talentów:\n"
@@ -111,18 +134,35 @@ def build_prompt(question: str, talents: Iterable[str], knowledge_items: Iterabl
     ]
 
 
-def generate_answer(db: Session, question: str, talents: Iterable[str], knowledge_items: Iterable[KnowledgeItem], language: str) -> tuple[str, str]:
-    """Generate answer using LLM."""
-    client = get_openrouter_client()
-    model_name = get_setting(db, "openrouter_chat_model")
-    messages = build_prompt(question, talents, knowledge_items, language)
-    response = client.chat.completions.create(
-        model=model_name,
-        messages=messages,
-        temperature=0.4,
-    )
-    answer_text = response.choices[0].message.content.strip()
-    return answer_text, model_name
+def generate_answer(
+    db: Session,
+    question: str,
+    talents: Iterable[str],
+    knowledge_items: Iterable[KnowledgeItem],
+    language: str,
+) -> tuple[str, str]:
+    """Generate answer using LLM.
+    
+    Raises:
+        HTTPException: If LLM API call fails.
+    """
+    try:
+        client = get_openrouter_client()
+        model_name = get_setting(db, "openrouter_chat_model")
+        messages = build_prompt(db, question, talents, knowledge_items, language)
+        response = client.chat.completions.create(
+            model=model_name,
+            messages=messages,
+            temperature=0.4,
+        )
+        answer_text = response.choices[0].message.content.strip()
+        return answer_text, model_name
+    except OpenAIError as e:
+        logger.error(f"OpenRouter chat completion error: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Usługa AI jest chwilowo niedostępna. Spróbuj ponownie za chwilę."
+        )
 
 
 def find_similar_query(
@@ -146,8 +186,11 @@ def find_similar_query(
     )
 
 
-def get_user_or_404(db: Session, user_id: int, organization_id: int) -> User:
-    """Fetch a user with organization check."""
+def get_user_in_organization(db: Session, user_id: int, organization_id: int) -> User | None:
+    """Fetch a user belonging to the specified organization.
+    
+    Returns None if user doesn't exist or belongs to a different organization.
+    """
     return (
         db.query(User)
         .filter(User.id == user_id, User.organization_id == organization_id)

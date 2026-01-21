@@ -62,9 +62,20 @@ def review_answer(
     db: Session = Depends(get_db),
     current_user=Depends(require_role(["admin"])),
 ):
-    answer = db.query(GeneratedAnswer).filter(GeneratedAnswer.id == answer_id).first()
-    if not answer:
+    # Join with UserQuery to verify organization ownership
+    result = (
+        db.query(GeneratedAnswer, UserQuery)
+        .join(UserQuery, GeneratedAnswer.query_id == UserQuery.id)
+        .filter(
+            GeneratedAnswer.id == answer_id,
+            UserQuery.organization_id == current_user.organization_id,
+        )
+        .first()
+    )
+    if not result:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Answer not found")
+    
+    answer, query = result
 
     review = (
         db.query(AnswerReview)
@@ -81,9 +92,7 @@ def review_answer(
     review.reviewed_at = datetime.utcnow()
 
     if review.status == ReviewStatus.APPROVED:
-        query = db.query(UserQuery).filter(UserQuery.id == answer.query_id).first()
-        if not query:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Query not found")
+        # Use query from the join above (line 78)
         content = review.edited_text or answer.answer_text
         embedding = get_embedding(db, content)
         knowledge_item = KnowledgeItem(

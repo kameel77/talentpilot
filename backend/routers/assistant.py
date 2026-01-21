@@ -13,7 +13,7 @@ from services.assistant_service import (
     find_similar_query,
     generate_answer,
     get_embedding,
-    get_user_or_404,
+    get_user_in_organization,
     get_user_talents,
     retrieve_knowledge,
 )
@@ -41,7 +41,7 @@ def query_assistant(
 ):
     language = request.language or "pl"
     target_user_id = request.target_user_id or current_user.id
-    target_user = get_user_or_404(db, target_user_id, current_user.organization_id)
+    target_user = get_user_in_organization(db, target_user_id, current_user.organization_id)
     if not target_user:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
 

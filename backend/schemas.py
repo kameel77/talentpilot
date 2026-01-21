@@ -4,6 +4,8 @@ from typing import List, Optional
 from datetime import datetime
 from enum import Enum
 
+from models import ReviewStatus
+
 
 # Enums
 class UserRole(str, Enum):
@@ -240,10 +242,7 @@ class AdminSettingsResponse(BaseModel):
     settings: dict[str, str]
 
 
-class ReviewStatus(str, Enum):
-    PENDING = "pending"
-    APPROVED = "approved"
-    REJECTED = "rejected"
+# ReviewStatus imported from models.py
 
 
 class QueryReviewResponse(BaseModel):

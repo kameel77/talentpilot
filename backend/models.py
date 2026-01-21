@@ -208,20 +208,7 @@ class UserTalent(Base):
     talent = relationship("Talent", back_populates="user_talents")
 
 
-class KnowledgeBase(Base):
-    """Knowledge base for RAG with pgvector embeddings."""
-    __tablename__ = "knowledge_base"
-    
-    id = Column(Integer, primary_key=True, index=True)
-    content = Column(Text, nullable=False)
-    
-    # pgvector embedding (will be added after pgvector migration)
-    # embedding = Column(Vector(384))  # For multilingual-e5-small or text-embedding-3-small
-    
-    # Metadata for filtering
-    metadata_json = Column(JSON, nullable=False)  # e.g., {"talent_id": 1, "context": "motivation"}
-    
-    created_at = Column(DateTime(timezone=True), server_default=func.now())
+# NOTE: KnowledgeBase model removed - replaced by KnowledgeItem with pgvector embeddings
 
 
 class AITip(Base):
