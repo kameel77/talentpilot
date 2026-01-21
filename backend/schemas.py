@@ -198,3 +198,66 @@ class GallupPdfParseResponse(BaseModel):
     rankings: dict[str, int]  # Internal code -> rank
     translated_rankings: dict[str, int]  # Translated name -> rank
     language: str
+
+
+class AssistantQueryRequest(BaseModel):
+    question: str = Field(..., min_length=1, max_length=2000)
+    target_user_id: Optional[int] = None
+    language: str = Field(default="pl", min_length=2, max_length=10)
+
+
+class AssistantQueryResponse(BaseModel):
+    query_id: int
+    answer_id: int
+    answer_text: str
+    model_name: str
+
+    model_config = {"from_attributes": True}
+
+
+class KnowledgeItemCreate(BaseModel):
+    content: str = Field(..., min_length=1)
+    language: str = Field(default="pl", min_length=2, max_length=10)
+    metadata_json: dict = Field(default_factory=dict)
+
+
+class KnowledgeItemResponse(BaseModel):
+    id: int
+    content: str
+    language: str
+    is_active: bool
+    created_at: datetime
+
+    model_config = {"from_attributes": True}
+
+
+class AdminSettingUpdate(BaseModel):
+    key: str = Field(..., min_length=1, max_length=100)
+    value: str = Field(..., min_length=1, max_length=500)
+
+
+class AdminSettingsResponse(BaseModel):
+    settings: dict[str, str]
+
+
+class ReviewStatus(str, Enum):
+    PENDING = "pending"
+    APPROVED = "approved"
+    REJECTED = "rejected"
+
+
+class QueryReviewResponse(BaseModel):
+    query_id: int
+    question: str
+    language: str
+    created_at: datetime
+    answer_id: int
+    answer_text: str
+    model_name: str
+    status: ReviewStatus
+    edited_text: Optional[str] = None
+
+
+class ReviewUpdate(BaseModel):
+    status: ReviewStatus
+    edited_text: Optional[str] = None

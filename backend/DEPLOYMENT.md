@@ -30,6 +30,7 @@ cp .env.example .env
 # - DATABASE_URL=postgresql://user:password@localhost:5432/talentpilot
 # - JWT_SECRET=$(openssl rand -hex 32)
 # - OPENAI_API_KEY=your_key_here
+# - OPENROUTER_API_KEY=your_key_here
 ```
 
 ### 2. Initialize Database
@@ -80,6 +81,7 @@ When deploying for the first time to Coolify:
    DATABASE_URL=postgresql://talentpilot:talentpilot@postgres:5432/talentpilot
    JWT_SECRET=your_generated_secret
    OPENAI_API_KEY=your_openai_key
+   OPENROUTER_API_KEY=your_openrouter_key
    DEBUG=false
    ```
 3. Build command: `pip install -r requirements.txt`
@@ -209,7 +211,8 @@ docker exec -it <postgres_container_id> psql -U talentpilot -d talentpilot -c "S
 |----------|----------|-------------|
 | `DATABASE_URL` | Yes | PostgreSQL connection string |
 | `JWT_SECRET` | Yes | Secret for JWT signing (generate with `openssl rand -hex 32`) |
-| `OPENAI_API_KEY` | Yes | OpenAI API key for AI features |
+| `OPENAI_API_KEY` | Yes | OpenAI API key for legacy AI features |
+| `OPENROUTER_API_KEY` | Yes | OpenRouter API key for LLM + embeddings |
 | `DEBUG` | No | Enable debug mode (default: false) |
 | `COOLIFY_URL` | No | Coolify URL for webhooks |
 | `COOLIFY_FQDN` | No | Coolify FQDN |
@@ -244,4 +247,4 @@ When setting up automated deployments:
 - Never commit `.env` files with real secrets
 - Use Coolify's secret management for production
 - Rotate `JWT_SECRET` periodically
-- Keep `OPENAI_API_KEY` secure
+- Keep `OPENAI_API_KEY` and `OPENROUTER_API_KEY` secure

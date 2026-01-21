@@ -14,8 +14,12 @@ class Settings(BaseSettings):
     jwt_algorithm: str = "HS256"
     jwt_expiration_minutes: int = 1440  # 24 hours
     
-    # OpenAI
+    # OpenAI (legacy)
     openai_api_key: str
+
+    # OpenRouter
+    openrouter_api_key: str
+    openrouter_base_url: str = "https://openrouter.ai/api/v1"
     
     # Application
     environment: str = "development"
