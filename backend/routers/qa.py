@@ -48,6 +48,7 @@ def parse_structured_answer(text: str) -> QAAnswer:
     fallback = False
 
     try:
+        logger.info(f"--- PARSING LLM TEXT ---\n{text}")
         # Simple regex-based parsing
         talent_match = re.search(r"Talent:\s*(.*)", text, re.IGNORECASE)
         if talent_match:

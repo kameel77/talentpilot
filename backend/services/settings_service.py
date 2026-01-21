@@ -28,7 +28,9 @@ def get_setting(db: Session, key: str) -> str:
     """Return a setting value or fallback to defaults."""
     setting = db.query(AppSetting).filter(AppSetting.key == key).first()
     if setting:
+        logger.info(f"Setting '{key}' loaded from DATABASE")
         return setting.value
+    logger.info(f"Setting '{key}' loaded from CODE DEFAULTS")
     return DEFAULT_SETTINGS.get(key, "")
 
 
