@@ -214,7 +214,10 @@ class AssistantQueryResponse(BaseModel):
     answer_text: str
     model_name: str
 
-    model_config = {"from_attributes": True}
+    model_config = {
+        "from_attributes": True,
+        "protected_namespaces": (),
+    }
 
 
 class KnowledgeItemCreate(BaseModel):
@@ -255,6 +258,10 @@ class QueryReviewResponse(BaseModel):
     model_name: str
     status: ReviewStatus
     edited_text: Optional[str] = None
+
+    model_config = {
+        "protected_namespaces": (),
+    }
 
 
 class ReviewUpdate(BaseModel):
