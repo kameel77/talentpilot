@@ -69,17 +69,17 @@ export default function DashboardPage() {
                     </h3>
 
                     <div className="space-y-6">
-                        <DomainProgress label="Realizacja" value={35} color="bg-indigo-500" />
-                        <DomainProgress label="Wpływanie" value={25} color="bg-orange-500" />
-                        <DomainProgress label="Budowanie relacji" value={22} color="bg-teal-500" />
-                        <DomainProgress label="Myślenie strategiczne" value={18} color="bg-blue-500" />
+                        <DomainProgress label="Realizacja" value={35} color="bg-domain-executing" />
+                        <DomainProgress label="Wpływanie" value={25} color="bg-domain-influencing" />
+                        <DomainProgress label="Budowanie relacji" value={22} color="bg-domain-relationship" />
+                        <DomainProgress label="Myślenie strategiczne" value={18} color="bg-domain-strategic" />
                     </div>
 
                     <div className="mt-8 flex gap-3">
-                        <div className="h-10 grow bg-indigo-500 rounded-xl" />
-                        <div className="h-10 grow bg-orange-500 rounded-xl" />
-                        <div className="h-10 grow bg-teal-500 rounded-xl" />
-                        <div className="h-10 grow bg-blue-500 rounded-xl" />
+                        <div className="h-10 grow bg-domain-executing rounded-xl" />
+                        <div className="h-10 grow bg-domain-influencing rounded-xl" />
+                        <div className="h-10 grow bg-domain-relationship rounded-xl" />
+                        <div className="h-10 grow bg-domain-strategic rounded-xl" />
                     </div>
                 </div>
 

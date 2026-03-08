@@ -30,14 +30,14 @@
   --radius: 0.75rem;
 
   /* Domain colors */
-  --color-domain-executing: hsl(262 60% 50%);
-  --color-domain-executing-light: hsl(262 60% 95%);
-  --color-domain-influencing: hsl(25 95% 53%);
-  --color-domain-influencing-light: hsl(25 95% 95%);
-  --color-domain-relationship: hsl(168 70% 40%);
-  --color-domain-relationship-light: hsl(168 70% 94%);
-  --color-domain-strategic: hsl(210 80% 50%);
-  --color-domain-strategic-light: hsl(210 80% 95%);
+  --color-domain-executing: #6B33CC;
+  --color-domain-executing-light: #F0E9FF;
+  --color-domain-influencing: #F97415;
+  --color-domain-influencing-light: #FFF1E7;
+  --color-domain-relationship: #1FAD91;
+  --color-domain-relationship-light: #E9FBF8;
+  --color-domain-strategic: #1A80E6;
+  --color-domain-strategic-light: #EBF5FF;
 
   /* Status colors */
   --color-success: hsl(152 60% 42%);
