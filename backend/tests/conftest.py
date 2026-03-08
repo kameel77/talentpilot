@@ -15,6 +15,7 @@ os.environ.setdefault("OPENROUTER_API_KEY", "test-openrouter-key")
 
 from database import Base, get_db
 from main import app
+from external_app import external_app
 from models import Organization, User, UserRole
 from auth import create_access_token, hash_password
 
@@ -52,9 +53,12 @@ def client(db_session):
             pass
 
     app.dependency_overrides[get_db] = override_get_db
+    # Sub-apps have independent dependency registries — override separately.
+    external_app.dependency_overrides[get_db] = override_get_db
     with TestClient(app) as test_client:
         yield test_client
     app.dependency_overrides.clear()
+    external_app.dependency_overrides.clear()
 
 
 @pytest.fixture
