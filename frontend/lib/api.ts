@@ -17,8 +17,29 @@ export interface User {
     is_active: boolean;
     is_ghost: boolean;
     avatar_url?: string;
+    phone?: string;
+    linkedin_url?: string;
     organization_id: number;
     created_at: string;
+}
+
+export interface Organization {
+    id: number;
+    name: string;
+    address?: string;
+    created_at: string;
+}
+
+export interface UserUpdateData {
+    full_name?: string;
+    email?: string;
+    phone?: string;
+    linkedin_url?: string;
+    avatar_url?: string;
+    superpowers?: string;
+    motivators?: string;
+    blockers?: string;
+    feedback_style?: string;
 }
 
 export interface LoginCredentials {
@@ -243,8 +264,13 @@ export const api = {
             return response.data;
         },
 
-        get: async (id: number) => {
-            const response = await apiClient.get(`/api/organizations/${id}`);
+        get: async (id: number): Promise<Organization> => {
+            const response = await apiClient.get<Organization>(`/api/organizations/${id}`);
+            return response.data;
+        },
+
+        update: async (id: number, data: { name?: string; address?: string }): Promise<Organization> => {
+            const response = await apiClient.patch<Organization>(`/api/organizations/${id}`, data);
             return response.data;
         },
     },
@@ -275,9 +301,21 @@ export const api = {
             return response.data;
         },
 
-        get: async (id: number) => {
-            const response = await apiClient.get(`/api/users/${id}`);
+        get: async (id: number): Promise<User> => {
+            const response = await apiClient.get<User>(`/api/users/${id}`);
             return response.data;
+        },
+
+        update: async (id: number, data: UserUpdateData): Promise<User> => {
+            const response = await apiClient.patch<User>(`/api/users/${id}`, data);
+            return response.data;
+        },
+
+        changePassword: async (currentPassword: string, newPassword: string): Promise<void> => {
+            await apiClient.post('/api/users/me/change-password', {
+                current_password: currentPassword,
+                new_password: newPassword,
+            });
         },
 
         create: async (data: { email: string; password: string; full_name: string; role?: string }) => {

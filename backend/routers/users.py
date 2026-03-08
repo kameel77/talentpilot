@@ -5,8 +5,8 @@ from typing import List, Optional
 
 from database import get_db
 from models import User, UserRole
-from schemas import UserCreate, UserUpdate, UserResponse, UserDetailResponse
-from auth import get_current_user, require_role, hash_password
+from schemas import UserCreate, UserUpdate, UserResponse, UserDetailResponse, PasswordChangeRequest
+from auth import get_current_user, require_role, hash_password, verify_password
 
 router = APIRouter()
 
@@ -142,6 +142,18 @@ def update_user(
     # Update fields
     if data.full_name is not None:
         user.full_name = data.full_name
+    if data.email is not None:
+        existing = db.query(User).filter(User.email == data.email, User.id != user.id).first()
+        if existing:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Email already in use"
+            )
+        user.email = data.email
+    if data.phone is not None:
+        user.phone = data.phone
+    if data.linkedin_url is not None:
+        user.linkedin_url = data.linkedin_url
     if data.avatar_url is not None:
         user.avatar_url = data.avatar_url
     if data.superpowers is not None:
@@ -152,11 +164,28 @@ def update_user(
         user.blockers = data.blockers
     if data.feedback_style is not None:
         user.feedback_style = data.feedback_style
-    
+
     db.commit()
     db.refresh(user)
-    
+
     return user
+
+
+@router.post("/me/change-password", status_code=status.HTTP_204_NO_CONTENT)
+def change_password(
+    data: PasswordChangeRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """Change current user's password."""
+    if not verify_password(data.current_password, current_user.hashed_password):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Current password is incorrect"
+        )
+    current_user.hashed_password = hash_password(data.new_password)
+    db.commit()
+    return None
 
 
 @router.delete("/{user_id}", status_code=status.HTTP_204_NO_CONTENT)

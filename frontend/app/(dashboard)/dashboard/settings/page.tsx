@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -18,20 +18,147 @@ import {
   Save,
   Upload,
   Sparkles,
+  User,
+  Lock,
 } from "lucide-react";
 import { SettingsSection } from "@/components/dashboard/SettingsSection";
 import { GALLUP_TALENTS } from "@/data/gallupTalents";
 import { UserTalent } from "@/types/talent";
-import { tokenManager } from "@/lib/api";
+import { api, tokenManager, type User as UserType, type Organization } from "@/lib/api";
 import { cn } from "@/lib/utils";
 
 export default function SettingsPage() {
   const [talentImportOpen, setTalentImportOpen] = useState(false);
   const [myTalents, setMyTalents] = useState<UserTalent[]>([]);
 
+  // Current user data
+  const [currentUser, setCurrentUser] = useState<UserType | null>(null);
+  const [org, setOrg] = useState<Organization | null>(null);
+
+  // Profile form
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
+  const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");
+  const [linkedin, setLinkedin] = useState("");
+  const [profileSaving, setProfileSaving] = useState(false);
+  const [profileMsg, setProfileMsg] = useState<{ type: "success" | "error"; text: string } | null>(null);
+
+  // Password form
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [passwordSaving, setPasswordSaving] = useState(false);
+  const [passwordMsg, setPasswordMsg] = useState<{ type: "success" | "error"; text: string } | null>(null);
+
+  // Organization form
+  const [orgName, setOrgName] = useState("");
+  const [orgAddress, setOrgAddress] = useState("");
+  const [orgSaving, setOrgSaving] = useState(false);
+  const [orgMsg, setOrgMsg] = useState<{ type: "success" | "error"; text: string } | null>(null);
+
+  useEffect(() => {
+    const user = tokenManager.getUser();
+    if (!user) return;
+    setCurrentUser(user);
+
+    // Split full_name into first/last
+    const parts = user.full_name.trim().split(" ");
+    setFirstName(parts[0] ?? "");
+    setLastName(parts.slice(1).join(" "));
+    setEmail(user.email);
+    setPhone(user.phone ?? "");
+    setLinkedin(user.linkedin_url ?? "");
+
+    // Load fresh user data from API
+    api.users.get(user.id).then((u) => {
+      setCurrentUser(u);
+      const p = u.full_name.trim().split(" ");
+      setFirstName(p[0] ?? "");
+      setLastName(p.slice(1).join(" "));
+      setEmail(u.email);
+      setPhone(u.phone ?? "");
+      setLinkedin(u.linkedin_url ?? "");
+      tokenManager.setUser(u);
+    });
+
+    // Load organization
+    api.organizations.get(user.organization_id).then((o) => {
+      setOrg(o);
+      setOrgName(o.name);
+      setOrgAddress(o.address ?? "");
+    });
+  }, []);
+
   const handleTalentsSave = (talents: UserTalent[]) => {
     setMyTalents(talents);
   };
+
+  const handleProfileSave = async () => {
+    if (!currentUser) return;
+    setProfileSaving(true);
+    setProfileMsg(null);
+    try {
+      const full_name = `${firstName.trim()} ${lastName.trim()}`.trim();
+      const updated = await api.users.update(currentUser.id, {
+        full_name,
+        email,
+        phone: phone || undefined,
+        linkedin_url: linkedin || undefined,
+      });
+      tokenManager.setUser(updated);
+      setCurrentUser(updated);
+      setProfileMsg({ type: "success", text: "Dane zostały zapisane." });
+    } catch {
+      setProfileMsg({ type: "error", text: "Błąd zapisu. Spróbuj ponownie." });
+    } finally {
+      setProfileSaving(false);
+    }
+  };
+
+  const handlePasswordChange = async () => {
+    setPasswordMsg(null);
+    if (newPassword !== confirmPassword) {
+      setPasswordMsg({ type: "error", text: "Nowe hasła nie są zgodne." });
+      return;
+    }
+    if (newPassword.length < 8) {
+      setPasswordMsg({ type: "error", text: "Nowe hasło musi mieć co najmniej 8 znaków." });
+      return;
+    }
+    setPasswordSaving(true);
+    try {
+      await api.users.changePassword(currentPassword, newPassword);
+      setCurrentPassword("");
+      setNewPassword("");
+      setConfirmPassword("");
+      setPasswordMsg({ type: "success", text: "Hasło zostało zmienione." });
+    } catch {
+      setPasswordMsg({ type: "error", text: "Nieprawidłowe aktualne hasło." });
+    } finally {
+      setPasswordSaving(false);
+    }
+  };
+
+  const handleOrgSave = async () => {
+    if (!org) return;
+    setOrgSaving(true);
+    setOrgMsg(null);
+    try {
+      const updated = await api.organizations.update(org.id, {
+        name: orgName || undefined,
+        address: orgAddress || undefined,
+      });
+      setOrg(updated);
+      setOrgMsg({ type: "success", text: "Dane organizacji zostały zapisane." });
+    } catch {
+      setOrgMsg({ type: "error", text: "Błąd zapisu. Sprawdź uprawnienia." });
+    } finally {
+      setOrgSaving(false);
+    }
+  };
+
+  const isAdmin = currentUser?.role === "admin";
 
   return (
     <div className="mx-auto max-w-3xl space-y-6">
@@ -41,21 +168,166 @@ export default function SettingsPage() {
         <p className="text-body">Zarządzaj ustawieniami konta i organizacji</p>
       </div>
 
+      {/* User Profile */}
+      <SettingsSection
+        icon={User}
+        title="Mój profil"
+        description="Dane osobowe i kontaktowe"
+      >
+        <div className="space-y-4">
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="space-y-2">
+              <Label htmlFor="first-name">Imię</Label>
+              <Input
+                id="first-name"
+                value={firstName}
+                onChange={(e) => setFirstName(e.target.value)}
+                placeholder="Jan"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="last-name">Nazwisko</Label>
+              <Input
+                id="last-name"
+                value={lastName}
+                onChange={(e) => setLastName(e.target.value)}
+                placeholder="Kowalski"
+              />
+            </div>
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="email">Adres email</Label>
+            <Input
+              id="email"
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="jan@firma.pl"
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="phone">Telefon komórkowy</Label>
+            <Input
+              id="phone"
+              type="tel"
+              value={phone}
+              onChange={(e) => setPhone(e.target.value)}
+              placeholder="+48 600 000 000"
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="linkedin">Profil LinkedIn (URL)</Label>
+            <Input
+              id="linkedin"
+              type="url"
+              value={linkedin}
+              onChange={(e) => setLinkedin(e.target.value)}
+              placeholder="https://linkedin.com/in/jankowalski"
+            />
+          </div>
+          {profileMsg && (
+            <p className={cn("text-sm", profileMsg.type === "success" ? "text-green-600" : "text-destructive")}>
+              {profileMsg.text}
+            </p>
+          )}
+          <Button variant="hero" onClick={handleProfileSave} disabled={profileSaving}>
+            <Save className="h-4 w-4 mr-2" />
+            {profileSaving ? "Zapisywanie…" : "Zapisz dane profilu"}
+          </Button>
+        </div>
+      </SettingsSection>
+
+      {/* Password Change */}
+      <SettingsSection
+        icon={Lock}
+        title="Zmiana hasła"
+        description="Zaktualizuj hasło do swojego konta"
+      >
+        <div className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="current-password">Aktualne hasło</Label>
+            <Input
+              id="current-password"
+              type="password"
+              value={currentPassword}
+              onChange={(e) => setCurrentPassword(e.target.value)}
+              placeholder="••••••••"
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="new-password">Nowe hasło</Label>
+            <Input
+              id="new-password"
+              type="password"
+              value={newPassword}
+              onChange={(e) => setNewPassword(e.target.value)}
+              placeholder="Min. 8 znaków"
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="confirm-password">Powtórz nowe hasło</Label>
+            <Input
+              id="confirm-password"
+              type="password"
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
+              placeholder="••••••••"
+            />
+          </div>
+          {passwordMsg && (
+            <p className={cn("text-sm", passwordMsg.type === "success" ? "text-green-600" : "text-destructive")}>
+              {passwordMsg.text}
+            </p>
+          )}
+          <Button
+            variant="outline"
+            onClick={handlePasswordChange}
+            disabled={passwordSaving || !currentPassword || !newPassword || !confirmPassword}
+          >
+            <Lock className="h-4 w-4 mr-2" />
+            {passwordSaving ? "Zmieniam…" : "Zmień hasło"}
+          </Button>
+        </div>
+      </SettingsSection>
+
       {/* Organization */}
       <SettingsSection
         icon={Building2}
         title="Organizacja"
-        description="Informacje o Twojej organizacji"
+        description={isAdmin ? "Informacje o Twojej organizacji" : "Dane organizacji (tylko odczyt)"}
       >
         <div className="space-y-4">
           <div className="space-y-2">
             <Label htmlFor="org-name">Nazwa organizacji</Label>
-            <Input id="org-name" defaultValue="TechCorp Polska" />
+            <Input
+              id="org-name"
+              value={orgName}
+              onChange={(e) => setOrgName(e.target.value)}
+              disabled={!isAdmin}
+              placeholder="Nazwa firmy"
+            />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="org-domain">Domena email</Label>
-            <Input id="org-domain" defaultValue="techcorp.pl" />
+            <Label htmlFor="org-address">Adres</Label>
+            <Input
+              id="org-address"
+              value={orgAddress}
+              onChange={(e) => setOrgAddress(e.target.value)}
+              disabled={!isAdmin}
+              placeholder="ul. Przykładowa 1, 00-001 Warszawa"
+            />
           </div>
+          {orgMsg && (
+            <p className={cn("text-sm", orgMsg.type === "success" ? "text-green-600" : "text-destructive")}>
+              {orgMsg.text}
+            </p>
+          )}
+          {isAdmin && (
+            <Button variant="hero" onClick={handleOrgSave} disabled={orgSaving}>
+              <Save className="h-4 w-4 mr-2" />
+              {orgSaving ? "Zapisywanie…" : "Zapisz organizację"}
+            </Button>
+          )}
         </div>
       </SettingsSection>
 
@@ -290,14 +562,6 @@ export default function SettingsPage() {
             </p>
           </div>
         </div>
-      </div>
-
-      {/* Save button */}
-      <div className="flex justify-end">
-        <Button variant="hero" size="lg" className="px-12 shadow-soft-xl">
-          <Save className="h-5 w-5 mr-3" />
-          Zapisz zmiany
-        </Button>
       </div>
 
       {/* Talent Import Dialog */}

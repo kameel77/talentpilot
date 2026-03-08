@@ -5,7 +5,7 @@ from typing import List
 
 from database import get_db
 from models import User, Organization
-from schemas import OrganizationCreate, OrganizationResponse
+from schemas import OrganizationCreate, OrganizationUpdate, OrganizationResponse
 from auth import get_current_user, require_role
 
 router = APIRouter()
@@ -63,32 +63,35 @@ def get_organization(
 @router.patch("/{organization_id}", response_model=OrganizationResponse)
 def update_organization(
     organization_id: int,
-    data: OrganizationCreate,
+    data: OrganizationUpdate,
     db: Session = Depends(get_db),
     current_user: User = Depends(require_role(["admin"]))
 ):
     """
     Update organization (admin only).
-    
+
     - Only admins of the organization can update it
     """
-    # Check if user belongs to this organization
     if current_user.organization_id != organization_id:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Access denied to this organization"
         )
-    
+
     organization = db.query(Organization).filter(Organization.id == organization_id).first()
-    
+
     if not organization:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Organization not found"
         )
-    
-    organization.name = data.name
+
+    if data.name is not None:
+        organization.name = data.name
+    if data.address is not None:
+        organization.address = data.address
+
     db.commit()
     db.refresh(organization)
-    
+
     return organization
