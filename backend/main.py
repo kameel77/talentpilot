@@ -54,6 +54,11 @@ app.include_router(assistant.router, prefix="/api", tags=["Assistant"])
 app.include_router(admin.router, prefix="/api/admin", tags=["Admin"])
 app.include_router(qa.router, prefix="/api", tags=["QA v1"])
 
+# External API — mounted as an isolated sub-application.
+# Has its own CORS policy, sanitized error handler, and Swagger docs at /api/external/docs.
+from external_app import external_app
+app.mount("/api/external", external_app)
+
 
 if __name__ == "__main__":
     import uvicorn

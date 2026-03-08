@@ -4,18 +4,21 @@ from typing import Optional
 from jose import JWTError, jwt
 from passlib.context import CryptContext
 from fastapi import Depends, HTTPException, status
-from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials, APIKeyHeader
 from sqlalchemy.orm import Session
 
 from config import settings
 from database import get_db
-from models import User
+from models import User, ApiKey
 
 # Password hashing
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 # HTTP Bearer token
 security = HTTPBearer()
+
+# API Key token
+api_key_header = APIKeyHeader(name="X-API-Key", auto_error=False)
 
 
 def hash_password(password: str) -> str:
@@ -144,3 +147,24 @@ def require_role(allowed_roles: list):
         return current_user
     
     return role_checker
+
+
+def verify_api_key(
+    api_key: str = Depends(api_key_header),
+    db: Session = Depends(get_db)
+) -> ApiKey:
+    """Validate external API key."""
+    if not api_key:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Missing API Key",
+        )
+    
+    key_record = db.query(ApiKey).filter(ApiKey.key == api_key, ApiKey.is_active == True).first()
+    if not key_record:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Invalid or inactive API Key",
+        )
+    
+    return key_record
