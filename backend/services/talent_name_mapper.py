@@ -86,9 +86,14 @@ TALENT_MAP: Dict[str, str] = {
 
 def normalize_name(name: str) -> str:
     """Normalize talent name for mapping."""
-    # Remove extra spaces, lowercase, remove punctuation
+    # Remove extra spaces, lowercase, normalize separators
     name = name.lower().strip()
-    name = re.sub(r"[.\-:)]", "", name)
+    # Replace hyphens and underscores with spaces (preserves multi-word names like "self assurance")
+    name = re.sub(r"[-_]", " ", name)
+    # Remove other punctuation
+    name = re.sub(r"[.:)]", "", name)
+    # Collapse multiple spaces
+    name = re.sub(r"\s+", " ", name).strip()
     return name
 
 
