@@ -58,9 +58,10 @@ user_teams = Table(
 class Organization(Base):
     """Organization model for multi-tenancy."""
     __tablename__ = "organizations"
-    
+
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String(255), nullable=False)
+    address = Column(String(500), nullable=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
     
@@ -86,6 +87,9 @@ class User(Base):
     # Multi-tenancy
     organization_id = Column(Integer, ForeignKey('organizations.id', ondelete='CASCADE'), nullable=False)
     
+    phone = Column(String(50), nullable=True)
+    linkedin_url = Column(String(500), nullable=True)
+
     # User Manual fields (editable by user)
     superpowers = Column(Text, nullable=True)  # "Moje Supermoce"
     motivators = Column(Text, nullable=True)   # "Wyzwalacze"
@@ -350,3 +354,19 @@ class UserFeedback(Base) :
     query = relationship("UserQuery")
     answer = relationship("GeneratedAnswer")
     user = relationship("User")
+
+
+class ApiKey(Base):
+    """API keys for external applications."""
+    __tablename__ = "api_keys"
+
+    id = Column(Integer, primary_key=True, index=True)
+    key = Column(String(100), unique=True, index=True, nullable=False)
+    name = Column(String(255), nullable=False)  # e.g. "External App 1"
+    organization_id = Column(Integer, ForeignKey('organizations.id', ondelete='CASCADE'), nullable=True)
+    is_active = Column(Boolean, default=True)
+    
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+    # Relationships
+    organization = relationship("Organization")

@@ -26,11 +26,17 @@ class OrganizationCreate(BaseModel):
     name: str = Field(..., min_length=1, max_length=255)
 
 
+class OrganizationUpdate(BaseModel):
+    name: Optional[str] = Field(default=None, min_length=1, max_length=255)
+    address: Optional[str] = Field(default=None, max_length=500)
+
+
 class OrganizationResponse(BaseModel):
     id: int
     name: str
+    address: Optional[str] = None
     created_at: datetime
-    
+
     model_config = {"from_attributes": True}
 
 
@@ -43,12 +49,20 @@ class UserCreate(BaseModel):
 
 
 class UserUpdate(BaseModel):
-    full_name: Optional[str] = None
+    full_name: Optional[str] = Field(default=None, min_length=1, max_length=255)
+    email: Optional[EmailStr] = None
+    phone: Optional[str] = Field(default=None, max_length=50)
+    linkedin_url: Optional[str] = Field(default=None, max_length=500)
     avatar_url: Optional[str] = None
     superpowers: Optional[str] = None
     motivators: Optional[str] = None
     blockers: Optional[str] = None
     feedback_style: Optional[str] = None
+
+
+class PasswordChangeRequest(BaseModel):
+    current_password: str = Field(..., min_length=8, max_length=72)
+    new_password: str = Field(..., min_length=8, max_length=72)
 
 
 class UserResponse(BaseModel):
@@ -60,9 +74,11 @@ class UserResponse(BaseModel):
     is_active: bool
     is_ghost: bool
     avatar_url: Optional[str] = None
+    phone: Optional[str] = None
+    linkedin_url: Optional[str] = None
     organization_id: int
     created_at: datetime
-    
+
     model_config = {"from_attributes": True}
 
 
@@ -331,3 +347,106 @@ class QAHistoryItem(BaseModel):
     created_at: datetime
 
     model_config = {"from_attributes": True}
+
+
+# External API Schemas
+class ExternalTalentName(BaseModel):
+    pl: Optional[str] = Field(default=None, description="Talent name in Polish (present when language=pl or pl+en)")
+    en: Optional[str] = Field(default=None, description="Talent name in English (present when language=en or pl+en)")
+
+    model_config = {
+        "json_schema_extra": {
+            "examples": [
+                {"pl": "Osiąganie", "en": "Achiever"},
+                {"pl": "Osiąganie", "en": None},
+                {"pl": None, "en": "Achiever"},
+            ]
+        }
+    }
+
+
+class ExternalDomain(BaseModel):
+    number: int = Field(description="Domain index: Executing=1, Influencing=2, Relationship Building=3, Strategic Thinking=4")
+    pl: Optional[str] = Field(default=None, description="Domain name in Polish (present when language=pl or pl+en)")
+    en: Optional[str] = Field(default=None, description="Domain name in English (present when language=en or pl+en)")
+
+    model_config = {
+        "json_schema_extra": {
+            "examples": [
+                {"number": 1, "pl": "Realizowanie", "en": "Executing"},
+                {"number": 2, "pl": "Wywieranie wpływu", "en": None},
+                {"number": 3, "pl": None, "en": "Relationship Building"},
+            ]
+        }
+    }
+
+
+class ExternalTalent(BaseModel):
+    rank: int = Field(description="Talent position in the Gallup report (1–34). Lower = stronger talent.")
+    talent: str = Field(description="Internal talent code (e.g. 'achiever', 'learner')")
+    domain: ExternalDomain
+    name: ExternalTalentName
+
+    model_config = {
+        "json_schema_extra": {
+            "examples": [
+                {
+                    "rank": 1,
+                    "talent": "achiever",
+                    "domain": {"number": 1, "pl": "Realizowanie", "en": "Executing"},
+                    "name": {"pl": "Osiąganie", "en": "Achiever"},
+                }
+            ]
+        }
+    }
+
+
+class ExternalGallupResponse(BaseModel):
+    language: str = Field(description="Language filter used in this response: pl, en, or pl+en")
+    talents: List[ExternalTalent] = Field(description="Talents parsed from the PDF, sorted by rank ascending")
+
+    model_config = {
+        "json_schema_extra": {
+            "examples": [
+                {
+                    "language": "pl+en",
+                    "talents": [
+                        {
+                            "rank": 1,
+                            "talent": "achiever",
+                            "domain": {"number": 1, "pl": "Realizowanie", "en": "Executing"},
+                            "name": {"pl": "Osiąganie", "en": "Achiever"},
+                        },
+                        {
+                            "rank": 2,
+                            "talent": "learner",
+                            "domain": {"number": 4, "pl": "Myślenie strategiczne", "en": "Strategic Thinking"},
+                            "name": {"pl": "Uczenie się", "en": "Learner"},
+                        },
+                    ],
+                },
+                {
+                    "language": "pl",
+                    "talents": [
+                        {
+                            "rank": 1,
+                            "talent": "achiever",
+                            "domain": {"number": 1, "pl": "Realizowanie", "en": None},
+                            "name": {"pl": "Osiąganie", "en": None},
+                        }
+                    ],
+                },
+                {
+                    "language": "en",
+                    "talents": [
+                        {
+                            "rank": 1,
+                            "talent": "achiever",
+                            "domain": {"number": 1, "pl": None, "en": "Executing"},
+                            "name": {"pl": None, "en": "Achiever"},
+                        }
+                    ],
+                },
+            ]
+        }
+    }
