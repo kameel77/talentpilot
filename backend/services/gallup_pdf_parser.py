@@ -126,7 +126,7 @@ def clean_talent_name(raw_name: str) -> str:
         "If you answered yes to any of these questions",
         "weaknesses",
         "CliftonStrengths themes might prevent you from maximizing your potential",
-        "Focusing on your CliftonStrengths doesn’t mean you can ignore your",
+        "Focusing on your CliftonStrengths doesn't mean you can ignore your",
         "To identify potential weaknesses",
         "Słabe strony",
         "Jak zarządzać słabymi stronami",
@@ -136,6 +136,21 @@ def clean_talent_name(raw_name: str) -> str:
     for suffix in unwanted_suffixes:
         pattern = re.compile(r"\s+" + re.escape(suffix) + r"(?:[.\s]*)$", re.IGNORECASE)
         cleaned_name = pattern.sub("", cleaned_name).strip()
+
+    # Strip trailing concatenated text from PDF two-column layout.
+    # E.g., "Bliskość SkupieniesięnacechachCliftonStrengths..." -> "Bliskość"
+    # Heuristic: if a word boundary is followed by a very long word (>15 chars)
+    # that looks like concatenated text, take only the first word(s).
+    parts = cleaned_name.split()
+    if len(parts) > 1:
+        # Check if any part (after the first) is a long concatenated string
+        cleaned_parts = [parts[0]]
+        for part in parts[1:]:
+            # Long words without natural breaks are likely PDF artifacts
+            if len(part) > 20:
+                break
+            cleaned_parts.append(part)
+        cleaned_name = " ".join(cleaned_parts)
 
     return re.sub(r"\s+", " ", cleaned_name).strip(" .-–—:\t")
 

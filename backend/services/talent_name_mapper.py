@@ -81,6 +81,13 @@ TALENT_MAP: Dict[str, str] = {
     "poważanie": "significance",
     "strateg": "strategic",
     "czar": "woo",
+
+    # No-space variants (PDF extraction often concatenates words)
+    "uczeniesię": "learner",
+    "wiarawsiebie": "self-assurance",
+    "rozwijanieinnych": "developer",
+    "współzależność": "connectedness",
+    "rozwijanie innych": "developer",
 }
 
 
