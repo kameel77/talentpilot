@@ -25,6 +25,15 @@ class Settings(BaseSettings):
     environment: str = "development"
     debug: bool = True
     cors_origins: str = "http://localhost:3000"
+    frontend_url: str = "http://localhost:3000"
+    
+    # Email / SMTP
+    smtp_server: str = "smtp.gmail.com"
+    smtp_port: int = 587
+    smtp_username: str | None = None
+    smtp_password: str | None = None
+    smtp_from_email: str | None = None
+    smtp_from_name: str = "Manager Copilot"
     
     # Redis (optional)
     redis_url: str | None = None

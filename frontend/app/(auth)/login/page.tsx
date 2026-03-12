@@ -102,12 +102,12 @@ export default function LoginPage() {
                                 <label htmlFor="password" className="block text-sm font-semibold text-slate-700 ml-1">
                                     Hasło
                                 </label>
-                                <button
-                                    type="button"
-                                    className="text-sm text-primary hover:underline"
+                                <Link
+                                    href="/forgot-password"
+                                    className="text-sm text-primary hover:underline font-medium"
                                 >
-                                    Zapomniałes hasła?
-                                </button>
+                                    Zapomniałeś hasła?
+                                </Link>
                             </div>
                             <div className="relative">
                                 <Lock className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-400" />

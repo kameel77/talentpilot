@@ -1,14 +1,19 @@
 """Authentication router with register, login, and user info endpoints."""
-from fastapi import APIRouter, Depends, HTTPException, Request, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status, BackgroundTasks
 from sqlalchemy.orm import Session
+import uuid
+import hashlib
+from datetime import datetime, timezone, timedelta
 
 from database import get_db
-from models import User, Organization, UserRole
+from models import User, Organization, UserRole, PasswordResetToken
 from schemas import (
     RegisterRequest,
     Token,
     UserResponse,
-    UserDetailResponse
+    UserDetailResponse,
+    ForgotPasswordRequest,
+    ResetPasswordRequest,
 )
 from auth import (
     hash_password,
@@ -16,6 +21,7 @@ from auth import (
     create_access_token,
     get_current_user
 )
+from services.email_service import send_password_reset_email
 
 router = APIRouter()
 
@@ -119,3 +125,92 @@ def get_me(current_user: User = Depends(get_current_user)):
     - Returns user profile with User Manual fields
     """
     return current_user
+
+
+@router.post("/forgot-password", status_code=status.HTTP_200_OK)
+def forgot_password(
+    data: ForgotPasswordRequest,
+    background_tasks: BackgroundTasks,
+    db: Session = Depends(get_db)
+):
+    """
+    Zgłoszenie prośby o reset hasła. Zwraca zawsze 200 z tym samym komunikatem.
+    Wysyła email w tle za pomocą EmailService.
+    """
+    user = db.query(User).filter(User.email == data.email).first()
+    
+    # We return the same response regardless if user exists, for security (prevent enumeration)
+    response_msg = {"message": "Jeśli podany e-mail istnieje w bazie, wysłaliśmy na niego link do resetu hasła."}
+    
+    if not user:
+        return response_msg
+        
+    # Tworzymy unikalny token
+    reset_token = str(uuid.uuid4())
+    # Hashujemy token do bazy
+    token_hash = hashlib.sha256(reset_token.encode()).hexdigest()
+    # 1 hour expiry
+    expires_at = datetime.now(timezone.utc) + timedelta(hours=1)
+    
+    # Inwalidacja starych tokenow dla usera
+    db.query(PasswordResetToken).filter(PasswordResetToken.user_id == user.id).delete()
+    
+    db_token = PasswordResetToken(
+        user_id=user.id,
+        token_hash=token_hash,
+        expires_at=expires_at
+    )
+    db.add(db_token)
+    db.commit()
+    
+    # Zlecamy wysyłkę w tle
+    background_tasks.add_task(send_password_reset_email, user.email, reset_token)
+    
+    return response_msg
+
+
+@router.post("/reset-password", status_code=status.HTTP_200_OK)
+def reset_password(
+    data: ResetPasswordRequest,
+    db: Session = Depends(get_db)
+):
+    """
+    Weryfikuje token i zapisuje nowe hasło.
+    """
+    token_hash = hashlib.sha256(data.token.encode()).hexdigest()
+    
+    # Find active token
+    db_token = db.query(PasswordResetToken).filter(
+        PasswordResetToken.token_hash == token_hash
+    ).first()
+    
+    if not db_token:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, 
+            detail="Nieprawidłowy lub wygasły link do zmiany hasła."
+        )
+        
+    if db_token.expires_at < datetime.now(timezone.utc):
+        db.delete(db_token)
+        db.commit()
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, 
+            detail="Link do zmiany hasła wygasł."
+        )
+        
+    # Znajdź usera
+    user = db.query(User).filter(User.id == db_token.user_id).first()
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, 
+            detail="Nie znaleziono użytkownika."
+        )
+        
+    # Update hasła
+    user.hashed_password = hash_password(data.new_password)
+    
+    # Kasujemy zużyty token
+    db.delete(db_token)
+    db.commit()
+    
+    return {"message": "Hasło zostało pomyślnie zmienione. Możesz się teraz zalogować."}

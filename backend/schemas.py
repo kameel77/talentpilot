@@ -195,6 +195,16 @@ class RegisterRequest(BaseModel):
     organization_name: str = Field(..., min_length=1, max_length=255)
 
 
+class ForgotPasswordRequest(BaseModel):
+    email: EmailStr
+
+
+class ResetPasswordRequest(BaseModel):
+    token: str = Field(..., min_length=1)
+    new_password: str = Field(..., min_length=8, max_length=72)
+
+
+
 # AI Tip Schemas
 class AITipResponse(BaseModel):
     id: int

@@ -162,6 +162,19 @@ class TeamInvitation(Base):
     created_by_user = relationship("User", foreign_keys=[created_by])
 
 
+class PasswordResetToken(Base):
+    """Token for password reset functionality."""
+    __tablename__ = "password_reset_tokens"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey('users.id', ondelete='CASCADE'), nullable=False)
+    token_hash = Column(String(64), unique=True, index=True, nullable=False)
+    expires_at = Column(DateTime(timezone=True), nullable=False)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+    user = relationship("User")
+
+
 class Talent(Base):
     """Talent model representing the 34 CliftonStrengths talents."""
     __tablename__ = "talents"

@@ -255,6 +255,16 @@ export const api = {
             const response = await apiClient.get<User>('/api/auth/me');
             return response.data;
         },
+
+        forgotPassword: async (email: string) => {
+            const response = await apiClient.post('/api/auth/forgot-password', { email });
+            return response.data;
+        },
+
+        resetPassword: async (token: string, new_password: string) => {
+            const response = await apiClient.post('/api/auth/reset-password', { token, new_password });
+            return response.data;
+        },
     },
 
     // Organizations
