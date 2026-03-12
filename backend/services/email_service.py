@@ -33,11 +33,16 @@ class EmailService:
 
         try:
             # We use SMTP (with STARTTLS) or SMTP_SSL depending on port, 
-            # usually port 587 uses STARTTLS
-            with smtplib.SMTP(self.server, self.port) as server:
-                server.starttls()
-                server.login(self.username, self.password)
-                server.send_message(msg)
+            # port 465 requires SMTP_SSL
+            if self.port == 465:
+                with smtplib.SMTP_SSL(self.server, self.port) as server:
+                    server.login(self.username, self.password)
+                    server.send_message(msg)
+            else:
+                with smtplib.SMTP(self.server, self.port) as server:
+                    server.starttls()
+                    server.login(self.username, self.password)
+                    server.send_message(msg)
             logger.info(f"Email sent successfully to {to_email}")
         except Exception as e:
             logger.error(f"Failed to send email to {to_email}: {str(e)}")
