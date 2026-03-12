@@ -32,20 +32,21 @@ class EmailService:
         msg.set_content(html_content, subtype='html')
 
         try:
+            logger.info(f"Attempting to send email to {to_email} via {self.server}:{self.port}")
             # We use SMTP (with STARTTLS) or SMTP_SSL depending on port, 
             # port 465 requires SMTP_SSL
             if self.port == 465:
-                with smtplib.SMTP_SSL(self.server, self.port) as server:
+                with smtplib.SMTP_SSL(self.server, self.port, timeout=10) as server:
                     server.login(self.username, self.password)
                     server.send_message(msg)
             else:
-                with smtplib.SMTP(self.server, self.port) as server:
+                with smtplib.SMTP(self.server, self.port, timeout=10) as server:
                     server.starttls()
                     server.login(self.username, self.password)
                     server.send_message(msg)
             logger.info(f"Email sent successfully to {to_email}")
         except Exception as e:
-            logger.error(f"Failed to send email to {to_email}: {str(e)}")
+            logger.error(f"Failed to send email to {to_email} via {self.server}:{self.port}: {str(e)}")
             # Nie rzucamy błędu dalej żeby nie zablokować API, ale zalogujemy to
 
 
