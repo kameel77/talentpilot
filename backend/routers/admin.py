@@ -22,7 +22,7 @@ from services.settings_service import get_all_settings, upsert_setting
 router = APIRouter()
 
 
-@router.get("/admin/queries", response_model=list[QueryReviewResponse])
+@router.get("/queries", response_model=list[QueryReviewResponse])
 def list_pending_queries(
     db: Session = Depends(get_db),
     current_user=Depends(require_role(["admin"])),
@@ -56,7 +56,7 @@ def list_pending_queries(
     return response
 
 
-@router.patch("/admin/answers/{answer_id}")
+@router.patch("/answers/{answer_id}")
 def review_answer(
     answer_id: int,
     payload: ReviewUpdate,
@@ -115,7 +115,7 @@ def review_answer(
     return {"status": review.status.value}
 
 
-@router.post("/admin/knowledge", response_model=KnowledgeItemResponse)
+@router.post("/knowledge", response_model=KnowledgeItemResponse)
 def create_knowledge(
     payload: KnowledgeItemCreate,
     db: Session = Depends(get_db),
@@ -140,7 +140,7 @@ def create_knowledge(
     return knowledge_item
 
 
-@router.get("/admin/knowledge", response_model=list[KnowledgeItemResponse])
+@router.get("/knowledge", response_model=list[KnowledgeItemResponse])
 def list_knowledge(
     section: str | None = None,
     db: Session = Depends(get_db),
@@ -152,7 +152,7 @@ def list_knowledge(
     return query.order_by(KnowledgeItem.created_at.desc()).all()
 
 
-@router.patch("/admin/knowledge/{knowledge_id}", response_model=KnowledgeItemResponse)
+@router.patch("/knowledge/{knowledge_id}", response_model=KnowledgeItemResponse)
 def update_knowledge(
     knowledge_id: int,
     payload: KnowledgeItemUpdate,
@@ -190,7 +190,7 @@ def update_knowledge(
     return knowledge_item
 
 
-@router.get("/admin/settings", response_model=AdminSettingsResponse)
+@router.get("/settings", response_model=AdminSettingsResponse)
 def get_settings(
     db: Session = Depends(get_db),
     current_user=Depends(require_role(["admin"])),
@@ -198,7 +198,7 @@ def get_settings(
     return AdminSettingsResponse(settings=get_all_settings(db))
 
 
-@router.patch("/admin/settings", response_model=AdminSettingsResponse)
+@router.patch("/settings", response_model=AdminSettingsResponse)
 def update_settings(
     payload: list[AdminSettingUpdate],
     db: Session = Depends(get_db),
