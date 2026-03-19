@@ -413,7 +413,7 @@ export default function UsersPage() {
                     title="Active Now"
                     value={users.filter(u => u.is_active !== false).length}
                     icon={<UserCheck className="h-5 w-5" />}
-                    trend={{ value: 12, isPositive: true }}
+                    trend={{ value: 12, isUp: true }}
                 />
                 <KPICard
                     title="Admins"

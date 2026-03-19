@@ -18,7 +18,7 @@ from models import Talent, TalentTranslation, GallupDomain
 # 34 CliftonStrengths talents with descriptions and domain mappings
 PL_TALENT_NAMES = {
     "achiever": "Osiąganie",
-    "arranger": "Organizacja",
+    "arranger": "Organizator",
     "belief": "Przekonania",
     "consistency": "Sprawiedliwość",
     "deliberative": "Rozwaga",

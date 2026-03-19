@@ -15,6 +15,8 @@ import {
     Database,
     Shield,
     MessageSquare,
+    Menu,
+    X,
 } from "lucide-react";
 import { tokenManager, User } from "@/lib/api";
 import { cn } from "@/lib/utils";
@@ -28,6 +30,7 @@ export default function DashboardLayout({
     const pathname = usePathname();
     const [user, setUser] = useState<User | null>(null);
     const [loading, setLoading] = useState(true);
+    const [sidebarOpen, setSidebarOpen] = useState(false);
 
     useEffect(() => {
         const checkAuth = () => {
@@ -44,6 +47,11 @@ export default function DashboardLayout({
 
         checkAuth();
     }, [router]);
+
+    // Close sidebar on route change (mobile)
+    useEffect(() => {
+        setSidebarOpen(false);
+    }, [pathname]);
 
     const handleLogout = () => {
         tokenManager.removeToken();
@@ -79,145 +87,171 @@ export default function DashboardLayout({
         { name: "Ustawienia AI", href: "/dashboard/admin/settings", icon: Shield },
     ];
 
-    return (
-        <div className="flex h-screen w-full bg-slate-50 font-sans overflow-hidden">
-            {/* Sidebar Desktop */}
-            <aside
-                style={{ width: '256px', backgroundColor: '#111827', minWidth: '256px' }}
-                className="flex-none flex flex-col z-30 border-r border-white/10"
-            >
-                <div className="p-6 flex items-center justify-between border-b border-white/5 h-16">
-                    <div className="flex items-center gap-3">
-                        <div className="h-10 w-10 bg-blue-600 flex items-center justify-center rounded-xl text-white font-bold text-xl">
-                            TP
-                        </div>
-                        <span className="text-xl font-bold text-white tracking-tight">
-                            TalentPilot
-                        </span>
+    const sidebarContent = (
+        <>
+            <div className="p-5 flex items-center justify-between border-b border-white/5 h-16">
+                <div className="flex items-center gap-3">
+                    <div className="h-10 w-10 bg-blue-600 flex items-center justify-center rounded-xl text-white font-bold text-xl">
+                        TP
                     </div>
+                    <span className="text-xl font-bold text-white tracking-tight">
+                        TalentPilot
+                    </span>
+                </div>
+                {/* Close button — only visible on mobile */}
+                <button
+                    onClick={() => setSidebarOpen(false)}
+                    className="lg:hidden p-2 rounded-lg text-slate-400 hover:text-white hover:bg-white/10 transition-colors"
+                    aria-label="Zamknij menu"
+                >
+                    <X className="h-5 w-5" />
+                </button>
+            </div>
+
+            <nav className="flex-1 px-4 mt-6 space-y-1 overflow-y-auto">
+                <div className="space-y-1">
+                    {navigation.map((item) => {
+                        const isActive = pathname === item.href;
+                        return (
+                            <Link
+                                key={item.name}
+                                href={item.href}
+                                className={cn(
+                                    "flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 group text-sm font-medium",
+                                    isActive
+                                        ? "bg-blue-600 text-white"
+                                        : "text-slate-400 hover:text-white hover:bg-white/5"
+                                )}
+                            >
+                                <item.icon className={cn(
+                                    "h-5 w-5",
+                                    isActive ? "text-white" : "text-slate-500 group-hover:text-white"
+                                )} />
+                                {item.name}
+                            </Link>
+                        );
+                    })}
                 </div>
 
-                <nav className="flex-1 px-4 mt-6 space-y-1 overflow-y-auto">
-                    <div className="space-y-1">
-                        {navigation.map((item) => {
-                            const isActive = pathname === item.href;
-                            return (
+                {user?.role === 'admin' && (
+                    <div className="mt-8">
+                        <h3 className="px-4 text-[10px] font-bold uppercase tracking-widest text-slate-500 mb-2">
+                            Administracja
+                        </h3>
+                        <div className="space-y-3">
+                            <div className="space-y-1">
                                 <Link
-                                    key={item.name}
-                                    href={item.href}
+                                    href="/dashboard/admin/knowledge"
                                     className={cn(
                                         "flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 group text-sm font-medium",
-                                        isActive
+                                        pathname === "/dashboard/admin/knowledge"
                                             ? "bg-blue-600 text-white"
                                             : "text-slate-400 hover:text-white hover:bg-white/5"
                                     )}
                                 >
-                                    <item.icon className={cn(
+                                    <Database className={cn(
                                         "h-5 w-5",
-                                        isActive ? "text-white" : "text-slate-500 group-hover:text-white"
+                                        pathname === "/dashboard/admin/knowledge"
+                                            ? "text-white"
+                                            : "text-slate-500 group-hover:text-white"
                                     )} />
-                                    {item.name}
+                                    Baza wiedzy
                                 </Link>
-                            );
-                        })}
-                    </div>
-
-                    {user?.role === 'admin' && (
-                        <div className="mt-8">
-                            <h3 className="px-4 text-[10px] font-bold uppercase tracking-widest text-slate-500 mb-2">
-                                Administracja
-                            </h3>
-                            <div className="space-y-3">
-                                <div className="space-y-1">
-                                    <Link
-                                        href="/dashboard/admin/knowledge"
-                                        className={cn(
-                                            "flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 group text-sm font-medium",
-                                            pathname === "/dashboard/admin/knowledge"
-                                                ? "bg-blue-600 text-white"
-                                                : "text-slate-400 hover:text-white hover:bg-white/5"
-                                        )}
-                                    >
-                                        <Database className={cn(
-                                            "h-5 w-5",
-                                            pathname === "/dashboard/admin/knowledge"
-                                                ? "text-white"
-                                                : "text-slate-500 group-hover:text-white"
-                                        )} />
-                                        Baza wiedzy
-                                    </Link>
-                                    <div className="ml-8 space-y-1">
-                                        {knowledgeLinks.map((item) => {
-                                            const isActive = pathname === item.href;
-                                            return (
-                                                <Link
-                                                    key={item.name}
-                                                    href={item.href}
-                                                    className={cn(
-                                                        "flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-semibold tracking-wide transition-all",
-                                                        isActive
-                                                            ? "bg-white/10 text-white"
-                                                            : "text-slate-400 hover:text-white hover:bg-white/5"
-                                                    )}
-                                                >
-                                                    {item.name}
-                                                </Link>
-                                            );
-                                        })}
-                                    </div>
-                                </div>
-                                <div className="space-y-1">
-                                    {adminNavigation.map((item) => {
+                                <div className="ml-8 space-y-1">
+                                    {knowledgeLinks.map((item) => {
                                         const isActive = pathname === item.href;
                                         return (
                                             <Link
                                                 key={item.name}
                                                 href={item.href}
                                                 className={cn(
-                                                    "flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 group text-sm font-medium",
+                                                    "flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-semibold tracking-wide transition-all",
                                                     isActive
-                                                        ? "bg-blue-600 text-white"
+                                                        ? "bg-white/10 text-white"
                                                         : "text-slate-400 hover:text-white hover:bg-white/5"
                                                 )}
                                             >
-                                                <item.icon className={cn(
-                                                    "h-5 w-5",
-                                                    isActive ? "text-white" : "text-slate-500 group-hover:text-white"
-                                                )} />
                                                 {item.name}
                                             </Link>
                                         );
                                     })}
                                 </div>
                             </div>
+                            <div className="space-y-1">
+                                {adminNavigation.map((item) => {
+                                    const isActive = pathname === item.href;
+                                    return (
+                                        <Link
+                                            key={item.name}
+                                            href={item.href}
+                                            className={cn(
+                                                "flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 group text-sm font-medium",
+                                                isActive
+                                                    ? "bg-blue-600 text-white"
+                                                    : "text-slate-400 hover:text-white hover:bg-white/5"
+                                            )}
+                                        >
+                                            <item.icon className={cn(
+                                                "h-5 w-5",
+                                                isActive ? "text-white" : "text-slate-500 group-hover:text-white"
+                                            )} />
+                                            {item.name}
+                                        </Link>
+                                    );
+                                })}
+                            </div>
                         </div>
-                    )}
-                </nav>
+                    </div>
+                )}
+            </nav>
 
-                <div className="p-4 border-t border-white/5 mt-auto space-y-1">
-                    <Link
-                        href="/dashboard/settings"
-                        className={cn(
-                            "flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 group text-sm font-medium",
-                            pathname === "/dashboard/settings"
-                                ? "bg-blue-600 text-white"
-                                : "text-slate-400 hover:text-white hover:bg-white/5"
-                        )}
-                    >
-                        <Settings className={cn(
-                            "h-5 w-5",
-                            pathname === "/dashboard/settings" ? "text-white" : "text-slate-500 group-hover:text-white"
-                        )} />
-                        Ustawienia
-                    </Link>
-                    <button
-                        onClick={handleLogout}
-                        className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-slate-400 hover:text-white hover:bg-white/5"
-                    >
-                        <LogOut className="h-5 w-5" />
-                        Wyloguj się
-                    </button>
-                </div>
+            <div className="p-4 border-t border-white/5 mt-auto space-y-1">
+                <Link
+                    href="/dashboard/settings"
+                    className={cn(
+                        "flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 group text-sm font-medium",
+                        pathname === "/dashboard/settings"
+                            ? "bg-blue-600 text-white"
+                            : "text-slate-400 hover:text-white hover:bg-white/5"
+                    )}
+                >
+                    <Settings className={cn(
+                        "h-5 w-5",
+                        pathname === "/dashboard/settings" ? "text-white" : "text-slate-500 group-hover:text-white"
+                    )} />
+                    Ustawienia
+                </Link>
+                <button
+                    onClick={handleLogout}
+                    className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-slate-400 hover:text-white hover:bg-white/5"
+                >
+                    <LogOut className="h-5 w-5" />
+                    Wyloguj się
+                </button>
+            </div>
+        </>
+    );
+
+    return (
+        <div className="flex h-screen w-full bg-slate-50 font-sans overflow-hidden">
+            {/* Mobile Overlay */}
+            {sidebarOpen && (
+                <div
+                    className="fixed inset-0 z-40 bg-black/50 backdrop-blur-sm lg:hidden transition-opacity"
+                    onClick={() => setSidebarOpen(false)}
+                    aria-hidden="true"
+                />
+            )}
+
+            {/* Sidebar — Desktop: always visible, Mobile: slide-in */}
+            <aside
+                className={cn(
+                    "fixed inset-y-0 left-0 z-50 flex flex-col border-r border-white/10 transition-transform duration-300 ease-in-out lg:static lg:translate-x-0",
+                    sidebarOpen ? "translate-x-0" : "-translate-x-full"
+                )}
+                style={{ width: '256px', backgroundColor: '#111827', minWidth: '256px' }}
+            >
+                {sidebarContent}
             </aside>
 
             {/* Main Area */}
@@ -225,10 +259,18 @@ export default function DashboardLayout({
                 {/* Header */}
                 <header
                     style={{ height: '64px', backgroundColor: 'white', borderBottom: '1px solid #e2e8f0' }}
-                    className="flex-none px-8 flex items-center justify-between z-20"
+                    className="flex-none px-4 sm:px-8 flex items-center justify-between z-20"
                 >
                     <div className="flex items-center gap-4">
-                        <span className="font-bold text-slate-900 md:hidden">TalentPilot</span>
+                        {/* Hamburger button — only on mobile */}
+                        <button
+                            onClick={() => setSidebarOpen(true)}
+                            className="lg:hidden p-2 -ml-2 rounded-lg text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition-colors"
+                            aria-label="Otwórz menu"
+                        >
+                            <Menu className="h-5 w-5" />
+                        </button>
+                        <span className="font-bold text-slate-900 lg:hidden">TalentPilot</span>
                     </div>
 
                     <div className="flex items-center gap-4">
@@ -244,7 +286,7 @@ export default function DashboardLayout({
                 </header>
 
                 {/* Content Area with its own scroll */}
-                <main className="flex-1 overflow-y-auto p-8 bg-slate-50">
+                <main className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8 bg-slate-50">
                     <div className="max-w-7xl mx-auto w-full">
                         {children}
                     </div>

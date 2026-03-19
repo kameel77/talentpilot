@@ -1,12 +1,24 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { Suspense, useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { api } from "@/lib/api";
 import { ArrowRight, Eye, EyeOff, Lock, CheckCircle2, ShieldAlert } from "lucide-react";
 
 export default function ResetPasswordPage() {
+    return (
+        <Suspense fallback={
+            <div className="flex min-h-screen w-full items-center justify-center p-6 bg-slate-50">
+                <div className="animate-pulse text-slate-400 font-medium">Ładowanie...</div>
+            </div>
+        }>
+            <ResetPasswordContent />
+        </Suspense>
+    );
+}
+
+function ResetPasswordContent() {
     const router = useRouter();
     const searchParams = useSearchParams();
     const token = searchParams.get("token");

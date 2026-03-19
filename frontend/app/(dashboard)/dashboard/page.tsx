@@ -1,6 +1,7 @@
+"use client";
+
+import { useEffect, useState } from "react";
 import { KPICard } from "@/components/ui/KPICard";
-import { DomainBadge } from "@/components/ui/DomainBadge";
-import type { DomainType } from "@/components/ui/DomainBadge";
 import {
     Users,
     Database,
@@ -8,83 +9,192 @@ import {
     TrendingUp,
     ChevronRight,
     ArrowRight,
-    Sparkles
+    Sparkles,
+    Loader2,
 } from "lucide-react";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
+import { api, tokenManager, User, DomainDistribution, UserTalentResponse } from "@/lib/api";
+
+interface DashboardData {
+    users: User[];
+    currentUser: User | null;
+    teamDomains: { executing: number; influencing: number; relationship_building: number; strategic_thinking: number };
+    usersWithTalents: number;
+}
 
 export default function DashboardPage() {
+    const [data, setData] = useState<DashboardData | null>(null);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState("");
+
+    useEffect(() => {
+        const loadDashboard = async () => {
+            try {
+                const currentUser = tokenManager.getUser();
+                const users: User[] = await api.users.list();
+
+                // Aggregate domain distribution across all users
+                const teamDomains = { executing: 0, influencing: 0, relationship_building: 0, strategic_thinking: 0 };
+                let usersWithTalents = 0;
+
+                // Fetch talents for each user and aggregate domains
+                const domainPromises = users.map(async (user) => {
+                    try {
+                        const talents: UserTalentResponse[] = await api.talents.getUserTalentsTyped(user.id);
+                        if (talents.length > 0) {
+                            usersWithTalents++;
+                            talents.forEach((ut) => {
+                                const domain = ut.talent.domain as keyof typeof teamDomains;
+                                if (domain in teamDomains) {
+                                    teamDomains[domain]++;
+                                }
+                            });
+                        }
+                    } catch {
+                        // User may not have talents assigned
+                    }
+                });
+
+                await Promise.all(domainPromises);
+
+                setData({
+                    users,
+                    currentUser,
+                    teamDomains,
+                    usersWithTalents,
+                });
+            } catch (_err) {
+                setError("Nie udało się załadować danych. Spróbuj odświeżyć stronę.");
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        loadDashboard();
+    }, []);
+
+    if (loading) {
+        return (
+            <div className="flex h-[400px] items-center justify-center">
+                <div className="flex flex-col items-center gap-3">
+                    <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                    <p className="text-sm font-medium text-slate-500">Ładowanie panelu...</p>
+                </div>
+            </div>
+        );
+    }
+
+    if (error) {
+        return (
+            <div className="flex h-[400px] items-center justify-center">
+                <div className="rounded-2xl border border-rose-200 bg-rose-50 px-8 py-6 text-center">
+                    <p className="text-sm font-medium text-rose-700">{error}</p>
+                </div>
+            </div>
+        );
+    }
+
+    if (!data) return null;
+
+    const { users, currentUser, teamDomains, usersWithTalents } = data;
+    const totalTalents = teamDomains.executing + teamDomains.influencing + teamDomains.relationship_building + teamDomains.strategic_thinking;
+    const totalDomains = totalTalents || 1; // Avoid division by zero
+
+    const domainPercentages = {
+        executing: Math.round((teamDomains.executing / totalDomains) * 100),
+        influencing: Math.round((teamDomains.influencing / totalDomains) * 100),
+        relationship_building: Math.round((teamDomains.relationship_building / totalDomains) * 100),
+        strategic_thinking: Math.round((teamDomains.strategic_thinking / totalDomains) * 100),
+    };
+
+    const firstName = currentUser?.full_name?.split(" ")[0] || "Użytkowniku";
+
+    // Get a few users to display in the team section (max 6)
+    const displayUsers = users.slice(0, 6);
+
     return (
         <div className="space-y-8 max-w-7xl mx-auto">
             {/* Page Header */}
-            <div className="flex items-end justify-between">
+            <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
                 <div>
                     <h1 className="text-3xl font-bold font-heading text-slate-900 tracking-tight">Panel główny</h1>
                     <p className="mt-1 text-slate-500 font-medium">
-                        Witaj, Anno! Oto przegląd Twojego zespołu.
+                        Witaj, {firstName}! Oto przegląd Twojego zespołu.
                     </p>
                 </div>
-                <button className="flex items-center gap-2 px-6 py-3 bg-primary text-white rounded-xl font-bold text-sm shadow-lg shadow-primary/25 hover:bg-primary-dark transition-all group">
+                <Link
+                    href="/dashboard/users"
+                    className="inline-flex items-center gap-2 px-6 py-3 bg-primary text-white rounded-xl font-bold text-sm shadow-lg shadow-primary/25 hover:bg-primary-dark transition-all group"
+                >
                     Zarządzaj zespołem
                     <ArrowRight className="h-4 w-4 group-hover:translate-x-1 transition-transform" />
-                </button>
+                </Link>
             </div>
 
             {/* KPI Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
                 <KPICard
                     title="Członków zespołu"
-                    value="5"
+                    value={users.length}
                     icon={<Users className="h-5 w-5" />}
                     description="aktywnych użytkowników"
-                    trend={{ value: "12%", isUp: true }}
                 />
                 <KPICard
                     title="Zaimportowane talenty"
-                    value="25"
+                    value={totalTalents}
                     icon={<Database className="h-5 w-5" />}
-                    description="profili talentowych"
+                    description={`${usersWithTalents} profili talentowych`}
                 />
                 <KPICard
                     title="Porównań 1:1"
-                    value="12"
+                    value="—"
                     icon={<ArrowRightLeft className="h-5 w-5" />}
-                    description="w tym miesiącu"
-                    trend={{ value: "8%", isUp: true }}
+                    description="wkrótce"
                 />
                 <KPICard
-                    title="Zaangażowanie"
-                    value="87%"
+                    title="Pokrycie talentami"
+                    value={users.length > 0 ? `${Math.round((usersWithTalents / users.length) * 100)}%` : "0%"}
                     icon={<TrendingUp className="h-5 w-5" />}
-                    description="średnia aktywność"
-                    trend={{ value: "5%", isUp: true }}
+                    description={`${usersWithTalents} z ${users.length} użytkowników`}
                 />
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
                 {/* Domain Area */}
-                <div className="lg:col-span-4 bg-white rounded-3xl border border-slate-200/60 p-8 shadow-sm">
+                <div className="lg:col-span-4 bg-white rounded-3xl border border-slate-200/60 p-6 sm:p-8 shadow-sm">
                     <h3 className="text-xl font-bold font-heading text-slate-900 mb-6 tracking-tight">
                         Rozkład domenowy zespołu
                     </h3>
 
-                    <div className="space-y-6">
-                        <DomainProgress label="Realizacja" value={35} color="bg-domain-executing" />
-                        <DomainProgress label="Wpływanie" value={25} color="bg-domain-influencing" />
-                        <DomainProgress label="Budowanie relacji" value={22} color="bg-domain-relationship" />
-                        <DomainProgress label="Myślenie strategiczne" value={18} color="bg-domain-strategic" />
-                    </div>
+                    {totalTalents === 0 ? (
+                        <div className="text-center py-8">
+                            <Database className="h-10 w-10 text-slate-300 mx-auto mb-3" />
+                            <p className="text-sm text-slate-500">
+                                Brak zaimportowanych talentów. Zacznij od dodania talentów dla członków zespołu.
+                            </p>
+                        </div>
+                    ) : (
+                        <>
+                            <div className="space-y-6">
+                                <DomainProgress label="Realizacja" value={domainPercentages.executing} color="bg-domain-executing" />
+                                <DomainProgress label="Wpływanie" value={domainPercentages.influencing} color="bg-domain-influencing" />
+                                <DomainProgress label="Budowanie relacji" value={domainPercentages.relationship_building} color="bg-domain-relationship" />
+                                <DomainProgress label="Myślenie strategiczne" value={domainPercentages.strategic_thinking} color="bg-domain-strategic" />
+                            </div>
 
-                    <div className="mt-8 flex gap-3">
-                        <div className="h-10 grow bg-domain-executing rounded-xl" />
-                        <div className="h-10 grow bg-domain-influencing rounded-xl" />
-                        <div className="h-10 grow bg-domain-relationship rounded-xl" />
-                        <div className="h-10 grow bg-domain-strategic rounded-xl" />
-                    </div>
+                            <div className="mt-8 flex gap-3">
+                                <div className="h-10 bg-domain-executing rounded-xl" style={{ flex: teamDomains.executing || 0.1 }} />
+                                <div className="h-10 bg-domain-influencing rounded-xl" style={{ flex: teamDomains.influencing || 0.1 }} />
+                                <div className="h-10 bg-domain-relationship rounded-xl" style={{ flex: teamDomains.relationship_building || 0.1 }} />
+                                <div className="h-10 bg-domain-strategic rounded-xl" style={{ flex: teamDomains.strategic_thinking || 0.1 }} />
+                            </div>
+                        </>
+                    )}
                 </div>
 
                 {/* Daily Tip Area */}
-                <div className="lg:col-span-8 bg-blue-50/50 rounded-3xl border border-blue-100/50 p-8 flex flex-col">
+                <div className="lg:col-span-8 bg-blue-50/50 rounded-3xl border border-blue-100/50 p-6 sm:p-8 flex flex-col">
                     <div className="flex items-center gap-3 mb-6">
                         <div className="h-12 w-12 bg-white rounded-2xl flex items-center justify-center text-primary shadow-sm ring-1 ring-blue-100">
                             <Sparkles className="h-6 w-6" />
@@ -92,27 +202,27 @@ export default function DashboardPage() {
                         <div>
                             <div className="flex items-center gap-2">
                                 <span className="text-[10px] font-bold tracking-widest text-slate-400 uppercase">
-                                    Dzienna wskazówka
-                                </span>
-                                <span className="px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-600 text-[10px] font-bold">
-                                    Realizacja
+                                    Q&A Copilot
                                 </span>
                             </div>
                             <h4 className="text-xl font-bold text-slate-900 font-heading tracking-tight">
-                                Wskazówka na spotkanie z Anną
+                                Zapytaj o swój zespół
                             </h4>
                         </div>
                     </div>
 
                     <p className="text-lg text-slate-600 leading-relaxed max-w-2xl">
-                        Anna ma silny talent Osiągania. Przed spotkaniem przygotuj konkretne cele i rezultaty, które chcesz osiągnąć. Doceni jasną strukturę i możliwość od razu przejścia do działania.
+                        Użyj AI Copilota, aby dowiedzieć się więcej o talentach swojego zespołu. Zadaj pytanie o konkretną osobę, poproś o wskazówki do spotkania lub zaplanuj lepszą współpracę.
                     </p>
 
                     <div className="mt-auto pt-8">
-                        <button className="flex items-center gap-2 text-sm font-bold text-slate-900 hover:gap-3 transition-all">
-                            Zobacz więcej wskazówek
+                        <Link
+                            href="/dashboard/qa"
+                            className="flex items-center gap-2 text-sm font-bold text-slate-900 hover:gap-3 transition-all"
+                        >
+                            Otwórz Q&A Copilot
                             <ArrowRight className="h-4 w-4" />
-                        </button>
+                        </Link>
                     </div>
                 </div>
             </div>
@@ -127,32 +237,41 @@ export default function DashboardPage() {
                     </Link>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    <MemberCard
-                        name="Anna Kowalska"
-                        role="Menedżer"
-                        domains={["Realizacja", "Myślenie strategiczne"]}
-                        initials="AK"
-                    />
-                    <MemberCard
-                        name="Piotr Nowak"
-                        role="Członek Zespołu"
-                        domains={["Budowanie relacji"]}
-                        initials="PN"
-                    />
-                    <MemberCard
-                        name="Magdalena Wiśniewska"
-                        role="Członek Zespołu"
-                        domains={["Myślenie strategiczne", "Wpływanie"]}
-                        initials="MW"
-                    />
-                </div>
+                {users.length === 0 ? (
+                    <div className="rounded-3xl border border-dashed border-slate-300 bg-slate-50/50 p-12 sm:p-16 text-center">
+                        <Users className="h-12 w-12 text-slate-300 mx-auto mb-4" />
+                        <h4 className="text-lg font-semibold text-slate-700">Brak członków zespołu</h4>
+                        <p className="mt-2 text-sm text-slate-500">
+                            Zaproś pierwszych członków zespołu, aby rozpocząć pracę z TalentPilot.
+                        </p>
+                        <Link
+                            href="/dashboard/users"
+                            className="mt-6 inline-flex items-center gap-2 rounded-xl bg-primary px-6 py-3 text-sm font-semibold text-white hover:bg-blue-700 transition-all shadow-sm"
+                        >
+                            Dodaj użytkownika
+                            <ArrowRight className="h-4 w-4" />
+                        </Link>
+                    </div>
+                ) : (
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+                        {displayUsers.map((user) => (
+                            <MemberCard
+                                key={user.id}
+                                id={user.id}
+                                name={user.full_name}
+                                role={roleLabel(user.role)}
+                                email={user.email}
+                                initials={getInitials(user.full_name)}
+                            />
+                        ))}
+                    </div>
+                )}
             </div>
         </div>
     );
 }
 
-function DomainProgress({ label, value, color }: { label: string, value: number, color: string }) {
+function DomainProgress({ label, value, color }: { label: string; value: number; color: string }) {
     return (
         <div className="space-y-2">
             <div className="flex justify-between text-sm">
@@ -166,30 +285,53 @@ function DomainProgress({ label, value, color }: { label: string, value: number,
     );
 }
 
-function MemberCard({ name, role, domains, initials }: { name: string, role: string, domains: string[], initials: string }) {
+function MemberCard({ id, name, role, email, initials }: { id: number; name: string; role: string; email: string; initials: string }) {
     return (
-        <div className="bg-white p-6 rounded-3xl border border-slate-200/60 shadow-sm hover:shadow-md transition-all">
-            <div className="flex items-center gap-4 mb-6">
-                <div className="h-14 w-14 bg-indigo-600 text-white rounded-full flex items-center justify-center font-bold text-xl relative">
+        <Link
+            href={`/dashboard/users/${id}`}
+            className="group bg-white p-6 rounded-3xl border border-slate-200/60 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all"
+        >
+            <div className="flex items-center gap-4 mb-4">
+                <div className="h-14 w-14 bg-indigo-600 text-white rounded-full flex items-center justify-center font-bold text-xl relative shrink-0">
                     {initials}
-                    <div className="absolute -bottom-1 -right-1 h-6 w-6 bg-amber-400 border-4 border-white rounded-full flex items-center justify-center">
-                        <Sparkles className="h-3 w-3 text-white" />
-                    </div>
                 </div>
-                <div>
-                    <h4 className="font-bold text-slate-900 group-hover:text-primary transition-colors">{name}</h4>
+                <div className="min-w-0">
+                    <h4 className="font-bold text-slate-900 group-hover:text-primary transition-colors truncate">{name}</h4>
                     <p className="text-xs text-slate-500 font-medium">{role}</p>
+                    <p className="text-xs text-slate-400 truncate">{email}</p>
                 </div>
             </div>
 
-            <div className="flex flex-wrap gap-2">
-                {domains.map(d => (
-                    <DomainBadge key={d} domain={d as DomainType} size="sm" />
-                ))}
-                {domains.length > 2 && (
-                    <span className="text-[10px] font-bold text-slate-400">+2 więcej</span>
-                )}
+            <div className="flex items-center justify-between">
+                <div className="flex items-center gap-1.5">
+                    <div className="h-2 w-2 rounded-full bg-emerald-500" />
+                    <span className="text-[11px] font-bold text-slate-500 uppercase tracking-tight">Aktywny</span>
+                </div>
+                <span className="text-xs font-semibold text-primary opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1">
+                    Zobacz profil
+                    <ChevronRight className="h-3 w-3" />
+                </span>
             </div>
-        </div>
-    )
+        </Link>
+    );
+}
+
+function getInitials(name: string): string {
+    return name
+        .split(" ")
+        .map((n) => n[0])
+        .join("")
+        .toUpperCase()
+        .slice(0, 2);
+}
+
+function roleLabel(role: string): string {
+    switch (role) {
+        case "admin":
+            return "Administrator";
+        case "manager":
+            return "Menedżer";
+        default:
+            return "Członek zespołu";
+    }
 }

@@ -160,6 +160,27 @@ export interface QAHistoryItem {
     created_at: string;
 }
 
+export interface DomainDistribution {
+    executing: number;
+    influencing: number;
+    relationship_building: number;
+    strategic_thinking: number;
+}
+
+export interface UserDetailResponse extends User {
+    superpowers?: string;
+    motivators?: string;
+    blockers?: string;
+    feedback_style?: string;
+}
+
+export interface UserTalentResponse {
+    id: number;
+    talent_id: number;
+    rank: number;
+    talent: Talent;
+}
+
 export interface QAFeedbackRequest {
     query_id: number;
     answer_id: number;
@@ -348,6 +369,16 @@ export const api = {
 
         getUserTalents: async (userId: number) => {
             const response = await apiClient.get(`/api/users/${userId}/talents`);
+            return response.data;
+        },
+
+        getUserTalentsTyped: async (userId: number, language: string = 'pl'): Promise<UserTalentResponse[]> => {
+            const response = await apiClient.get<UserTalentResponse[]>(`/api/users/${userId}/talents`, { params: { language } });
+            return response.data;
+        },
+
+        getUserDomains: async (userId: number): Promise<DomainDistribution> => {
+            const response = await apiClient.get<DomainDistribution>(`/api/users/${userId}/domains`);
             return response.data;
         },
     },
