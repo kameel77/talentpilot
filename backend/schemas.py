@@ -505,3 +505,30 @@ class CompareResponse(BaseModel):
     domain_balance: List[DomainBalance]
     synergy_score: int
     collaboration_tips: List[str]
+
+
+# -------- Tips Schemas --------
+
+class DailyTipResponse(BaseModel):
+    """AI-generated daily tip."""
+    tip_id: Optional[int] = None
+    content: str
+    talent_focus: str
+    context: str
+
+
+class SynergyTipResponse(BaseModel):
+    """Synergy tip for team interaction."""
+    tip_id: Optional[int] = None
+    content: str
+    target_user_name: Optional[str] = None
+    shared_talents: List[SharedTalent] = []
+    synergy_score: int = 0
+    collaboration_tips: List[str] = []
+    domain_balance: List[DomainBalance] = []
+
+
+class TipFeedbackRequest(BaseModel):
+    """Feedback on a tip."""
+    tip_id: int
+    helpful: bool

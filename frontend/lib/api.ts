@@ -216,6 +216,24 @@ export interface CompareResponse {
     collaboration_tips: string[];
 }
 
+// Tips types
+export interface DailyTipResponse {
+    tip_id: number | null;
+    content: string;
+    talent_focus: string;
+    context: string;
+}
+
+export interface SynergyTipResponse {
+    tip_id: number | null;
+    content: string;
+    target_user_name: string | null;
+    shared_talents: SharedTalent[];
+    synergy_score: number;
+    collaboration_tips: string[];
+    domain_balance: DomainBalanceItem[];
+}
+
 export interface QAFeedbackRequest {
     query_id: number;
     answer_id: number;
@@ -433,9 +451,14 @@ export const api = {
 
     // AI Tips
     tips: {
-        getDaily: async (context?: string) => {
+        getDaily: async (context?: string): Promise<DailyTipResponse> => {
             const params = context ? { context } : {};
-            const response = await apiClient.get('/api/tips/daily', { params });
+            const response = await apiClient.get<DailyTipResponse>('/api/tips/daily', { params });
+            return response.data;
+        },
+
+        getSynergy: async (targetUserId: number): Promise<SynergyTipResponse> => {
+            const response = await apiClient.get<SynergyTipResponse>(`/api/tips/synergy/${targetUserId}`);
             return response.data;
         },
 
