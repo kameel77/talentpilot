@@ -457,6 +457,45 @@ class ExternalGallupResponse(BaseModel):
                         }
                     ],
                 },
-            ]
+            ],
         }
     }
+
+
+# -------- Compare Schemas --------
+
+class TalentCompareItem(BaseModel):
+    """A single talent in comparison context."""
+    code: str
+    name: str
+    domain: str
+    rank: int
+
+
+class SharedTalent(BaseModel):
+    """A talent shared by both users (bridge)."""
+    code: str
+    name: str
+    domain: str
+    rank_a: int
+    rank_b: int
+
+
+class DomainBalance(BaseModel):
+    """Domain talent count for both users."""
+    domain: str
+    domain_label: str
+    count_a: int
+    count_b: int
+
+
+class CompareResponse(BaseModel):
+    """Full comparison result between two users."""
+    user_a: UserResponse
+    user_b: UserResponse
+    shared_talents: List[SharedTalent]
+    unique_a: List[TalentCompareItem]
+    unique_b: List[TalentCompareItem]
+    domain_balance: List[DomainBalance]
+    synergy_score: int
+    collaboration_tips: List[str]

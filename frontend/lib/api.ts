@@ -181,6 +181,40 @@ export interface UserTalentResponse {
     talent: Talent;
 }
 
+// Compare types
+export interface TalentCompareItem {
+    code: string;
+    name: string;
+    domain: string;
+    rank: number;
+}
+
+export interface SharedTalent {
+    code: string;
+    name: string;
+    domain: string;
+    rank_a: number;
+    rank_b: number;
+}
+
+export interface DomainBalanceItem {
+    domain: string;
+    domain_label: string;
+    count_a: number;
+    count_b: number;
+}
+
+export interface CompareResponse {
+    user_a: User;
+    user_b: User;
+    shared_talents: SharedTalent[];
+    unique_a: TalentCompareItem[];
+    unique_b: TalentCompareItem[];
+    domain_balance: DomainBalanceItem[];
+    synergy_score: number;
+    collaboration_tips: string[];
+}
+
 export interface QAFeedbackRequest {
     query_id: number;
     answer_id: number;
@@ -513,6 +547,16 @@ export const api = {
 
         getHistory: async (): Promise<QAHistoryItem[]> => {
             const response = await apiClient.get<QAHistoryItem[]>('/api/v1/qa/history');
+            return response.data;
+        },
+    },
+
+    // Compare
+    compare: {
+        users: async (userAId: number, userBId: number, language: string = 'pl'): Promise<CompareResponse> => {
+            const response = await apiClient.get<CompareResponse>(`/api/compare/${userAId}/${userBId}`, {
+                params: { language },
+            });
             return response.data;
         },
     },
