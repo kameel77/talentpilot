@@ -7,7 +7,7 @@ from typing import List
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
-from auth import hash_password, require_role
+from auth import hash_password, require_role, create_access_token
 from database import get_db
 from models import (
     InvitationStatus,
@@ -18,7 +18,13 @@ from models import (
     UserRole,
     UserTalent,
 )
-from schemas import GhostInviteCreate, GhostInviteResponse, GhostInviteTalent
+from schemas import (
+    GhostInviteCreate,
+    GhostInviteResponse,
+    GhostInviteTalent,
+    InvitationAcceptRequest,
+    Token,
+)
 
 router = APIRouter()
 
@@ -146,3 +152,62 @@ def create_ghost_invite(
         expires_at=invitation.expires_at,
         status=invitation.status.value,
     )
+
+
+@router.post("/accept", response_model=Token, status_code=status.HTTP_200_OK)
+def accept_invitation(
+    data: InvitationAcceptRequest,
+    db: Session = Depends(get_db),
+):
+    """Accept an invitation and activate the user account.
+
+    - Verifies token and expiry
+    - Sets password, activates user (is_active=True, is_ghost=False)
+    - Returns JWT for auto-login
+    """
+    token_hash = _hash_token(data.token)
+
+    invitation = (
+        db.query(TeamInvitation)
+        .filter(
+            TeamInvitation.token_hash == token_hash,
+            TeamInvitation.status == InvitationStatus.ACTIVE,
+        )
+        .first()
+    )
+
+    if not invitation:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid or expired invitation link.",
+        )
+
+    if invitation.expires_at < datetime.now(timezone.utc):
+        invitation.status = InvitationStatus.EXPIRED
+        db.commit()
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="This invitation has expired.",
+        )
+
+    user = db.query(User).filter(User.id == invitation.user_id).first()
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="User not found.",
+        )
+
+    # Activate user
+    user.hashed_password = hash_password(data.password)
+    user.is_active = True
+    user.is_ghost = False
+
+    # Mark invitation as consumed
+    invitation.status = InvitationStatus.REVOKED
+    invitation.revoked_at = datetime.now(timezone.utc)
+
+    db.commit()
+
+    # Return JWT for auto-login
+    access_token = create_access_token(data={"sub": user.id})
+    return Token(access_token=access_token)

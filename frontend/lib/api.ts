@@ -36,6 +36,7 @@ export interface UserUpdateData {
     phone?: string;
     linkedin_url?: string;
     avatar_url?: string;
+    is_active?: boolean;
     superpowers?: string;
     motivators?: string;
     blockers?: string;
@@ -421,6 +422,11 @@ export const api = {
     invitations: {
         createGhostInvite: async (data: GhostInviteRequest): Promise<GhostInviteResponse> => {
             const response = await apiClient.post<GhostInviteResponse>('/api/invitations/ghost', data);
+            return response.data;
+        },
+
+        acceptInvite: async (token: string, password: string): Promise<AuthResponse> => {
+            const response = await apiClient.post<AuthResponse>('/api/invitations/accept', { token, password });
             return response.data;
         },
     },

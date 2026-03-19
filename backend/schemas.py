@@ -54,6 +54,7 @@ class UserUpdate(BaseModel):
     phone: Optional[str] = Field(default=None, max_length=50)
     linkedin_url: Optional[str] = Field(default=None, max_length=500)
     avatar_url: Optional[str] = None
+    is_active: Optional[bool] = None
     superpowers: Optional[str] = None
     motivators: Optional[str] = None
     blockers: Optional[str] = None
@@ -110,6 +111,11 @@ class GhostInviteResponse(BaseModel):
     invite_token: str
     expires_at: datetime
     status: str
+
+
+class InvitationAcceptRequest(BaseModel):
+    token: str = Field(..., min_length=1)
+    password: str = Field(..., min_length=8, max_length=72)
 
 
 # Team Schemas

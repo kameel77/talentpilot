@@ -164,6 +164,20 @@ def update_user(
         user.blockers = data.blockers
     if data.feedback_style is not None:
         user.feedback_style = data.feedback_style
+    if data.is_active is not None:
+        # Only admins can toggle is_active
+        if current_user.role != UserRole.ADMIN:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Only admins can activate/deactivate users",
+            )
+        # Prevent self-deactivation
+        if user.id == current_user.id and data.is_active is False:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Cannot deactivate your own account",
+            )
+        user.is_active = data.is_active
 
     db.commit()
     db.refresh(user)

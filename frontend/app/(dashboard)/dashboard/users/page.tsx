@@ -2,14 +2,14 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { api, GhostInviteRequest, Talent, Team } from "@/lib/api";
+import { api, GhostInviteRequest, Talent, Team, tokenManager } from "@/lib/api";
 import { cn } from "@/lib/utils";
 import { KPICard } from "@/components/ui/KPICard";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Users, UserPlus, Shield, UserCheck } from "lucide-react";
+import { Users, UserPlus, Shield, UserCheck, Power } from "lucide-react";
 
 interface UserSummary {
     id: number;
@@ -17,6 +17,7 @@ interface UserSummary {
     email: string;
     role: string;
     is_active?: boolean;
+    is_ghost?: boolean;
 }
 
 export default function UsersPage() {
@@ -49,6 +50,9 @@ export default function UsersPage() {
         loadTeams();
         loadTalents();
     }, []);
+
+    const currentUser = tokenManager.getUser();
+    const isAdmin = currentUser?.role === "admin";
 
     const loadUsers = async () => {
         try {
@@ -453,34 +457,35 @@ export default function UsersPage() {
             ) : (
                 <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3 animate-fade-up">
                     {users.map((user) => (
-                        <Link
+                        <div
                             key={user.id}
-                            href={`/dashboard/users/${user.id}`}
                             className="group flex flex-col justify-between rounded-2xl border border-slate-200 bg-white p-6 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:border-blue-100 hover:shadow-xl hover:shadow-blue-500/5"
                         >
-                            <div className="flex items-start justify-between gap-4">
-                                <div className="flex items-center gap-4">
-                                    <div className="h-12 w-12 rounded-xl bg-slate-100 flex items-center justify-center text-slate-500 group-hover:bg-blue-50 group-hover:text-primary transition-colors">
-                                        <span className="text-lg font-bold font-heading">
-                                            {user.full_name.charAt(0)}
-                                        </span>
+                            <Link href={`/dashboard/users/${user.id}`}>
+                                <div className="flex items-start justify-between gap-4">
+                                    <div className="flex items-center gap-4">
+                                        <div className="h-12 w-12 rounded-xl bg-slate-100 flex items-center justify-center text-slate-500 group-hover:bg-blue-50 group-hover:text-primary transition-colors">
+                                            <span className="text-lg font-bold font-heading">
+                                                {user.full_name.charAt(0)}
+                                            </span>
+                                        </div>
+                                        <div>
+                                            <h3 className="font-bold text-slate-900 group-hover:text-primary transition-colors">
+                                                {user.full_name}
+                                            </h3>
+                                            <p className="text-xs text-slate-400 font-medium">{user.email}</p>
+                                        </div>
                                     </div>
-                                    <div>
-                                        <h3 className="font-bold text-slate-900 group-hover:text-primary transition-colors">
-                                            {user.full_name}
-                                        </h3>
-                                        <p className="text-xs text-slate-400 font-medium">{user.email}</p>
-                                    </div>
+                                    <span className={cn(
+                                        "rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider",
+                                        user.role.toLowerCase() === 'admin'
+                                            ? "bg-amber-50 text-amber-600 border border-amber-100"
+                                            : "bg-blue-50 text-blue-600 border border-blue-100"
+                                    )}>
+                                        {user.role}
+                                    </span>
                                 </div>
-                                <span className={cn(
-                                    "rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider",
-                                    user.role.toLowerCase() === 'admin'
-                                        ? "bg-amber-50 text-amber-600 border border-amber-100"
-                                        : "bg-blue-50 text-blue-600 border border-blue-100"
-                                )}>
-                                    {user.role}
-                                </span>
-                            </div>
+                            </Link>
 
                             <div className="mt-8 flex items-center justify-between">
                                 <div className="flex items-center gap-1.5">
@@ -492,14 +497,48 @@ export default function UsersPage() {
                                         {user.is_active !== false ? "Active" : "Inactive"}
                                     </span>
                                 </div>
-                                <span className="text-xs font-semibold text-primary opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1">
-                                    View profile
-                                    <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                                    </svg>
-                                </span>
+                                <div className="flex items-center gap-2">
+                                    {isAdmin && user.id !== currentUser?.id && (
+                                        <button
+                                            onClick={async (e) => {
+                                                e.stopPropagation();
+                                                try {
+                                                    await api.users.update(user.id, { is_active: user.is_active === false });
+                                                    setUsers((prev) =>
+                                                        prev.map((u) =>
+                                                            u.id === user.id
+                                                                ? { ...u, is_active: u.is_active === false }
+                                                                : u
+                                                        )
+                                                    );
+                                                } catch {
+                                                    setError("Failed to update user status");
+                                                }
+                                            }}
+                                            className={cn(
+                                                "inline-flex items-center gap-1 rounded-lg px-2.5 py-1 text-[11px] font-bold uppercase tracking-tight transition-all",
+                                                user.is_active !== false
+                                                    ? "text-rose-600 hover:bg-rose-50 border border-rose-200"
+                                                    : "text-emerald-600 hover:bg-emerald-50 border border-emerald-200"
+                                            )}
+                                            title={user.is_active !== false ? "Deactivate user" : "Activate user"}
+                                        >
+                                            <Power className="h-3 w-3" />
+                                            {user.is_active !== false ? "Deactivate" : "Activate"}
+                                        </button>
+                                    )}
+                                    <Link
+                                        href={`/dashboard/users/${user.id}`}
+                                        className="text-xs font-semibold text-primary opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1"
+                                    >
+                                        View profile
+                                        <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                                        </svg>
+                                    </Link>
+                                </div>
                             </div>
-                        </Link>
+                        </div>
                     ))}
                 </div>
             )}
