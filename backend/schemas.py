@@ -290,7 +290,7 @@ class KnowledgeItemResponse(BaseModel):
 
 class AdminSettingUpdate(BaseModel):
     key: str = Field(..., min_length=1, max_length=100)
-    value: str = Field(..., min_length=1, max_length=500)
+    value: str = Field(..., max_length=10000)
 
 
 class AdminSettingsResponse(BaseModel):
