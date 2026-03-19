@@ -85,11 +85,11 @@ export default function AdminSettingsPage() {
                         </div>
                     </CardHeader>
                     <CardContent className="p-6 space-y-6">
-                        <div className="grid gap-4 md:grid-cols-2">
+                        <div className="grid gap-4 md:grid-cols-3">
                             <div className="space-y-2">
                                 <Label htmlFor="chat-model" className="flex items-center gap-2">
                                     <Cpu className="h-3 w-3 text-slate-400" />
-                                    Model Czat (OpenRouter ID)
+                                    Model Czat
                                 </Label>
                                 <Input
                                     id="chat-model"
@@ -98,6 +98,21 @@ export default function AdminSettingsPage() {
                                     placeholder="openai/gpt-4o-mini"
                                     className="bg-white"
                                 />
+                                <p className="text-[10px] text-slate-400">Generowanie odpowiedzi, tipsów, synergii</p>
+                            </div>
+                            <div className="space-y-2">
+                                <Label htmlFor="embedding-model" className="flex items-center gap-2">
+                                    <Cpu className="h-3 w-3 text-slate-400" />
+                                    Model Embedding
+                                </Label>
+                                <Input
+                                    id="embedding-model"
+                                    value={settings.openrouter_embedding_model || ""}
+                                    onChange={(e) => handleChange("openrouter_embedding_model", e.target.value)}
+                                    placeholder="text-embedding-3-small"
+                                    className="bg-white"
+                                />
+                                <p className="text-[10px] text-slate-400">Wektoryzacja pytań i wyszukiwanie w bazie wiedzy (RAG)</p>
                             </div>
                             <div className="space-y-2">
                                 <Label htmlFor="query-limit" className="flex items-center gap-2">
@@ -111,7 +126,33 @@ export default function AdminSettingsPage() {
                                     onChange={(e) => handleChange("daily_query_limit", e.target.value)}
                                     className="bg-white"
                                 />
+                                <p className="text-[10px] text-slate-400">Maks. pytań na użytkownika / 24h (0 = bez limitu)</p>
                             </div>
+                        </div>
+
+                        <div className="flex items-center justify-between p-4 rounded-xl bg-slate-50 border border-slate-100">
+                            <div className="flex items-center gap-3">
+                                <div className="p-1.5 bg-emerald-100 rounded-lg text-emerald-600">
+                                    <Zap className="h-4 w-4" />
+                                </div>
+                                <div>
+                                    <p className="text-sm font-semibold text-slate-900">Streaming (SSE)</p>
+                                    <p className="text-[10px] text-slate-400">Odpowiedzi pojawiają się słowo po słowie zamiast czekać na pełen tekst</p>
+                                </div>
+                            </div>
+                            <button
+                                type="button"
+                                onClick={() => handleChange("streaming_enabled", settings.streaming_enabled === "true" ? "false" : "true")}
+                                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                                    settings.streaming_enabled === "true" ? "bg-emerald-600" : "bg-slate-300"
+                                }`}
+                            >
+                                <span
+                                    className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${
+                                        settings.streaming_enabled === "true" ? "translate-x-6" : "translate-x-1"
+                                    }`}
+                                />
+                            </button>
                         </div>
 
                         <div className="space-y-2">
