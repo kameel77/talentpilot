@@ -269,7 +269,7 @@ function KnowledgeFormFields({
             </div>
 
             {/* Row 2.5: Render Mode (only for instructions section) */}
-            {section === "instructions" && (
+            {section.includes("instructions") && (
                 <div className="grid gap-4 md:grid-cols-3">
                     <FormSelect
                         label="Tryb renderowania"
