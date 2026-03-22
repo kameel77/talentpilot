@@ -197,14 +197,15 @@ def retrieve_instruction(
     db: Session,
     intent: str,
     language: str,
-) -> str | None:
-    """Retrieve format instruction from KB for the given intent.
+) -> tuple[str | None, str]:
+    """Retrieve format instruction and render mode from KB for the given intent.
     
-    Searches the 'instructions' section for an entry matching the intent category.
-    Returns the content of the matching instruction or None if not found.
+    Returns:
+        Tuple of (instruction_content, render_mode).
+        render_mode comes from metadata_json.render_mode, defaults to 'freeform'.
     """
     if not intent or intent == "default":
-        return None
+        return None, "structured"
 
     instruction = (
         db.query(KnowledgeItem)
@@ -218,9 +219,11 @@ def retrieve_instruction(
         .first()
     )
     if instruction:
-        logger.info(f"Retrieved instruction for intent '{intent}': {instruction.title}")
-        return instruction.content
-    return None
+        meta = instruction.metadata_json or {}
+        render_mode = meta.get("render_mode", "freeform")
+        logger.info(f"Retrieved instruction for intent '{intent}': {instruction.title} (render_mode={render_mode})")
+        return instruction.content, render_mode
+    return None, "structured"
 
 
 def build_prompt(

@@ -2,51 +2,86 @@
 
 ## Cel
 
-Moduł **Intent-Driven KB** dynamicznie steruje formatem odpowiedzi AI w Q&A Copilot.
-Zamiast jednego sztywnego system prompta, odpowiedź jest formatowana na podstawie **intencji pytania** użytkownika.
+Moduł **Intent-Driven KB** dynamicznie steruje **formatem odpowiedzi** AI w Q&A Copilot.
+Zamiast jednego sztywnego parsera (Talent/Kompetencja/Akcja), odpowiedź jest formatowana i renderowana w zależności od **intencji pytania** użytkownika.
 
 ---
 
-## Jak to działa
+## Architektura — pełny flow
 
 ```
  Pytanie użytkownika
         │
         ▼
  ┌──────────────────┐
- │ Intent Classifier │ ← osobny, lekki model LLM (np. gpt-4.1-nano)
- │  (intent_service) │ ← prompt i model konfigurowane w Admin → Ustawienia AI
+ │ Intent Classifier │ ← lekki LLM (np. gpt-4.1-nano)
+ │  (intent_service) │ ← model + prompt konfigurowane w Admin → Ustawienia AI
  └────────┬─────────┘
-          │ zwraca klasę intencji (np. "shadow_sides", "action_plan")
+          │ zwraca klasę intencji (np. "shadow_sides")
           ▼
  ┌──────────────────┐
  │ Retrieve          │ ← KB sekcja "instructions", filtr: category == intent
- │ Instruction       │
- └────────┬─────────┘
-          │ treść instrukcji formatu (lub None jeśli brak)
-          ▼
- ┌──────────────────┐
- │ Build Prompt      │ ← INSTRUKCJA FORMATU + Kontekst talentów + Wiedza + Pytanie
- │ + Generate Answer │ ← główny model LLM (konfigurowalny)
+ │ Instruction       │ ← zwraca: (treść instrukcji, render_mode)
  └────────┬─────────┘
           │
           ▼
-   Odpowiedź w formacie
-   dopasowanym do intencji
+ ┌──────────────────┐
+ │ Generate Answer   │ ← główny LLM z wstrzykniętą instrukcją formatu
+ └────────┬─────────┘
+          │
+          ▼
+ ┌──────────────────┐
+ │ Conditional Parse │ ← render_mode == "structured" → parse do boxów
+ │                   │ ← render_mode != "structured" → zwróć surowy tekst
+ └────────┬─────────┘
+          │ answer + answer_raw + render_mode
+          ▼
+ ┌──────────────────┐
+ │ Frontend Renderer │ ← rejestr rendererów: structured / freeform / ...
+ │ Registry          │
+ └──────────────────┘
 ```
 
 ---
 
 ## Kluczowe pliki
 
+### Backend
+
 | Plik | Rola |
 |------|------|
-| `backend/services/intent_service.py` | Klasyfikator intencji — pobiera klasy z KB, wywołuje LLM |
-| `backend/services/assistant_service.py` | `retrieve_instruction()` — pobiera instrukcję z KB; `build_prompt()` — buduje prompt z instrukcją |
-| `backend/services/settings_service.py` | Domyślne wartości: `intent_classifier_model`, `intent_classifier_prompt` |
-| `backend/routers/qa.py` | Pipeline Q&A — integruje: classify → instruction → generate |
-| `frontend/.../knowledge/instructions/page.tsx` | UI: zarządzanie instrukcjami w KB |
-| `frontend/.../settings/page.tsx` | UI: konfiguracja modelu i promptu klasyfikatora |
+| `services/intent_service.py` | Klasyfikator intencji: pobiera klasy z KB, wywołuje LLM |
+| `services/assistant_service.py` | `retrieve_instruction()` → zwraca `(content, render_mode)` z `metadata_json.render_mode` |
+| `services/settings_service.py` | Domyślne: `intent_classifier_model`, `intent_classifier_prompt` |
+| `routers/qa.py` | Pipeline: classify → instruction → generate → conditional parse |
+| `schemas.py` | `QAQueryResponse` + `QAHistoryItem` z polami `answer_raw`, `render_mode` |
+
+### Frontend
+
+| Plik | Rola |
+|------|------|
+| `components/qa/QARenderers.tsx` | **Rejestr rendererów**: `StructuredRenderer`, `FreeformRenderer`, `getRenderer()` |
+| `app/.../qa/page.tsx` | Dynamicznie wybiera renderer wg `render_mode` z API response |
+| `components/knowledge/KnowledgeEntryManager.tsx` | Dropdown "Tryb renderowania" (tylko w sekcji Instrukcje) |
+| `lib/api.ts` | Typy z `answer_raw`, `render_mode` |
+
+---
+
+## Render Modes
+
+| `render_mode` | Renderer | Opis |
+|---------------|----------|------|
+| `structured` | `StructuredRenderer` | 3 boxy: Talent / Kompetencja / Akcja (domyślny) |
+| `freeform` | `FreeformRenderer` | Swobodny tekst z formatowaniem nagłówków, list i bold |
+
+### Dodawanie nowego render mode
+
+1. **Developer**: Utwórz nowy komponent w `QARenderers.tsx` implementujący `RendererProps`
+2. **Developer**: Dodaj go do mapy `RENDERERS` w tym samym pliku
+3. **Developer**: Dodaj opcję do dropdownu w `KnowledgeEntryManager.tsx` (sekcja "Tryb renderowania")
+4. **Admin**: Przy tworzeniu instrukcji w KB → wybierz nowy tryb z dropdownu
+
+> **Ważne:** Dodanie nowej intencji, która używa istniejącego renderera, NIE wymaga zmian w kodzie.
 
 ---
 
@@ -55,50 +90,62 @@ Zamiast jednego sztywnego system prompta, odpowiedź jest formatowana na podstaw
 ### Model klasyfikatora
 - Klucz: `intent_classifier_model`
 - Domyślnie: `openai/gpt-4.1-nano`
-- Powinien być szybki i tani — klasyfikacja to jedno krótkie zapytanie
+- Powinien być szybki i tani
 
 ### Prompt klasyfikatora
 - Klucz: `intent_classifier_prompt`
-- Placeholder `{question}` — wstawiane jest pytanie użytkownika
-- Placeholder `{intent_classes}` — wstawiana jest lista klas intencji z KB (sekcja Instrukcje)
+- `{question}` → pytanie użytkownika
+- `{intent_classes}` → lista klas z KB (auto-generated)
 
 ---
 
-## Dodawanie nowej intencji
+## Dodawanie nowej intencji (Admin, bez kodu)
 
-1. Wejdź w **Admin → Baza wiedzy → Instrukcje odpowiedzi**
-2. Kliknij **Dodaj wpis**
-3. Wypełnij:
-   - **Kategoria** = klasa intencji (np. `shadow_sides`, `action_plan`, `team_dynamics`)
-   - **Tagi** = słowa kluczowe pomocnicze
-   - **Treść** = instrukcja formatu, np.:
+1. **Admin → Baza wiedzy → Instrukcje odpowiedzi → Dodaj**
+2. Wypełnij:
+   - **Kategoria** = klasa intencji (np. `shadow_sides`)
+   - **Typ treści** = `Instrukcja intencji (Intent Prompt)`
+   - **Tryb renderowania** = `Freeform` lub `Structured`
+   - **Treść** = instrukcja formatu dla LLM:
      ```
-     Gdy pytanie dotyczy piwnic/cieni talentu, odpowiedz w formacie:
+     Odpowiedz w formacie:
      
      Talent: [Nazwa]
-     Piwnice (potencjalne ryzyka):
+     Piwnice (ryzyka):
      1) [opis]
-     2) [opis]
      
-     Jak zarządzić cieniami:
+     Strategie zarządzania:
      1) [strategia]
-     2) [strategia]
      ```
-4. Zapisz — od teraz pytania pasujące do tej intencji będą formatowane wg podanej instrukcji
+
+---
+
+## API Response
+
+```json
+{
+    "query_id": 42,
+    "answer_id": 101,
+    "answer": {
+        "talent": "Dyscyplina",
+        "competency": "General Management",
+        "actions": ["..."],
+        "fallback": false
+    },
+    "answer_raw": "Talent: Dyscyplina\nPiwnice...",
+    "render_mode": "freeform",
+    "source": "ai+talent-mapping"
+}
+```
+
+- `answer` → zawsze wypełniony (structured: parsed, freeform: puste pola)
+- `answer_raw` → surowy tekst LLM (dla rendererów niestandardowych)
+- `render_mode` → sygnał dla frontendu, który renderer użyć
 
 ---
 
 ## Fallback
 
-Gdy klasyfikator nie dopasuje żadnej klasy (lub brak wpisów w sekcji Instrukcje):
-- `intent = "default"`
-- Instrukcja = `None`
-- Odpowiedź generowana jest z domyślnym formatem z system prompta (Talent/Kompetencja/Akcja)
-
----
-
-## Optymalizacja
-
-- **Klasyfikator** działa na lekkim modelu (np. nano/flash) → dodaje ~1-3s do pipeline
-- **Klasy intencji** są cachowalne (przyszła optymalizacja)
-- Jeśli sekcja Instrukcje jest pusta → klasyfikator nie jest wywoływany (skip LLM call)
+- Brak wpisów w sekcji Instrukcje → klasyfikator pomijany → `render_mode = "structured"`
+- Klasyfikator nie dopasuje klasy → `intent = "default"` → `render_mode = "structured"`
+- Nieznany `render_mode` na froncie → fallback do `StructuredRenderer`

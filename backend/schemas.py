@@ -345,6 +345,8 @@ class QAQueryResponse(BaseModel):
     query_id: int
     answer_id: int
     answer: QAAnswer
+    answer_raw: str = ""
+    render_mode: str = "structured"
     source: str = "ai+talent-mapping"
 
 
@@ -361,6 +363,8 @@ class QAHistoryItem(BaseModel):
     question: str
     context: str
     answer: QAAnswer
+    answer_raw: str = ""
+    render_mode: str = "structured"
     created_at: datetime
 
     model_config = {"from_attributes": True}

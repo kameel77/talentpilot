@@ -8,6 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Textarea } from "@/components/ui/textarea";
 import { api, QAAnswer, QAQueryResponse } from "@/lib/api";
 import { ChatBubble, ResponseBlock, ContextCard, TeamMemberCard } from "@/components/qa/QAComponents";
+import { getRenderer } from "@/components/qa/QARenderers";
 
 const quickPrompts = [
     "Trudna rozmowa z zespołem",
@@ -20,6 +21,8 @@ interface ChatMessage {
     role: "user" | "assistant";
     content: string;
     answer?: QAAnswer;
+    answer_raw?: string;
+    render_mode?: string;
     query_id?: number;
     answer_id?: number;
     feedback_sent?: boolean;
@@ -51,6 +54,8 @@ export default function QACopilotPage() {
                         role: "assistant",
                         content: `Historyczne pytanie: ${item.question}`,
                         answer: item.answer,
+                        answer_raw: item.answer_raw || "",
+                        render_mode: item.render_mode || "structured",
                         query_id: item.query_id,
                         feedback_sent: true
                     })));
@@ -91,6 +96,8 @@ export default function QACopilotPage() {
                     role: "assistant",
                     content: `Na podstawie talentów ${context === "self" ? "Twoich" : "użytkownika " + selectedMember?.full_name}, sugeruję następujące podejście:`,
                     answer: res.answer,
+                    answer_raw: res.answer_raw || "",
+                    render_mode: res.render_mode || "structured",
                     query_id: res.query_id,
                     answer_id: res.answer_id
                 }
@@ -177,44 +184,42 @@ export default function QACopilotPage() {
                             </div>
                         )}
 
-                        {messages.map((msg, idx) => (
-                            <div key={idx} className="space-y-4">
-                                <ChatBubble
-                                    variant={msg.role}
-                                    title={msg.role === "user" ? "Ty" : "Copilot"}
-                                    message={msg.content}
-                                >
-                                    {msg.answer && (
-                                        <div className="mt-4 space-y-3">
-                                            <ResponseBlock title="Talent" value={msg.answer.talent} tone="indigo" />
-                                            <ResponseBlock title="Kompetencja" value={msg.answer.competency} tone="blue" />
-                                            <ResponseBlock title="Akcja (7 dni)" tone="emerald">
-                                                <ul className="list-disc pl-5 text-sm text-slate-600 space-y-1">
-                                                    {msg.answer.actions.map((action, i) => (
-                                                        <li key={i}>{action}</li>
-                                                    ))}
-                                                </ul>
-                                            </ResponseBlock>
+                        {messages.map((msg, idx) => {
+                            const Renderer = getRenderer(msg.render_mode || "structured");
+                            return (
+                                <div key={idx} className="space-y-4">
+                                    <ChatBubble
+                                        variant={msg.role}
+                                        title={msg.role === "user" ? "Ty" : "Copilot"}
+                                        message={msg.content}
+                                    >
+                                        {msg.answer && (
+                                            <>
+                                                <Renderer
+                                                    answer={msg.answer}
+                                                    answerRaw={msg.answer_raw || ""}
+                                                />
 
-                                            {!msg.feedback_sent && (
-                                                <div className="mt-6 rounded-2xl border border-slate-200/80 bg-slate-50 p-4">
-                                                    <div className="flex items-center justify-between">
-                                                        <div>
-                                                            <p className="text-sm font-semibold text-slate-900">Czy rekomendacja zadziałała?</p>
-                                                            <p className="text-xs text-slate-500">Zbieramy feedback, by uczyć model.</p>
-                                                        </div>
-                                                        <div className="flex gap-2">
-                                                            <Button variant="outline" size="sm" onClick={() => handleFeedback(idx, false)}>Nie</Button>
-                                                            <Button size="sm" onClick={() => handleFeedback(idx, true)}>Tak</Button>
+                                                {!msg.feedback_sent && (
+                                                    <div className="mt-6 rounded-2xl border border-slate-200/80 bg-slate-50 p-4">
+                                                        <div className="flex items-center justify-between">
+                                                            <div>
+                                                                <p className="text-sm font-semibold text-slate-900">Czy rekomendacja zadziałała?</p>
+                                                                <p className="text-xs text-slate-500">Zbieramy feedback, by uczyć model.</p>
+                                                            </div>
+                                                            <div className="flex gap-2">
+                                                                <Button variant="outline" size="sm" onClick={() => handleFeedback(idx, false)}>Nie</Button>
+                                                                <Button size="sm" onClick={() => handleFeedback(idx, true)}>Tak</Button>
+                                                            </div>
                                                         </div>
                                                     </div>
-                                                </div>
-                                            )}
-                                        </div>
-                                    )}
-                                </ChatBubble>
-                            </div>
-                        ))}
+                                                )}
+                                            </>
+                                        )}
+                                    </ChatBubble>
+                                </div>
+                            );
+                        })}
 
                         {isLoading && (
                             <div className="flex justify-start">

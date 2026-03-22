@@ -154,8 +154,8 @@ def query_qa(
 
     # Intent classification: classify question → retrieve matching instruction
     intent = classify_intent(db, request.question, language)
-    instruction = retrieve_instruction(db, intent, language)
-    logger.info(f"--- INTENT: {intent}, INSTRUCTION: {'found' if instruction else 'none'} ---")
+    instruction, render_mode = retrieve_instruction(db, intent, language)
+    logger.info(f"--- INTENT: {intent}, RENDER_MODE: {render_mode}, INSTRUCTION: {'found' if instruction else 'none'} ---")
 
     answer_text, model_name = generate_answer(
         db,
@@ -176,10 +176,24 @@ def query_qa(
     db.add(generated_answer)
     db.commit()
 
+    # Conditional parsing: only parse into structured format for "structured" render mode
+    if render_mode == "structured":
+        parsed_answer = parse_structured_answer(answer_text)
+    else:
+        # For freeform/other modes: minimal structured wrapper, raw text drives rendering
+        parsed_answer = QAAnswer(
+            talent="",
+            competency="",
+            actions=[],
+            fallback=False,
+        )
+
     return QAQueryResponse(
         query_id=user_query.id,
         answer_id=generated_answer.id,
-        answer=parse_structured_answer(answer_text)
+        answer=parsed_answer,
+        answer_raw=answer_text,
+        render_mode=render_mode,
     )
 
 
@@ -232,6 +246,8 @@ def get_history(
             question=q.question,
             context="self" if q.target_user_id == q.user_id else "team",
             answer=parse_structured_answer(a.answer_text),
+            answer_raw=a.answer_text or "",
+            render_mode="structured",  # Historical entries default to structured
             created_at=q.created_at
         ))
     

@@ -151,6 +151,8 @@ export interface QAQueryResponse {
     query_id: number;
     answer_id: number;
     answer: QAAnswer;
+    answer_raw: string;
+    render_mode: string;
     source: string;
 }
 
@@ -159,6 +161,8 @@ export interface QAHistoryItem {
     question: string;
     context: 'self' | 'team';
     answer: QAAnswer;
+    answer_raw: string;
+    render_mode: string;
     created_at: string;
 }
 

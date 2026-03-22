@@ -83,6 +83,7 @@ interface KnowledgeFormState {
     language: string;
     domain: string;
     contentType: string;
+    renderMode: string;
 }
 
 const DEFAULT_FORM: KnowledgeFormState = {
@@ -93,6 +94,7 @@ const DEFAULT_FORM: KnowledgeFormState = {
     language: "pl",
     domain: "",
     contentType: "",
+    renderMode: "",
 };
 
 // --- Helpers ---
@@ -101,6 +103,7 @@ function buildMetadataJson(form: KnowledgeFormState): Record<string, unknown> {
     const meta: Record<string, unknown> = {};
     if (form.domain) meta.domain = form.domain;
     if (form.contentType) meta.content_type = form.contentType;
+    if (form.renderMode) meta.render_mode = form.renderMode;
     return meta;
 }
 
@@ -114,6 +117,7 @@ function extractFormFromEntry(entry: KnowledgeItem): KnowledgeFormState {
         language: entry.language,
         domain: meta.domain || "",
         contentType: meta.content_type || "",
+        renderMode: meta.render_mode || "",
     };
 }
 
@@ -263,6 +267,22 @@ function KnowledgeFormFields({
                     options={LANGUAGE_OPTIONS}
                 />
             </div>
+
+            {/* Row 2.5: Render Mode (only for instructions section) */}
+            {section === "instructions" && (
+                <div className="grid gap-4 md:grid-cols-3">
+                    <FormSelect
+                        label="Tryb renderowania"
+                        value={form.renderMode}
+                        onChange={(value) => setForm({ ...form, renderMode: value })}
+                        options={[
+                            { value: "", label: "— domyślny (structured) —" },
+                            { value: "structured", label: "Structured (Talent/Kompetencja/Akcja)" },
+                            { value: "freeform", label: "Freeform (swobodny tekst)" },
+                        ]}
+                    />
+                </div>
+            )}
 
             {/* Row 3: Tags */}
             <TagInput
