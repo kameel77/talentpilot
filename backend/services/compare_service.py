@@ -8,7 +8,7 @@ from services.assistant_service import DOMAIN_LABELS
 
 
 def get_user_talents_for_compare(
-    db: Session, user_id: int, language: str = "pl", limit: int = 10
+    db: Session, user_id: int, language: str = "pl", limit: int = 15
 ) -> list[dict]:
     """Return ordered talent info for a user (Top N)."""
     rows = (
@@ -46,7 +46,7 @@ def _synergy_score(shared: list, talents_a: list, talents_b: list) -> int:
     """Calculate a 0-100 synergy score.
     
     Factors:
-    - Shared talents (mosty) in Top 10 → strong signal of natural understanding
+    - Shared talents (mosty) in Top 15 → strong signal of natural understanding
     - Domain diversity (uzupełnianie się) → complementary strengths
     - Rank proximity of shared talents → closer ranks = stronger bridge
     """
@@ -65,9 +65,9 @@ def _synergy_score(shared: list, talents_a: list, talents_b: list) -> int:
     # 3. Rank proximity bonus for shared talents (0-30 pts)
     if shared:
         proximity_sum = sum(
-            max(0, 10 - abs(s["rank_a"] - s["rank_b"])) for s in shared
+            max(0, 15 - abs(s["rank_a"] - s["rank_b"])) for s in shared
         )
-        proximity_score = min(int(proximity_sum / len(shared) * 3), 30)
+        proximity_score = min(int(proximity_sum / len(shared) * 2), 30)
     else:
         # No shared talents → some base score from domain overlap
         overlap = domains_a & domains_b
@@ -155,8 +155,8 @@ def compare_users(
     language: str = "pl",
 ) -> dict:
     """Compare two users' talents and return structured analysis."""
-    talents_a = get_user_talents_for_compare(db, user_a.id, language, limit=10)
-    talents_b = get_user_talents_for_compare(db, user_b.id, language, limit=10)
+    talents_a = get_user_talents_for_compare(db, user_a.id, language, limit=15)
+    talents_b = get_user_talents_for_compare(db, user_b.id, language, limit=15)
 
     codes_a = {t["code"] for t in talents_a}
     codes_b = {t["code"] for t in talents_b}

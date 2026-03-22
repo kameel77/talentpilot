@@ -51,7 +51,7 @@ interface UserTalentResponse {
 
 interface TalentListViewProps {
     talents: UserTalent[];
-    viewMode: "top5" | "top10" | "all";
+    viewMode: "top5" | "top15" | "all";
     talentLookup: Map<string, { name: string; namePl: string; domain: GallupDomain }>;
 }
 
@@ -65,7 +65,7 @@ function normalizeApiDomain(domain?: string): GallupDomain {
 }
 
 function TalentListView({ talents, viewMode, talentLookup }: TalentListViewProps) {
-    const limit = viewMode === "top5" ? 5 : viewMode === "top10" ? 10 : 34;
+    const limit = viewMode === "top5" ? 5 : viewMode === "top15" ? 15 : 34;
     const displayTalents = talents
         .filter((t) => t.rank <= limit)
         .sort((a, b) => a.rank - b.rank);
@@ -119,9 +119,9 @@ function TalentListView({ talents, viewMode, talentLookup }: TalentListViewProps
 }
 
 function DomainSummary({ talents, talentLookup }: { talents: UserTalent[]; talentLookup: Map<string, { domain: GallupDomain }> }) {
-    const top10 = talents.filter((t) => t.rank <= 10);
+    const top15 = talents.filter((t) => t.rank <= 15);
 
-    const domainCounts = top10.reduce((acc, userTalent) => {
+    const domainCounts = top15.reduce((acc, userTalent) => {
         const talent = talentLookup.get(userTalent.talentId);
         if (talent) {
             acc[talent.domain] = (acc[talent.domain] || 0) + 1;
@@ -194,7 +194,7 @@ export default function UserProfilePage() {
     const [memberTalents, setMemberTalents] = useState<UserTalent[]>([]);
     const [memberTalentResponse, setMemberTalentResponse] = useState<UserTalentResponse[]>([]);
     const [currentUserTalents, setCurrentUserTalents] = useState<UserTalent[]>([]);
-    const [talentViewMode, setTalentViewMode] = useState<"top5" | "top10" | "all">("top10");
+    const [talentViewMode, setTalentViewMode] = useState<"top5" | "top15" | "all">("top15");
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
@@ -371,10 +371,10 @@ export default function UserProfilePage() {
                                         )}
                                     </div>
                                 </div>
-                                <Tabs value={talentViewMode} onValueChange={(v) => setTalentViewMode(v as "top5" | "top10" | "all")}>
+                                <Tabs value={talentViewMode} onValueChange={(v) => setTalentViewMode(v as "top5" | "top15" | "all")}>
                                     <TabsList className="h-8">
                                         <TabsTrigger value="top5" className="text-xs px-2 h-6">Top 5</TabsTrigger>
-                                        <TabsTrigger value="top10" className="text-xs px-2 h-6">Top 10</TabsTrigger>
+                                        <TabsTrigger value="top15" className="text-xs px-2 h-6">Top 15</TabsTrigger>
                                         <TabsTrigger value="all" className="text-xs px-2 h-6">1-34</TabsTrigger>
                                     </TabsList>
                                 </Tabs>

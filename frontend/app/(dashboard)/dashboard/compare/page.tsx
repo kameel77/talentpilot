@@ -321,13 +321,13 @@ export default function ComparePage() {
                             </div>
                             <div>
                                 <h3 className="text-lg font-bold font-heading text-slate-900">Wspólne talenty (Mosty)</h3>
-                                <p className="text-xs text-slate-400">Talenty obecne w Top 10 u obu osób — naturalne porozumienie</p>
+                                <p className="text-xs text-slate-400">Talenty obecne w Top 15 u obu osób — naturalne porozumienie</p>
                             </div>
                         </div>
 
                         {result.shared_talents.length === 0 ? (
                             <p className="text-sm text-slate-400 py-4">
-                                Brak wspólnych talentów w Top 10 — to oznacza silne uzupełnianie się.
+                                Brak wspólnych talentów w Top 15 — to oznacza silne uzupełnianie się.
                             </p>
                         ) : (
                             <div className="grid gap-3 sm:grid-cols-2">

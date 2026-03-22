@@ -18,7 +18,7 @@ interface ManualTalentInputProps {
 
 const DOMAINS: GallupDomain[] = ['executing', 'influencing', 'relationship', 'strategic'];
 
-type RankingView = '5' | '10' | '34';
+type RankingView = '5' | '15' | '34';
 
 export function ManualTalentInput({ onSave, initialTalents = [] }: ManualTalentInputProps) {
     const [searchQuery, setSearchQuery] = useState('');
@@ -255,15 +255,15 @@ export function ManualTalentInput({ onSave, initialTalents = [] }: ManualTalentI
                                     Top5
                                 </button>
                                 <button
-                                    onClick={() => setRankingView('10')}
+                                    onClick={() => setRankingView('15')}
                                     className={cn(
                                         "px-3 py-1 text-xs font-medium rounded-md transition-all",
-                                        rankingView === '10'
+                                        rankingView === '15'
                                             ? "bg-primary text-primary-foreground"
                                             : "hover:bg-background/80"
                                     )}
                                 >
-                                    Top10
+                                    Top15
                                 </button>
                                 <button
                                     onClick={() => setRankingView('34')}
@@ -331,11 +331,11 @@ export function ManualTalentInput({ onSave, initialTalents = [] }: ManualTalentI
                         </div>
                         <div className="flex items-center gap-1.5">
                             <Star className="h-3.5 w-3.5 text-primary/60" />
-                            <span>6-10 - Wspierające</span>
+                            <span>6-15 - Wspierające</span>
                         </div>
                         <div className="flex items-center gap-1.5">
                             <Medal className="h-3.5 w-3.5 text-primary/40" />
-                            <span>11-34 - Pozostałe</span>
+                            <span>16-34 - Pozostałe</span>
                         </div>
                     </div>
                 </div>

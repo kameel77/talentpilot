@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import Link from "next/link";
 import {
@@ -31,6 +31,18 @@ export default function DashboardLayout({
     const [user, setUser] = useState<User | null>(null);
     const [loading, setLoading] = useState(true);
     const [sidebarOpen, setSidebarOpen] = useState(false);
+    const [userMenuOpen, setUserMenuOpen] = useState(false);
+    const userMenuRef = useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+        function handleClickOutside(event: MouseEvent) {
+            if (userMenuRef.current && !userMenuRef.current.contains(event.target as Node)) {
+                setUserMenuOpen(false);
+            }
+        }
+        document.addEventListener("mousedown", handleClickOutside);
+        return () => document.removeEventListener("mousedown", handleClickOutside);
+    }, []);
 
     useEffect(() => {
         const checkAuth = () => {
@@ -205,30 +217,7 @@ export default function DashboardLayout({
                 )}
             </nav>
 
-            <div className="p-4 border-t border-white/5 mt-auto space-y-1">
-                <Link
-                    href="/dashboard/settings"
-                    className={cn(
-                        "flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 group text-sm font-medium",
-                        pathname === "/dashboard/settings"
-                            ? "bg-blue-600 text-white"
-                            : "text-slate-400 hover:text-white hover:bg-white/5"
-                    )}
-                >
-                    <Settings className={cn(
-                        "h-5 w-5",
-                        pathname === "/dashboard/settings" ? "text-white" : "text-slate-500 group-hover:text-white"
-                    )} />
-                    Ustawienia
-                </Link>
-                <button
-                    onClick={handleLogout}
-                    className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium text-slate-400 hover:text-white hover:bg-white/5"
-                >
-                    <LogOut className="h-5 w-5" />
-                    Wyloguj się
-                </button>
-            </div>
+            {/* Settings/Logout moved to user dropdown */}
         </>
     );
 
@@ -279,8 +268,47 @@ export default function DashboardLayout({
                             <span className="absolute top-2 right-2 h-2 w-2 bg-orange-500 border-2 border-white rounded-full" />
                         </button>
 
-                        <div className="h-10 w-10 bg-blue-600 text-white flex items-center justify-center rounded-full font-bold text-sm">
-                            {user?.full_name?.split(' ').map(n => n[0]).join('').toUpperCase() || "AK"}
+                        <div className="relative" ref={userMenuRef}>
+                            <button
+                                onClick={() => setUserMenuOpen(!userMenuOpen)}
+                                className="h-10 w-10 bg-blue-600 text-white flex items-center justify-center rounded-full font-bold text-sm hover:ring-2 hover:ring-blue-600/50 hover:ring-offset-2 transition-all focus:outline-none"
+                            >
+                                {user?.full_name?.split(' ').map(n => n[0]).join('').toUpperCase() || "AK"}
+                            </button>
+                            
+                            {userMenuOpen && (
+                                <div className="absolute right-0 mt-2 w-56 origin-top-right rounded-xl bg-white shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none overflow-hidden flex flex-col z-50 animate-in fade-in slide-in-from-top-2 duration-150">
+                                    <div className="px-4 py-3 border-b border-slate-100">
+                                        <p className="text-sm font-medium text-slate-900 truncate">{user?.full_name}</p>
+                                        <p className="text-xs text-slate-500 truncate">{user?.email}</p>
+                                    </div>
+                                    <div className="p-1">
+                                        <Link
+                                            href="/dashboard/settings"
+                                            onClick={() => setUserMenuOpen(false)}
+                                            className={cn(
+                                                "flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-slate-700 hover:bg-slate-50 hover:text-blue-600 transition-colors",
+                                                pathname === "/dashboard/settings" && "bg-blue-50 text-blue-600"
+                                            )}
+                                        >
+                                            <Settings className="h-4 w-4" />
+                                            Ustawienia
+                                        </Link>
+                                    </div>
+                                    <div className="p-1 border-t border-slate-100">
+                                        <button
+                                            onClick={() => {
+                                                setUserMenuOpen(false);
+                                                handleLogout();
+                                            }}
+                                            className="flex w-full items-center gap-2 px-3 py-2 rounded-lg text-sm text-red-600 hover:bg-red-50 transition-colors"
+                                        >
+                                            <LogOut className="h-4 w-4" />
+                                            Wyloguj się
+                                        </button>
+                                    </div>
+                                </div>
+                            )}
                         </div>
                     </div>
                 </header>

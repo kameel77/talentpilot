@@ -393,7 +393,7 @@ export default function TipsPage() {
                                 </h4>
                                 {synergyTip.shared_talents.length === 0 ? (
                                     <p className="text-sm text-slate-400">
-                                        Brak wspólnych talentów w Top 10 — uzupełniacie się nawzajem.
+                                        Brak wspólnych talentów w Top 15 — uzupełniacie się nawzajem.
                                     </p>
                                 ) : (
                                     <div className="space-y-2">

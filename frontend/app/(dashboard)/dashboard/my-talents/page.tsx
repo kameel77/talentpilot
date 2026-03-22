@@ -57,12 +57,18 @@ const mockPersonalInsights = {
 
 interface TalentListViewProps {
     talents: UserTalent[];
-    viewMode: 'top5' | 'top10' | 'all';
+    viewMode: 'top5' | 'top15' | 'all' | 'bottom5';
 }
 
 function TalentListView({ talents, viewMode }: TalentListViewProps) {
-    const limit = viewMode === 'top5' ? 5 : viewMode === 'top10' ? 10 : 34;
-    const displayTalents = talents.filter(t => t.rank <= limit).sort((a, b) => a.rank - b.rank);
+    const limit = viewMode === 'top5' ? 5 : viewMode === 'top15' ? 15 : 34;
+    let displayTalents = talents;
+    
+    if (viewMode === 'bottom5') {
+        displayTalents = talents.filter(t => t.rank >= 30 && t.rank <= 34).sort((a, b) => a.rank - b.rank);
+    } else {
+        displayTalents = talents.filter(t => t.rank <= limit).sort((a, b) => a.rank - b.rank);
+    }
 
     // Group by domain
     const groupedTalents = displayTalents.reduce((acc, userTalent) => {
@@ -114,9 +120,9 @@ function TalentListView({ talents, viewMode }: TalentListViewProps) {
 }
 
 function DomainSummary({ talents }: { talents: UserTalent[] }) {
-    const top10 = talents.filter(t => t.rank <= 10);
+    const top15 = talents.filter(t => t.rank <= 15);
 
-    const domainCounts = top10.reduce((acc, userTalent) => {
+    const domainCounts = top15.reduce((acc, userTalent) => {
         const talent = GALLUP_TALENTS.find(t => t.id === userTalent.talentId);
         if (talent) {
             acc[talent.domain] = (acc[talent.domain] || 0) + 1;
@@ -220,7 +226,7 @@ function EmptyTalentsView({ onImport }: { onImport: () => void }) {
 export default function MyTalentsPage() {
     const [talentImportOpen, setTalentImportOpen] = useState(false);
     const [myTalents, setMyTalents] = useState<UserTalent[]>([]);
-    const [talentViewMode, setTalentViewMode] = useState<'top5' | 'top10' | 'all'>('top10');
+    const [talentViewMode, setTalentViewMode] = useState<'top5' | 'top15' | 'all' | 'bottom5'>('top15');
     const [currentUser, setCurrentUser] = useState<User | null>(null);
 
     useEffect(() => {
@@ -352,11 +358,12 @@ export default function MyTalentsPage() {
                                         )}
                                     </div>
                                 </div>
-                                <Tabs value={talentViewMode} onValueChange={(v) => setTalentViewMode(v as 'top5' | 'top10' | 'all')}>
+                                <Tabs value={talentViewMode} onValueChange={(v) => setTalentViewMode(v as 'top5' | 'top15' | 'all' | 'bottom5')}>
                                     <TabsList className="h-8">
                                         <TabsTrigger value="top5" className="text-xs px-2 h-6">Top 5</TabsTrigger>
-                                        <TabsTrigger value="top10" className="text-xs px-2 h-6">Top 10</TabsTrigger>
+                                        <TabsTrigger value="top15" className="text-xs px-2 h-6">Top 15</TabsTrigger>
                                         <TabsTrigger value="all" className="text-xs px-2 h-6">1-34</TabsTrigger>
+                                        <TabsTrigger value="bottom5" className="text-xs px-2 h-6">30-34</TabsTrigger>
                                     </TabsList>
                                 </Tabs>
                             </div>
