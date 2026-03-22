@@ -268,8 +268,8 @@ function KnowledgeFormFields({
                 />
             </div>
 
-            {/* Row 2.5: Render Mode (only for instructions section) */}
-            {section.includes("instructions") && (
+            {/* Row 2.5: Render Mode (only for instructions section or intent prompts) */}
+            {(section.includes("instructions") || form.contentType === "intent_prompt") && (
                 <div className="grid gap-4 md:grid-cols-3">
                     <FormSelect
                         label="Tryb renderowania"
