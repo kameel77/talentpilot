@@ -40,7 +40,18 @@ export function TagInput({
     };
 
     const handleKeyDown = (event: React.KeyboardEvent<HTMLInputElement>) => {
-        if (event.key === "Enter" || event.key === ",") {
+        if (event.key === "Enter") {
+            event.preventDefault();
+            // Split by comma to support bulk paste: "tag1, tag2, tag3"
+            const parts = draft.split(",").map((p) => p.trim()).filter(Boolean);
+            if (parts.length > 0) {
+                const newTags = parts.filter((p) => !normalizedTags.includes(p));
+                if (newTags.length > 0) {
+                    onChange([...normalizedTags, ...newTags]);
+                }
+                setDraft("");
+            }
+        } else if (event.key === ",") {
             event.preventDefault();
             handleAdd(draft);
         }
