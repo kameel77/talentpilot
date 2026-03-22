@@ -173,6 +173,54 @@ export default function AdminSettingsPage() {
                         </div>
                     </CardContent>
                 </Card>
+
+                {/* Intent Classifier Configuration */}
+                <Card className="border-slate-200/60 shadow-sm overflow-hidden">
+                    <CardHeader className="bg-slate-50/50 border-b border-slate-100">
+                        <div className="flex items-center gap-3">
+                            <div className="p-2 bg-amber-100 rounded-lg text-amber-600">
+                                <Zap className="h-5 w-5" />
+                            </div>
+                            <div>
+                                <CardTitle className="text-lg">Klasyfikator intencji</CardTitle>
+                                <CardDescription>Automatyczne rozpoznawanie typu pytania i dobór formatu odpowiedzi</CardDescription>
+                            </div>
+                        </div>
+                    </CardHeader>
+                    <CardContent className="p-6 space-y-6">
+                        <div className="space-y-2">
+                            <Label htmlFor="intent-model" className="flex items-center gap-2">
+                                <Cpu className="h-3 w-3 text-slate-400" />
+                                Model klasyfikatora
+                            </Label>
+                            <Input
+                                id="intent-model"
+                                value={settings.intent_classifier_model || ""}
+                                onChange={(e) => handleChange("intent_classifier_model", e.target.value)}
+                                placeholder="openai/gpt-4.1-nano"
+                                className="bg-white"
+                            />
+                            <p className="text-[10px] text-slate-400">Szybki, tani model do klasyfikacji intencji pytań (np. gpt-4.1-nano, gemini-2.0-flash)</p>
+                        </div>
+
+                        <div className="space-y-2">
+                            <Label htmlFor="intent-prompt" className="flex items-center gap-2">
+                                <Shield className="h-3 w-3 text-slate-400" />
+                                Prompt klasyfikatora
+                            </Label>
+                            <Textarea
+                                id="intent-prompt"
+                                value={settings.intent_classifier_prompt || ""}
+                                onChange={(e) => handleChange("intent_classifier_prompt", e.target.value)}
+                                className="min-h-[180px] bg-white text-slate-700 leading-relaxed font-mono text-sm"
+                                placeholder="Zaklasyfikuj intencję pytania..."
+                            />
+                            <p className="text-[10px] text-slate-400 italic">
+                                * Placeholdery: <code className="bg-slate-100 px-1 rounded">{"{question}"}</code> — pytanie użytkownika, <code className="bg-slate-100 px-1 rounded">{"{intent_classes}"}</code> — lista dostępnych klas z bazy wiedzy (sekcja Instrukcje).
+                            </p>
+                        </div>
+                    </CardContent>
+                </Card>
             </div>
 
             <div className="flex justify-end">

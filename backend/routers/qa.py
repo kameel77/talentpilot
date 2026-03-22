@@ -24,8 +24,10 @@ from services.assistant_service import (
     get_embedding,
     get_user_in_organization,
     get_user_talents,
+    retrieve_instruction,
     retrieve_knowledge,
 )
+from services.intent_service import classify_intent
 from services.settings_service import get_setting
 
 router = APIRouter(prefix="/v1/qa", tags=["qa-v1"])
@@ -149,13 +151,19 @@ def query_qa(
 
     talents = get_user_talents(db, target_user.id, language)
     knowledge_items = retrieve_knowledge(db, current_user.organization_id, query_embedding, language)
-    
+
+    # Intent classification: classify question → retrieve matching instruction
+    intent = classify_intent(db, request.question, language)
+    instruction = retrieve_instruction(db, intent, language)
+    logger.info(f"--- INTENT: {intent}, INSTRUCTION: {'found' if instruction else 'none'} ---")
+
     answer_text, model_name = generate_answer(
         db,
         request.question,
         talents,
         knowledge_items,
         language,
+        instruction_content=instruction,
     )
     
     sources = [item.id for item in knowledge_items]

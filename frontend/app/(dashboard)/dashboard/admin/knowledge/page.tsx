@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { Check, X, Loader2, MessageSquare, Database, Settings2 } from "lucide-react";
+import { Check, X, Loader2, MessageSquare, Database, Settings2, Sparkles } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -111,8 +111,8 @@ export default function AdminKnowledgePage() {
                 </div>
             </div>
 
-            {/* Section cards: FAQ, Merytoryka, RAG Settings */}
-            <div className="grid gap-4 md:grid-cols-3">
+            {/* Section cards: FAQ, Merytoryka, Instructions, RAG Settings */}
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
                 <Card className="border-slate-200/70 shadow-sm">
                     <CardHeader className="pb-2">
                         <div className="flex items-center gap-2">
@@ -142,6 +142,22 @@ export default function AdminKnowledgePage() {
                     <CardContent>
                         <Button asChild variant="outline" size="sm">
                             <Link href="/dashboard/admin/knowledge/merytoryka">Przejdź do Merytoryki</Link>
+                        </Button>
+                    </CardContent>
+                </Card>
+                <Card className="border-slate-200/70 shadow-sm">
+                    <CardHeader className="pb-2">
+                        <div className="flex items-center gap-2">
+                            <Sparkles className="h-4 w-4 text-amber-600" />
+                            <CardTitle className="text-base">Instrukcje odpowiedzi</CardTitle>
+                        </div>
+                        <CardDescription>
+                            Steruj formatem odpowiedzi AI w zależności od intencji pytania.
+                        </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                        <Button asChild variant="outline" size="sm">
+                            <Link href="/dashboard/admin/knowledge/instructions">Przejdź do Instrukcji</Link>
                         </Button>
                     </CardContent>
                 </Card>

@@ -11,12 +11,27 @@ DEFAULT_SETTINGS = {
     "openrouter_embedding_model": "text-embedding-3-small",
     "daily_query_limit": "20",
     "rag_top_k": "8",
+    # Intent classifier settings
+    "intent_classifier_model": "openai/gpt-4.1-nano",
+    "intent_classifier_prompt": (
+        "Zaklasyfikuj intencję poniższego pytania do jednej z dostępnych klas.\n\n"
+        "Pytanie: {question}\n\n"
+        "Dostępne klasy intencji:\n{intent_classes}\n\n"
+        "Jeśli żadna klasa nie pasuje, odpowiedz: default\n\n"
+        "Odpowiedz TYLKO nazwą klasy, bez dodatkowych komentarzy."
+    ),
     # System prompt - editable by admin in UI
     "system_prompt": (
         "Jesteś profesjonalnym doradcą managerskim w aplikacji TalentPilot. "
         "Twoim celem jest przetłumaczenie talentów na praktyczne kompetencje i działania. "
         "Odpowiadaj z empatią, konkretnie i bez ogólników.\n\n"
-        "BARDZO WAŻNE: Twoja odpowiedź MUSI ściśle przestrzegać poniższego formatu:\n"
+        "Poniżej otrzymasz:\n"
+        "1) INSTRUKCJĘ FORMATU — opisuje jak sformatować odpowiedź (jeśli dostępna)\n"
+        "2) KONTEKST TALENTÓW — talenty użytkownika z rankingiem\n"
+        "3) KONTEKST WIEDZY — wiedza merytoryczna do wykorzystania\n"
+        "4) PYTANIE UŻYTKOWNIKA\n\n"
+        "Ściśle trzymaj się instrukcji formatu, jeśli została podana. "
+        "Jeśli brak instrukcji formatu, odpowiedz w formacie:\n"
         "Talent: [Nazwa Talentu]\n"
         "Kompetencja: [Nazwa Kompetencji Biznesowej]\n"
         "Akcja: \n"

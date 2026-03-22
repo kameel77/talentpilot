@@ -12,7 +12,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { TagInput } from "@/components/knowledge/TagInput";
 
 interface KnowledgeEntryManagerProps {
-    section: "faq" | "merytoryka";
+    section: "faq" | "merytoryka" | "instructions";
     title: string;
     description: string;
 }

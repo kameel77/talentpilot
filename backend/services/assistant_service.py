@@ -193,14 +193,49 @@ DOMAIN_LABELS = {
 }
 
 
+def retrieve_instruction(
+    db: Session,
+    intent: str,
+    language: str,
+) -> str | None:
+    """Retrieve format instruction from KB for the given intent.
+    
+    Searches the 'instructions' section for an entry matching the intent category.
+    Returns the content of the matching instruction or None if not found.
+    """
+    if not intent or intent == "default":
+        return None
+
+    instruction = (
+        db.query(KnowledgeItem)
+        .filter(
+            KnowledgeItem.section == "instructions",
+            KnowledgeItem.is_active.is_(True),
+            KnowledgeItem.language == language,
+            KnowledgeItem.organization_id.is_(None),
+            KnowledgeItem.category == intent,
+        )
+        .first()
+    )
+    if instruction:
+        logger.info(f"Retrieved instruction for intent '{intent}': {instruction.title}")
+        return instruction.content
+    return None
+
+
 def build_prompt(
     db: Session,
     question: str,
     talents: Iterable[dict],
     knowledge_items: Iterable[KnowledgeItem],
     language: str,
+    instruction_content: str | None = None,
 ) -> list[dict]:
-    """Build chat prompt messages for LLM using configurable system prompt."""
+    """Build chat prompt messages for LLM using configurable system prompt.
+    
+    Args:
+        instruction_content: Optional format instruction from KB (driven by intent classification).
+    """
     if talents:
         talents_lines = []
         for t in talents:
@@ -219,14 +254,15 @@ def build_prompt(
     system_prompt_base = get_setting(db, "system_prompt")
     system_message = f"{system_prompt_base} Odpowiedzi udzielaj w języku: {language}."
 
-    user_message = (
-        "Kontekst talentów:\n"
-        f"{talents_section}\n\n"
-        "Kontekst wiedzy kuratorowanej:\n"
-        f"{knowledge_section}\n\n"
-        "Pytanie użytkownika:\n"
-        f"{question}"
-    )
+    # Build user message with optional instruction section
+    parts = []
+    if instruction_content:
+        parts.append(f"INSTRUKCJA FORMATU ODPOWIEDZI:\n{instruction_content}")
+    parts.append(f"Kontekst talentów:\n{talents_section}")
+    parts.append(f"Kontekst wiedzy kuratorowanej:\n{knowledge_section}")
+    parts.append(f"Pytanie użytkownika:\n{question}")
+
+    user_message = "\n\n".join(parts)
 
     return [
         {"role": "system", "content": system_message},
@@ -240,8 +276,12 @@ def generate_answer(
     talents: Iterable[dict],
     knowledge_items: Iterable[KnowledgeItem],
     language: str,
+    instruction_content: str | None = None,
 ) -> tuple[str, str]:
     """Generate answer using LLM.
+    
+    Args:
+        instruction_content: Optional format instruction from KB.
     
     Raises:
         HTTPException: If LLM API call fails.
@@ -249,7 +289,10 @@ def generate_answer(
     try:
         client = get_openrouter_client()
         model_name = get_setting(db, "openrouter_chat_model")
-        messages = build_prompt(db, question, talents, knowledge_items, language)
+        messages = build_prompt(
+            db, question, talents, knowledge_items, language,
+            instruction_content=instruction_content,
+        )
         
         # DEBUG: Log the prompt for developers
         import json
