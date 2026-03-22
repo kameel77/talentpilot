@@ -39,6 +39,7 @@ const CONTENT_TYPE_OPTIONS = [
     { value: "dynamics", label: "Dynamika między talentami" },
     { value: "analysis_process", label: "Proces analizy" },
     { value: "neurodiversity", label: "Neurodiversity" },
+    { value: "intent_prompt", label: "Instrukcja intencji (Intent Prompt)" },
     { value: "other", label: "Inny" },
 ] as const;
 
@@ -68,6 +69,7 @@ const CONTENT_TYPE_LABEL_MAP: Record<string, string> = {
     dynamics: "Dynamika",
     analysis_process: "Analiza",
     neurodiversity: "Neurodiversity",
+    intent_prompt: "Intent Prompt",
     other: "Inny",
 };
 
