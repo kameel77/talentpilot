@@ -282,6 +282,7 @@ class KnowledgeItemResponse(BaseModel):
     content: str
     language: str
     is_active: bool
+    metadata_json: dict = Field(default_factory=dict)
     created_at: datetime
     updated_at: Optional[datetime] = None
 

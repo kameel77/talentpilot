@@ -4,7 +4,7 @@ from __future__ import annotations
 import hashlib
 import logging
 import re
-from typing import Iterable
+from typing import Iterable, Sequence
 
 from fastapi import HTTPException, status
 from openai import OpenAI, OpenAIError
@@ -18,7 +18,7 @@ from services.settings_service import get_setting
 logger = logging.getLogger(__name__)
 
 DEFAULT_LANGUAGE = "pl"
-TOP_K_SOURCES = 5
+TOP_K_SOURCES_DEFAULT = 8
 
 
 def get_openrouter_client() -> OpenAI:
@@ -100,14 +100,19 @@ def retrieve_knowledge(
     organization_id: int,
     embedding: list[float],
     language: str,
-    top_k: int = TOP_K_SOURCES,
+    top_k: int | None = None,
 ) -> list[KnowledgeItem]:
     """Retrieve curated knowledge items using vector similarity.
     
     Returns both global knowledge (organization_id=null) and org-specific knowledge.
     Global knowledge contains general talent management advice.
     Org-specific knowledge contains cultural/team-specific context added by org admins.
+    
+    If top_k is not provided, reads from app_settings (rag_top_k) or defaults to 8.
     """
+    if top_k is None:
+        top_k = int(get_setting(db, "rag_top_k") or str(TOP_K_SOURCES_DEFAULT))
+
     return (
         db.query(KnowledgeItem)
         .filter(
@@ -119,6 +124,65 @@ def retrieve_knowledge(
         .limit(top_k)
         .all()
     )
+
+
+def retrieve_knowledge_with_reranking(
+    db: Session,
+    organization_id: int,
+    embedding: list[float],
+    language: str,
+    top_k: int | None = None,
+    domain_hint: str | None = None,
+    content_type_hint: str | None = None,
+) -> list[KnowledgeItem]:
+    """Two-phase retrieval with metadata-based re-ranking.
+    
+    Phase 1: Fetch top_k * 2 candidates via cosine similarity.
+    Phase 2: Re-score using metadata boost (domain, content_type match).
+    Return top_k best items.
+    
+    This function is prepared for future activation. Currently not called
+    in the main flow — use retrieve_knowledge() instead.
+    """
+    if top_k is None:
+        top_k = int(get_setting(db, "rag_top_k") or str(TOP_K_SOURCES_DEFAULT))
+
+    # Phase 1: Over-fetch candidates
+    candidates = (
+        db.query(KnowledgeItem)
+        .filter(
+            KnowledgeItem.is_active.is_(True),
+            KnowledgeItem.language == language,
+            (KnowledgeItem.organization_id.is_(None) | (KnowledgeItem.organization_id == organization_id)),
+        )
+        .order_by(KnowledgeItem.embedding.cosine_distance(embedding))
+        .limit(top_k * 2)
+        .all()
+    )
+
+    if not candidates:
+        return []
+
+    # Phase 2: Re-rank with metadata boost
+    scored: list[tuple[float, KnowledgeItem]] = []
+    for item in candidates:
+        # Base score from cosine similarity (position-based approximation)
+        base_score = 1.0
+        meta = item.metadata_json or {}
+
+        # Domain boost: +20% if domain matches hint
+        if domain_hint and meta.get("domain") == domain_hint:
+            base_score *= 1.2
+
+        # Content type boost: +15% if content_type matches hint
+        if content_type_hint and meta.get("content_type") == content_type_hint:
+            base_score *= 1.15
+
+        scored.append((base_score, item))
+
+    # Sort by boosted score descending, take top_k
+    scored.sort(key=lambda x: x[0], reverse=True)
+    return [item for _, item in scored[:top_k]]
 
 
 DOMAIN_LABELS = {

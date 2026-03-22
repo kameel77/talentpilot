@@ -10,6 +10,7 @@ DEFAULT_SETTINGS = {
     "openrouter_chat_model": "openai/gpt-4o-mini",
     "openrouter_embedding_model": "text-embedding-3-small",
     "daily_query_limit": "20",
+    "rag_top_k": "8",
     # System prompt - editable by admin in UI
     "system_prompt": (
         "Jesteś profesjonalnym doradcą managerskim w aplikacji TalentPilot. "

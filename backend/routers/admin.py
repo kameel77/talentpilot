@@ -22,6 +22,33 @@ from services.settings_service import get_all_settings, upsert_setting
 router = APIRouter()
 
 
+def _build_metadata(explicit_meta: dict, category: str, tags: list[str]) -> dict:
+    """Auto-build metadata_json from form fields.
+    
+    Extracts structured metadata (domain, content_type, talent_code, talent_name_pl,
+    talent_name_en) from the explicit metadata dict and merges with auto-derived values.
+    Frontend sends these fields explicitly; this function ensures consistency.
+    """
+    meta = dict(explicit_meta)  # copy
+
+    # Ensure key fields exist (frontend should send them, but provide fallbacks)
+    meta.setdefault("domain", "")
+    meta.setdefault("content_type", "")
+    meta.setdefault("talent_code", "")
+    meta.setdefault("talent_name_pl", "")
+    meta.setdefault("talent_name_en", "")
+
+    # Auto-derive category from the category field if not set
+    if not meta.get("category"):
+        meta["category"] = category
+
+    # Auto-derive tags snapshot
+    meta["tags"] = tags
+
+    # Clean up empty string values
+    return {k: v for k, v in meta.items() if v != "" and v != []}
+
+
 @router.get("/queries", response_model=list[QueryReviewResponse])
 def list_pending_queries(
     db: Session = Depends(get_db),
@@ -122,6 +149,7 @@ def create_knowledge(
     current_user=Depends(require_role(["admin"])),
 ):
     embedding = get_embedding(db, payload.content)
+    metadata = _build_metadata(payload.metadata_json, payload.category, payload.tags)
     knowledge_item = KnowledgeItem(
         title=payload.title,
         category=payload.category,
@@ -132,7 +160,7 @@ def create_knowledge(
         language=payload.language,
         organization_id=None,
         created_by=current_user.id,
-        metadata_json=payload.metadata_json,
+        metadata_json=metadata,
     )
     db.add(knowledge_item)
     db.commit()
@@ -180,7 +208,11 @@ def update_knowledge(
     if payload.is_active is not None:
         knowledge_item.is_active = payload.is_active
     if payload.metadata_json is not None:
-        knowledge_item.metadata_json = payload.metadata_json
+        knowledge_item.metadata_json = _build_metadata(
+            payload.metadata_json,
+            payload.category or knowledge_item.category,
+            payload.tags if payload.tags is not None else knowledge_item.tags,
+        )
     if payload.content is not None and payload.content != knowledge_item.content:
         knowledge_item.content = payload.content
         knowledge_item.embedding = get_embedding(db, payload.content)

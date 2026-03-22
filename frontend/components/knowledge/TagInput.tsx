@@ -18,7 +18,7 @@ interface TagInputProps {
 
 export function TagInput({
     label,
-    placeholder = "Dodaj tag i naciśnij Enter",
+    placeholder = "Dodaj tag (Enter lub przecinek)",
     tags,
     suggestions = [],
     onChange,

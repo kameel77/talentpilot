@@ -134,6 +134,7 @@ export interface KnowledgeItem {
     content: string;
     language: string;
     is_active: boolean;
+    metadata_json: Record<string, unknown>;
     created_at: string;
     updated_at?: string | null;
 }

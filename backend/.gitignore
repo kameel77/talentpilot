@@ -12,6 +12,7 @@ dist/
 build/
 *.egg
 .agent/
+docs_other/
 
 # IDEs
 .vscode/

@@ -16,12 +16,68 @@ interface KnowledgeEntryManagerProps {
     description: string;
 }
 
+// --- Constants ---
+
+const DOMAIN_OPTIONS = [
+    { value: "", label: "— brak —" },
+    { value: "executing", label: "Realizacja (Executing)" },
+    { value: "influencing", label: "Wywieranie wpływu (Influencing)" },
+    { value: "relationship_building", label: "Budowanie relacji (Relationship Building)" },
+    { value: "strategic_thinking", label: "Myślenie strategiczne (Strategic Thinking)" },
+] as const;
+
+const CONTENT_TYPE_OPTIONS = [
+    { value: "", label: "— brak —" },
+    { value: "profile", label: "Profil talentu" },
+    { value: "strengths", label: "Siła / Ograniczenia (Balkon/Piwnica)" },
+    { value: "motivation", label: "Motywacja / Demotywacja" },
+    { value: "communication", label: "Styl komunikacji" },
+    { value: "partnerships", label: "Partnerstwa z innymi talentami" },
+    { value: "roles", label: "Idealne role i projekty" },
+    { value: "qa", label: "Q&A" },
+    { value: "dynamics", label: "Dynamika między talentami" },
+    { value: "analysis_process", label: "Proces analizy" },
+    { value: "other", label: "Inny" },
+] as const;
+
+const LANGUAGE_OPTIONS = [
+    { value: "pl", label: "🇵🇱 PL" },
+    { value: "en", label: "🇬🇧 EN" },
+    { value: "de", label: "🇩🇪 DE" },
+    { value: "es", label: "🇪🇸 ES" },
+    { value: "fr", label: "🇫🇷 FR" },
+] as const;
+
+const DOMAIN_LABEL_MAP: Record<string, string> = {
+    executing: "Realizacja",
+    influencing: "Wpływ",
+    relationship_building: "Relacje",
+    strategic_thinking: "Strategia",
+};
+
+const CONTENT_TYPE_LABEL_MAP: Record<string, string> = {
+    profile: "Profil",
+    strengths: "Siła/Piwnica",
+    motivation: "Motywacja",
+    communication: "Komunikacja",
+    partnerships: "Partnerstwa",
+    roles: "Role",
+    qa: "Q&A",
+    dynamics: "Dynamika",
+    analysis_process: "Analiza",
+    other: "Inny",
+};
+
+// --- Types ---
+
 interface KnowledgeFormState {
     title: string;
     category: string;
     tags: string[];
     content: string;
     language: string;
+    domain: string;
+    contentType: string;
 }
 
 const DEFAULT_FORM: KnowledgeFormState = {
@@ -30,7 +86,177 @@ const DEFAULT_FORM: KnowledgeFormState = {
     tags: [],
     content: "",
     language: "pl",
+    domain: "",
+    contentType: "",
 };
+
+// --- Helpers ---
+
+function buildMetadataJson(form: KnowledgeFormState): Record<string, unknown> {
+    const meta: Record<string, unknown> = {};
+    if (form.domain) meta.domain = form.domain;
+    if (form.contentType) meta.content_type = form.contentType;
+    return meta;
+}
+
+function extractFormFromEntry(entry: KnowledgeItem): KnowledgeFormState {
+    const meta = (entry.metadata_json || {}) as Record<string, string>;
+    return {
+        title: entry.title,
+        category: entry.category,
+        tags: entry.tags ?? [],
+        content: entry.content,
+        language: entry.language,
+        domain: meta.domain || "",
+        contentType: meta.content_type || "",
+    };
+}
+
+// --- Shared Select Component ---
+
+function FormSelect({
+    label,
+    value,
+    onChange,
+    options,
+}: {
+    label: string;
+    value: string;
+    onChange: (value: string) => void;
+    options: readonly { value: string; label: string }[];
+}) {
+    return (
+        <div className="space-y-2">
+            <label className="text-sm font-semibold text-slate-700">{label}</label>
+            <select
+                value={value}
+                onChange={(e) => onChange(e.target.value)}
+                className="flex h-9 w-full rounded-md border border-input bg-white px-3 py-1 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+            >
+                {options.map((opt) => (
+                    <option key={opt.value} value={opt.value}>
+                        {opt.label}
+                    </option>
+                ))}
+            </select>
+        </div>
+    );
+}
+
+// --- Metadata Badges ---
+
+function MetadataBadges({ metadata }: { metadata: Record<string, unknown> }) {
+    const domain = metadata?.domain as string | undefined;
+    const contentType = metadata?.content_type as string | undefined;
+
+    if (!domain && !contentType) return null;
+
+    return (
+        <div className="flex flex-wrap gap-1.5">
+            {domain && (
+                <Badge variant="outline" className="bg-indigo-50 text-indigo-700 border-indigo-200 text-[10px]">
+                    {DOMAIN_LABEL_MAP[domain] || domain}
+                </Badge>
+            )}
+            {contentType && (
+                <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200 text-[10px]">
+                    {CONTENT_TYPE_LABEL_MAP[contentType] || contentType}
+                </Badge>
+            )}
+        </div>
+    );
+}
+
+// --- Form Fields Component ---
+
+function KnowledgeFormFields({
+    form,
+    setForm,
+    categorySuggestions,
+    tagSuggestions,
+    section,
+}: {
+    form: KnowledgeFormState;
+    setForm: (updater: KnowledgeFormState | ((prev: KnowledgeFormState) => KnowledgeFormState)) => void;
+    categorySuggestions: string[];
+    tagSuggestions: string[];
+    section: string;
+}) {
+    return (
+        <div className="space-y-5">
+            {/* Row 1: Tytuł + Kategoria */}
+            <div className="grid gap-4 md:grid-cols-2">
+                <div className="space-y-2">
+                    <label className="text-sm font-semibold text-slate-700">Tytuł</label>
+                    <Input
+                        value={form.title}
+                        onChange={(event) => setForm({ ...form, title: event.target.value })}
+                        placeholder="Np. Jak udzielać feedbacku?"
+                        className="bg-white"
+                    />
+                </div>
+                <div className="space-y-2">
+                    <label className="text-sm font-semibold text-slate-700">Kategoria</label>
+                    <Input
+                        value={form.category}
+                        onChange={(event) => setForm({ ...form, category: event.target.value })}
+                        placeholder="Np. Talent: Bezstronność"
+                        list={`category-suggestions-${section}`}
+                        className="bg-white"
+                    />
+                    <datalist id={`category-suggestions-${section}`}>
+                        {categorySuggestions.map((category) => (
+                            <option key={category} value={category} />
+                        ))}
+                    </datalist>
+                </div>
+            </div>
+
+            {/* Row 2: Domena + Typ treści + Język */}
+            <div className="grid gap-4 md:grid-cols-3">
+                <FormSelect
+                    label="Domena (Gallup)"
+                    value={form.domain}
+                    onChange={(value) => setForm({ ...form, domain: value })}
+                    options={DOMAIN_OPTIONS}
+                />
+                <FormSelect
+                    label="Typ treści"
+                    value={form.contentType}
+                    onChange={(value) => setForm({ ...form, contentType: value })}
+                    options={CONTENT_TYPE_OPTIONS}
+                />
+                <FormSelect
+                    label="Język"
+                    value={form.language}
+                    onChange={(value) => setForm({ ...form, language: value })}
+                    options={LANGUAGE_OPTIONS}
+                />
+            </div>
+
+            {/* Row 3: Tags */}
+            <TagInput
+                label="Tagi"
+                tags={form.tags}
+                suggestions={tagSuggestions}
+                onChange={(tags) => setForm({ ...form, tags })}
+            />
+
+            {/* Row 4: Content */}
+            <div className="space-y-2">
+                <label className="text-sm font-semibold text-slate-700">Treść (Markdown)</label>
+                <Textarea
+                    value={form.content}
+                    onChange={(event) => setForm({ ...form, content: event.target.value })}
+                    placeholder="Opisuj konkretne zachowania, techniki i przykłady."
+                    className="min-h-[180px] bg-white"
+                />
+            </div>
+        </div>
+    );
+}
+
+// --- Main Component ---
 
 export function KnowledgeEntryManager({ section, title, description }: KnowledgeEntryManagerProps) {
     const [entries, setEntries] = useState<KnowledgeItem[]>([]);
@@ -39,6 +265,7 @@ export function KnowledgeEntryManager({ section, title, description }: Knowledge
     const [form, setForm] = useState<KnowledgeFormState>(DEFAULT_FORM);
     const [editingId, setEditingId] = useState<number | null>(null);
     const [editForm, setEditForm] = useState<KnowledgeFormState>(DEFAULT_FORM);
+
     const fetchEntries = useCallback(async () => {
         try {
             setLoading(true);
@@ -80,6 +307,7 @@ export function KnowledgeEntryManager({ section, title, description }: Knowledge
                 section,
                 content: form.content,
                 language: form.language,
+                metadata_json: buildMetadataJson(form),
             });
             setEntries((prev) => [created, ...prev]);
             resetForm();
@@ -92,13 +320,7 @@ export function KnowledgeEntryManager({ section, title, description }: Knowledge
 
     const startEditing = (entry: KnowledgeItem) => {
         setEditingId(entry.id);
-        setEditForm({
-            title: entry.title,
-            category: entry.category,
-            tags: entry.tags ?? [],
-            content: entry.content,
-            language: entry.language,
-        });
+        setEditForm(extractFormFromEntry(entry));
     };
 
     const cancelEditing = () => {
@@ -118,6 +340,7 @@ export function KnowledgeEntryManager({ section, title, description }: Knowledge
                 tags: editForm.tags,
                 content: editForm.content,
                 language: editForm.language,
+                metadata_json: buildMetadataJson(editForm),
             });
             setEntries((prev) => prev.map((entry) => (entry.id === entryId ? updated : entry)));
             cancelEditing();
@@ -148,49 +371,13 @@ export function KnowledgeEntryManager({ section, title, description }: Knowledge
                     </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-5">
-                    <div className="grid gap-4 md:grid-cols-2">
-                        <div className="space-y-2">
-                            <label className="text-sm font-semibold text-slate-700">Tytuł</label>
-                            <Input
-                                value={form.title}
-                                onChange={(event) => setForm({ ...form, title: event.target.value })}
-                                placeholder="Np. Jak udzielać feedbacku?"
-                                className="bg-white"
-                            />
-                        </div>
-                        <div className="space-y-2">
-                            <label className="text-sm font-semibold text-slate-700">Kategoria</label>
-                            <Input
-                                value={form.category}
-                                onChange={(event) => setForm({ ...form, category: event.target.value })}
-                                placeholder="Np. Feedback, Motywacja"
-                                list={`category-suggestions-${section}`}
-                                className="bg-white"
-                            />
-                            <datalist id={`category-suggestions-${section}`}>
-                                {categorySuggestions.map((category) => (
-                                    <option key={category} value={category} />
-                                ))}
-                            </datalist>
-                        </div>
-                    </div>
-
-                    <TagInput
-                        label="Tagi"
-                        tags={form.tags}
-                        suggestions={tagSuggestions}
-                        onChange={(tags) => setForm({ ...form, tags })}
+                    <KnowledgeFormFields
+                        form={form}
+                        setForm={setForm as (updater: KnowledgeFormState | ((prev: KnowledgeFormState) => KnowledgeFormState)) => void}
+                        categorySuggestions={categorySuggestions}
+                        tagSuggestions={tagSuggestions}
+                        section={section}
                     />
-
-                    <div className="space-y-2">
-                        <label className="text-sm font-semibold text-slate-700">Treść (Markdown)</label>
-                        <Textarea
-                            value={form.content}
-                            onChange={(event) => setForm({ ...form, content: event.target.value })}
-                            placeholder="Opisuj konkretne zachowania, techniki i przykłady."
-                            className="min-h-[180px] bg-white"
-                        />
-                    </div>
 
                     <div className="flex justify-end">
                         <Button
@@ -234,9 +421,14 @@ export function KnowledgeEntryManager({ section, title, description }: Knowledge
                                                 <CardTitle className="text-base text-slate-900">
                                                     {entry.title}
                                                 </CardTitle>
-                                                <CardDescription className="text-xs uppercase tracking-widest text-slate-400">
-                                                    {entry.category}
-                                                </CardDescription>
+                                                <div className="flex items-center gap-2">
+                                                    <CardDescription className="text-xs uppercase tracking-widest text-slate-400">
+                                                        {entry.category}
+                                                    </CardDescription>
+                                                    <Badge variant="secondary" className="text-[10px] font-bold">
+                                                        {entry.language.toUpperCase()}
+                                                    </Badge>
+                                                </div>
                                             </div>
                                             {!isEditing && (
                                                 <Button
@@ -249,6 +441,7 @@ export function KnowledgeEntryManager({ section, title, description }: Knowledge
                                             )}
                                         </div>
                                         <div className="flex flex-wrap gap-2">
+                                            <MetadataBadges metadata={entry.metadata_json as Record<string, unknown>} />
                                             {entry.tags?.map((tag) => (
                                                 <Badge key={tag} variant="secondary" className="bg-slate-100 text-slate-600">
                                                     {tag}
@@ -259,52 +452,13 @@ export function KnowledgeEntryManager({ section, title, description }: Knowledge
                                     <CardContent className="space-y-4">
                                         {isEditing ? (
                                             <div className="space-y-4">
-                                                <div className="grid gap-4 md:grid-cols-2">
-                                                    <div className="space-y-2">
-                                                        <label className="text-sm font-semibold text-slate-700">Tytuł</label>
-                                                        <Input
-                                                            value={editForm.title}
-                                                            onChange={(event) =>
-                                                                setEditForm({ ...editForm, title: event.target.value })
-                                                            }
-                                                            className="bg-white"
-                                                        />
-                                                    </div>
-                                                    <div className="space-y-2">
-                                                        <label className="text-sm font-semibold text-slate-700">Kategoria</label>
-                                                        <Input
-                                                            value={editForm.category}
-                                                            onChange={(event) =>
-                                                                setEditForm({ ...editForm, category: event.target.value })
-                                                            }
-                                                            list={`category-suggestions-edit-${section}`}
-                                                            className="bg-white"
-                                                        />
-                                                        <datalist id={`category-suggestions-edit-${section}`}>
-                                                            {categorySuggestions.map((category) => (
-                                                                <option key={category} value={category} />
-                                                            ))}
-                                                        </datalist>
-                                                    </div>
-                                                </div>
-                                                <TagInput
-                                                    label="Tagi"
-                                                    tags={editForm.tags}
-                                                    suggestions={tagSuggestions}
-                                                    onChange={(tags) => setEditForm({ ...editForm, tags })}
+                                                <KnowledgeFormFields
+                                                    form={editForm}
+                                                    setForm={setEditForm as (updater: KnowledgeFormState | ((prev: KnowledgeFormState) => KnowledgeFormState)) => void}
+                                                    categorySuggestions={categorySuggestions}
+                                                    tagSuggestions={tagSuggestions}
+                                                    section={`edit-${section}`}
                                                 />
-                                                <div className="space-y-2">
-                                                    <label className="text-sm font-semibold text-slate-700">
-                                                        Treść (Markdown)
-                                                    </label>
-                                                    <Textarea
-                                                        value={editForm.content}
-                                                        onChange={(event) =>
-                                                            setEditForm({ ...editForm, content: event.target.value })
-                                                        }
-                                                        className="min-h-[160px] bg-white"
-                                                    />
-                                                </div>
                                                 <div className="flex flex-wrap justify-end gap-2">
                                                     <Button variant="outline" onClick={cancelEditing} disabled={saving}>
                                                         Anuluj
