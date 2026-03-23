@@ -9,6 +9,7 @@ import logging
 from typing import Sequence
 
 from openai import OpenAIError
+from sqlalchemy import or_
 from sqlalchemy.orm import Session
 
 from models import KnowledgeItem
@@ -28,7 +29,10 @@ def get_available_intents(db: Session, language: str) -> list[dict]:
     instructions = (
         db.query(KnowledgeItem.category, KnowledgeItem.title)
         .filter(
-            KnowledgeItem.section == "instructions",
+            or_(
+                KnowledgeItem.section == "instructions",
+                KnowledgeItem.content_type == "intent_prompt"
+            ),
             KnowledgeItem.is_active.is_(True),
             KnowledgeItem.language == language,
             KnowledgeItem.organization_id.is_(None),

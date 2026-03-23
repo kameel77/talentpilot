@@ -8,6 +8,7 @@ from typing import Iterable, Sequence
 
 from fastapi import HTTPException, status
 from openai import OpenAI, OpenAIError
+from sqlalchemy import or_
 from sqlalchemy.orm import Session
 
 from config import settings
@@ -210,7 +211,10 @@ def retrieve_instruction(
     instruction = (
         db.query(KnowledgeItem)
         .filter(
-            KnowledgeItem.section == "instructions",
+            or_(
+                KnowledgeItem.section == "instructions",
+                KnowledgeItem.content_type == "intent_prompt"
+            ),
             KnowledgeItem.is_active.is_(True),
             KnowledgeItem.language == language,
             KnowledgeItem.organization_id.is_(None),
