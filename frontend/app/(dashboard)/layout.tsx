@@ -93,6 +93,7 @@ export default function DashboardLayout({
     const knowledgeLinks = [
         { name: "FAQ", href: "/dashboard/admin/knowledge/faq" },
         { name: "Merytoryka", href: "/dashboard/admin/knowledge/merytoryka" },
+        { name: "Instrukcje", href: "/dashboard/admin/knowledge/instructions" },
     ];
 
     const adminNavigation = [

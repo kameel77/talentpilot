@@ -194,19 +194,15 @@ DOMAIN_LABELS = {
 }
 
 
-def retrieve_instruction(
-    db: Session,
-    intent: str,
-    language: str,
-) -> tuple[str | None, str]:
-    """Retrieve format instruction and render mode from KB for the given intent.
+def retrieve_instruction(db: Session, intent: str, language: str) -> tuple[str | None, str]:
+    """Fetch dedicated instruction content and its preferred render mode.
     
-    Returns:
-        Tuple of (instruction_content, render_mode).
-        render_mode comes from metadata_json.render_mode, defaults to 'freeform'.
+    Returns (content, render_mode)
+    render_mode defaults to 'freeform' if not found.
+    Intent classes are derived from unique category values of instruction entries.
     """
-    if not intent or intent == "default":
-        return None, "structured"
+    if intent == "default":
+        return None, "freeform"
 
     instruction = (
         db.query(KnowledgeItem)
@@ -227,7 +223,7 @@ def retrieve_instruction(
         render_mode = meta.get("render_mode", "freeform")
         logger.info(f"Retrieved instruction for intent '{intent}': {instruction.title} (render_mode={render_mode})")
         return instruction.content, render_mode
-    return None, "structured"
+    return None, "freeform"
 
 
 def build_prompt(
