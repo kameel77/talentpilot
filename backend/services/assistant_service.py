@@ -213,7 +213,7 @@ def retrieve_instruction(
         .filter(
             or_(
                 KnowledgeItem.section == "instructions",
-                KnowledgeItem.content_type == "intent_prompt"
+                KnowledgeItem.metadata_json["contentType"].astext == "intent_prompt"
             ),
             KnowledgeItem.is_active.is_(True),
             KnowledgeItem.language == language,
