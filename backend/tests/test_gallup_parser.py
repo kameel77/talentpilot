@@ -1,4 +1,3 @@
-import pytest
 from services.gallup_pdf_parser import extract_ranked_talents, clean_talent_name
 from services.talent_name_mapper import map_talent_name_to_code
 
@@ -44,6 +43,18 @@ def test_extract_ranked_talents_en():
     assert results["strategic"] == 3
     assert results["empathy"] == 4
     assert results["relator"] == 5
+
+def test_extract_ranked_talents_section_header_inline():
+    """Regression: pdfplumber merges the STRENGTHEN/NAVIGATE column headers onto
+    the same line as the first entry in each column (rank 1 and rank 11),
+    breaking the line-start anchor of the ranking regex."""
+    text = "STRENGTHEN 1. Learner\n2. Arranger\nNAVIGATE 11. Relator\n12. Belief\n"
+    results = extract_ranked_talents(text)
+    assert results["learner"] == 1
+    assert results["arranger"] == 2
+    assert results["relator"] == 11
+    assert results["belief"] == 12
+
 
 def test_extract_ranked_talents_messy():
     text = """

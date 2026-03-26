@@ -24,8 +24,26 @@ RESULT_KEYWORDS = (
 )
 
 RANKED_TALENT_PATTERN = re.compile(
-    r"(?m)^\s*(\d{1,2})\s*[.\-:)]+\s*([A-Za-zÀ-ÖØ-öø-ÿąćęłńóśźżĄĆĘŁŃÓŚŹŻ'’\- ]{2,})"
+    r"(?m)^\s*(\d{1,2})\s*[.\-:)]+\s*([A-Za-zÀ-ÖØ-öø-ÿąćęłńóśźżĄĆĘŁŃÓŚŹŻ’’\- ]{2,})"
 )
+
+# Gallup section headers that pdfplumber may merge onto the same line as rank 1/11
+# due to multi-column layout on the results page.
+_SECTION_HEADERS = re.compile(
+    r"\b(STRENGTHEN|NAVIGATE|WZMACNIAJ|KIERUJ)\b",
+    re.IGNORECASE,
+)
+
+
+def _preprocess_text(text: str) -> str:
+    """Replace known Gallup section headers with newlines.
+
+    pdfplumber.extract_text() sorts glyphs by Y-position, so a section header
+    like ‘STRENGTHEN’ (left-column) can land on the same output line as
+    ‘1. Learner’ (also left-column but slightly lower). That prefix breaks the
+    line-anchored regex. Replacing headers with newlines restores the anchor.
+    """
+    return _SECTION_HEADERS.sub("\n", text)
 
 
 @dataclass(frozen=True)
@@ -95,6 +113,7 @@ def find_results_page(pages_text: List[str], keywords: Iterable[str] = RESULT_KE
 def extract_ranked_talents(text: str) -> Dict[str, int]:
     """Extract talent codes with their ranking numbers from text."""
     results: Dict[str, int] = {}
+    text = _preprocess_text(text)
     matches = RANKED_TALENT_PATTERN.findall(text)
     
     print(f"[PDF Parser] Found {len(matches)} ranking matches in text")
