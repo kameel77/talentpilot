@@ -113,9 +113,15 @@ def map_talent_name_to_code(raw_name: str) -> Optional[str]:
         return TALENT_MAP[normalized]
         
     # Partial matching (for cases where PDF extraction might be slightly messy)
+    # Use word-level matching to avoid "focus" matching inside "focusing"
+    normalized_words = set(normalized.split())
     for key, code in TALENT_MAP.items():
-        if key in normalized or normalized in key:
-            if len(normalized) > 3: # Avoid matching very short fragments
+        key_words = key.split()
+        if all(w in normalized_words for w in key_words):
+            if len(normalized) > 3:
+                return code
+        elif normalized in key:
+            if len(normalized) > 3:
                 return code
                 
     return None

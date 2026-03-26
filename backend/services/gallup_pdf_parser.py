@@ -166,7 +166,7 @@ def clean_talent_name(raw_name: str) -> str:
         cleaned_parts = [parts[0]]
         for part in parts[1:]:
             # Long words without natural breaks are likely PDF artifacts
-            if len(part) > 20:
+            if len(part) > 7:
                 break
             cleaned_parts.append(part)
         cleaned_name = " ".join(cleaned_parts)
