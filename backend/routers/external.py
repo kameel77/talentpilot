@@ -6,7 +6,7 @@ from fastapi import APIRouter, File, HTTPException, UploadFile, status, Depends,
 from sqlalchemy.orm import Session
 from typing import List, Literal
 
-from schemas import ExternalGallupResponse, ExternalTalent, ExternalTalentName, ExternalDomain
+from schemas import ExternalGallupResponse, ExternalPersonInfo, ExternalTalent, ExternalTalentName, ExternalDomain
 from services.gallup_pdf_parser import extract_gallup_rankings
 from auth import verify_api_key
 from database import get_db
@@ -86,13 +86,18 @@ def parse_gallup_pdf_external(
             raise HTTPException(status_code=500, detail=f"Failed to read upload: {str(e)}")
 
     try:
-        rankings, _ = extract_gallup_rankings(temp_path)
+        rankings, _, person_info = extract_gallup_rankings(temp_path)
     finally:
         if os.path.exists(temp_path):
             os.remove(temp_path)
 
+    person = ExternalPersonInfo(
+        first_name=person_info.first_name,
+        last_name=person_info.last_name,
+    ) if person_info.first_name or person_info.last_name else None
+
     if not rankings:
-        return ExternalGallupResponse(language=language, talents=[])
+        return ExternalGallupResponse(language=language, person=person, talents=[])
 
     include_pl = language in ("pl", "pl+en")
     include_en = language in ("en", "pl+en")
@@ -141,4 +146,4 @@ def parse_gallup_pdf_external(
             )
         )
 
-    return ExternalGallupResponse(language=language, talents=external_talents)
+    return ExternalGallupResponse(language=language, person=person, talents=external_talents)

@@ -232,6 +232,8 @@ class GallupPdfParseResponse(BaseModel):
     rankings: dict[str, int]  # Internal code -> rank
     translated_rankings: dict[str, int]  # Translated name -> rank
     language: str
+    first_name: Optional[str] = None
+    last_name: Optional[str] = None
 
 
 class AssistantQueryRequest(BaseModel):
@@ -371,6 +373,20 @@ class QAHistoryItem(BaseModel):
 
 
 # External API Schemas
+class ExternalPersonInfo(BaseModel):
+    first_name: Optional[str] = Field(default=None, description="First name extracted from the Gallup report header")
+    last_name: Optional[str] = Field(default=None, description="Last name extracted from the Gallup report header")
+
+    model_config = {
+        "json_schema_extra": {
+            "examples": [
+                {"first_name": "Kamil", "last_name": "Tonkowicz"},
+                {"first_name": "Anna Maria", "last_name": "Kowalska"},
+            ]
+        }
+    }
+
+
 class ExternalTalentName(BaseModel):
     pl: Optional[str] = Field(default=None, description="Talent name in Polish (present when language=pl or pl+en)")
     en: Optional[str] = Field(default=None, description="Talent name in English (present when language=en or pl+en)")
@@ -424,6 +440,7 @@ class ExternalTalent(BaseModel):
 
 class ExternalGallupResponse(BaseModel):
     language: str = Field(description="Language filter used in this response: pl, en, or pl+en")
+    person: Optional[ExternalPersonInfo] = Field(default=None, description="Person info (first/last name) extracted from the PDF header")
     talents: List[ExternalTalent] = Field(description="Talents parsed from the PDF, sorted by rank ascending")
 
     model_config = {

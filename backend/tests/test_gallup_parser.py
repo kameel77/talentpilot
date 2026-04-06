@@ -1,4 +1,4 @@
-from services.gallup_pdf_parser import extract_ranked_talents, clean_talent_name
+from services.gallup_pdf_parser import extract_ranked_talents, clean_talent_name, extract_person_name, GallupPersonInfo
 from services.talent_name_mapper import map_talent_name_to_code
 
 def test_clean_talent_name():
@@ -69,3 +69,75 @@ def test_extract_ranked_talents_messy():
     assert results["arranger"] == 2
     assert results["strategic"] == 10
     assert results["woo"] == 34
+
+
+# ---------- extract_person_name tests ----------
+
+def test_person_name_en_with_pipe_and_date():
+    """Format: 'KAMIL TONKOWICZ | 04-03-2021'"""
+    pages = ["KAMIL TONKOWICZ | 04-03-2021\nYour CliftonStrengths 34 Results"]
+    info = extract_person_name(pages)
+    assert info.first_name == "Kamil"
+    assert info.last_name == "Tonkowicz"
+
+
+def test_person_name_pl_with_pipe_and_date():
+    """Format: 'JOANNA TONKOWICZ | 05-02-2025'"""
+    pages = ["JOANNA TONKOWICZ | 05-02-2025\nTwoje wyniki badania CliftonStrengths 34"]
+    info = extract_person_name(pages)
+    assert info.first_name == "Joanna"
+    assert info.last_name == "Tonkowicz"
+
+
+def test_person_name_no_space_around_pipe():
+    """Format: 'ANNA MRÓZ|03-06-2026'"""
+    pages = ["ANNA MRÓZ|03-06-2026\nTwoje wyniki badania CliftonStrengths 34"]
+    info = extract_person_name(pages)
+    assert info.first_name == "Anna"
+    assert info.last_name == "Mróz"
+
+
+def test_person_name_no_date():
+    """Format: 'DONALD CLIFTON' (no pipe, no date)"""
+    pages = ["DONALD CLIFTON\nYour CliftonStrengths 34 Results"]
+    info = extract_person_name(pages)
+    assert info.first_name == "Donald"
+    assert info.last_name == "Clifton"
+
+
+def test_person_name_with_polish_chars():
+    """Format: 'KAROLINA MITRASZEWSKA | 04-10-2025'"""
+    pages = ["KAROLINA MITRASZEWSKA | 04-10-2025\nYour CliftonStrengths 34"]
+    info = extract_person_name(pages)
+    assert info.first_name == "Karolina"
+    assert info.last_name == "Mitraszewska"
+
+
+def test_person_name_multiple_first_names():
+    """Three words → first two as first_name, last as last_name."""
+    pages = ["ANNA MARIA KOWALSKA | 01-01-2025\nResults"]
+    info = extract_person_name(pages)
+    assert info.first_name == "Anna Maria"
+    assert info.last_name == "Kowalska"
+
+
+def test_person_name_single_word():
+    """Only one word in header → first_name only."""
+    pages = ["MADONNA\nResults"]
+    info = extract_person_name(pages)
+    assert info.first_name == "Madonna"
+    assert info.last_name is None
+
+
+def test_person_name_empty_pages():
+    """No pages → empty person info."""
+    info = extract_person_name([])
+    assert info.first_name is None
+    assert info.last_name is None
+
+
+def test_person_name_empty_first_page():
+    """Empty first page → empty person info."""
+    info = extract_person_name([""])
+    assert info.first_name is None
+    assert info.last_name is None

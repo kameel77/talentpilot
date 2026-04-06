@@ -47,6 +47,63 @@ def _preprocess_text(text: str) -> str:
 
 
 @dataclass(frozen=True)
+class GallupPersonInfo:
+    """First name / last name extracted from the Gallup PDF header."""
+    first_name: Optional[str] = None
+    last_name: Optional[str] = None
+
+
+# Pattern for the name header line.
+# Gallup always prints the person's name in ALL-CAPS on the very first line
+# of page 0, optionally followed by ` | DD-MM-YYYY`.
+_NAME_HEADER_PATTERN = re.compile(
+    r"^([A-ZÀ-ÖØ-öø-ÿĄĆĘŁŃÓŚŹŻa-ząćęłńóśźż\s\-']+?)\s*(?:\|.*)?$"
+)
+
+
+def extract_person_name(pages_text: List[str]) -> GallupPersonInfo:
+    """Extract first name and last name from the first page header.
+
+    Gallup PDF reports always place the person's name (ALL-CAPS) on the
+    first non-empty line of the first page.  Formats seen in the wild:
+
+    * ``KAMIL TONKOWICZ | 04-03-2021``
+    * ``JOANNA TONKOWICZ | 05-02-2025``
+    * ``ANNA MRÓZ|03-06-2026``       (no spaces around pipe)
+    * ``DONALD CLIFTON``              (no date at all)
+    """
+    if not pages_text or not pages_text[0]:
+        return GallupPersonInfo()
+
+    first_page = pages_text[0]
+    for line in first_page.split("\n"):
+        line = line.strip()
+        if not line:
+            continue
+
+        m = _NAME_HEADER_PATTERN.match(line)
+        if m:
+            raw_name = m.group(1).strip()
+            if not raw_name:
+                break  # fall through to empty result
+
+            parts = raw_name.split()
+            if len(parts) == 1:
+                # Only one word — treat as first name
+                return GallupPersonInfo(first_name=parts[0].title())
+            else:
+                # Last word = last name, everything before = first name(s)
+                first = " ".join(parts[:-1]).title()
+                last = parts[-1].title()
+                return GallupPersonInfo(first_name=first, last_name=last)
+
+        # First non-empty line didn't match — stop looking
+        break
+
+    return GallupPersonInfo()
+
+
+@dataclass(frozen=True)
 class GallupPageMatch:
     index: int
     text: str
@@ -174,13 +231,14 @@ def clean_talent_name(raw_name: str) -> str:
     return re.sub(r"\s+", " ", cleaned_name).strip(" .-–—:\t")
 
 
-def extract_gallup_rankings(pdf_path: str) -> Tuple[Dict[str, int], Optional[int]]:
-    """Extract Gallup rankings JSON and return it with the page index used."""
+def extract_gallup_rankings(pdf_path: str) -> Tuple[Dict[str, int], Optional[int], GallupPersonInfo]:
+    """Extract Gallup rankings JSON and person info; return (rankings, page_index, person_info)."""
     pages_text = extract_pdf_pages_text(pdf_path)
+    person_info = extract_person_name(pages_text)
     match = find_results_page(pages_text)
     if not match:
-        return {}, None
-    return extract_ranked_talents(match.text), match.index
+        return {}, None, person_info
+    return extract_ranked_talents(match.text), match.index, person_info
 
 
 def dump_rankings_json(rankings: Dict[str, int]) -> str:

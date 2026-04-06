@@ -37,7 +37,7 @@ def parse_gallup_pdf(
             raise HTTPException(status_code=500, detail=f"Failed to read upload: {str(e)}")
 
     try:
-        rankings, page_index = extract_gallup_rankings(temp_path)
+        rankings, page_index, person_info = extract_gallup_rankings(temp_path)
     finally:
         if os.path.exists(temp_path):
             os.remove(temp_path)
@@ -64,7 +64,9 @@ def parse_gallup_pdf(
         page_index=page_index,
         rankings=rankings,
         translated_rankings=translated_rankings,
-        language=language
+        language=language,
+        first_name=person_info.first_name,
+        last_name=person_info.last_name,
     )
 
 
