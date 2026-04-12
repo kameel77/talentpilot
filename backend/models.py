@@ -82,7 +82,7 @@ class User(Base):
     role = Column(SQLEnum(UserRole), nullable=False, default=UserRole.USER)
     is_active = Column(Boolean, default=True)
     is_ghost = Column(Boolean, default=False)
-    avatar_url = Column(String(500), nullable=True)
+    avatar_url = Column(Text, nullable=True)
     
     # Multi-tenancy
     organization_id = Column(Integer, ForeignKey('organizations.id', ondelete='CASCADE'), nullable=False)
