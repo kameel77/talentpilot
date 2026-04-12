@@ -95,6 +95,11 @@ class User(Base):
     motivators = Column(Text, nullable=True)   # "Wyzwalacze"
     blockers = Column(Text, nullable=True)     # "Blokady"
     feedback_style = Column(Text, nullable=True)  # "Jak mi dawać feedback"
+
+    # Public profile (wizytówka)
+    public_token = Column(String(64), unique=True, nullable=True, index=True)
+    public_slug = Column(String(64), unique=True, nullable=True, index=True)  # custom vanity slug
+    public_profile_settings = Column(JSON, nullable=True)  # privacy toggles
     
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())

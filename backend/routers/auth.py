@@ -57,7 +57,8 @@ def register(
         hashed_password=hash_password(data.password),
         full_name=data.full_name,
         role=UserRole.ADMIN,
-        organization_id=organization.id
+        organization_id=organization.id,
+        public_token=str(uuid.uuid4()).replace("-", ""),
     )
     db.add(user)
     db.commit()
@@ -109,7 +110,13 @@ async def login(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="User account is inactive"
         )
-    
+
+    # Lazily assign public_token for users who don't have one yet
+    if not user.public_token:
+        user.public_token = str(uuid.uuid4()).replace("-", "")
+        db.commit()
+        db.refresh(user)
+
     # Create access token
     access_token = create_access_token(data={"sub": user.id})
     

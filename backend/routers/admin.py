@@ -10,6 +10,8 @@ from models import AnswerReview, GeneratedAnswer, KnowledgeItem, ReviewStatus, U
 from schemas import (
     AdminSettingUpdate,
     AdminSettingsResponse,
+    KnowledgeItemBulkCreate,
+    KnowledgeItemBulkResponse,
     KnowledgeItemCreate,
     KnowledgeItemUpdate,
     KnowledgeItemResponse,
@@ -166,6 +168,52 @@ def create_knowledge(
     db.commit()
     db.refresh(knowledge_item)
     return knowledge_item
+
+
+@router.post("/knowledge/bulk", response_model=KnowledgeItemBulkResponse)
+def create_knowledge_bulk(
+    payload: KnowledgeItemBulkCreate,
+    db: Session = Depends(get_db),
+    current_user=Depends(require_role(["admin"])),
+):
+    """Bulk import multiple knowledge items in a single request.
+    Processes all items and returns created items + any per-item errors.
+    """
+    created_items = []
+    errors = []
+
+    for idx, item in enumerate(payload.items):
+        try:
+            embedding = get_embedding(db, item.content)
+            metadata = _build_metadata(item.metadata_json, item.category, item.tags)
+            knowledge_item = KnowledgeItem(
+                title=item.title,
+                category=item.category,
+                tags=item.tags,
+                section=item.section,
+                content=item.content,
+                embedding=embedding,
+                language=item.language,
+                organization_id=None,
+                created_by=current_user.id,
+                metadata_json=metadata,
+            )
+            db.add(knowledge_item)
+            db.flush()
+            db.refresh(knowledge_item)
+            created_items.append(knowledge_item)
+        except Exception as e:
+            errors.append(f"Item {idx} '{item.title}': {str(e)}")
+            db.rollback()
+
+    if created_items:
+        db.commit()
+
+    return KnowledgeItemBulkResponse(
+        created=len(created_items),
+        errors=errors,
+        items=created_items,
+    )
 
 
 @router.get("/knowledge", response_model=list[KnowledgeItemResponse])

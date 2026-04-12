@@ -272,9 +272,13 @@ export default function DashboardLayout({
                         <div className="relative" ref={userMenuRef}>
                             <button
                                 onClick={() => setUserMenuOpen(!userMenuOpen)}
-                                className="h-10 w-10 bg-blue-600 text-white flex items-center justify-center rounded-full font-bold text-sm hover:ring-2 hover:ring-blue-600/50 hover:ring-offset-2 transition-all focus:outline-none"
+                                className="h-10 w-10 bg-blue-600 text-white flex items-center justify-center rounded-full font-bold text-sm hover:ring-2 hover:ring-blue-600/50 hover:ring-offset-2 transition-all focus:outline-none overflow-hidden"
                             >
-                                {user?.full_name?.split(' ').map(n => n[0]).join('').toUpperCase() || "AK"}
+                                {user?.avatar_url ? (
+                                    <img src={user.avatar_url} alt="" className="h-full w-full object-cover" />
+                                ) : (
+                                    user?.full_name?.split(' ').map(n => n[0]).join('').toUpperCase() || "AK"
+                                )}
                             </button>
                             
                             {userMenuOpen && (

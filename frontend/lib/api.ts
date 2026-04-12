@@ -21,6 +21,8 @@ export interface User {
     linkedin_url?: string;
     organization_id: number;
     created_at: string;
+    public_token?: string;
+    public_slug?: string;
 }
 
 export interface Organization {
@@ -41,6 +43,8 @@ export interface UserUpdateData {
     motivators?: string;
     blockers?: string;
     feedback_style?: string;
+    public_profile_settings?: Record<string, boolean>;
+    public_slug?: string;
 }
 
 export interface LoginCredentials {

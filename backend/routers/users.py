@@ -1,4 +1,5 @@
 """Users router for CRUD operations."""
+import uuid
 from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.orm import Session
 from typing import List, Optional
@@ -43,7 +44,8 @@ def create_user(
         hashed_password=hash_password(data.password),
         full_name=data.full_name,
         role=data.role,
-        organization_id=current_user.organization_id
+        organization_id=current_user.organization_id,
+        public_token=str(uuid.uuid4()).replace("-", ""),
     )
     db.add(user)
     db.commit()
@@ -164,6 +166,17 @@ def update_user(
         user.blockers = data.blockers
     if data.feedback_style is not None:
         user.feedback_style = data.feedback_style
+    if data.public_profile_settings is not None:
+        user.public_profile_settings = data.public_profile_settings
+    if data.public_slug is not None:
+        slug = data.public_slug.lower().strip()
+        conflict = db.query(User).filter(User.public_slug == slug, User.id != user.id).first()
+        if conflict:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="This slug is already taken. Please choose a different one.",
+            )
+        user.public_slug = slug
     if data.is_active is not None:
         # Only admins can toggle is_active
         if current_user.role != UserRole.ADMIN:

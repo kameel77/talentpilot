@@ -59,6 +59,14 @@ class UserUpdate(BaseModel):
     motivators: Optional[str] = None
     blockers: Optional[str] = None
     feedback_style: Optional[str] = None
+    public_profile_settings: Optional[dict] = None
+    public_slug: Optional[str] = Field(
+        default=None,
+        min_length=3,
+        max_length=64,
+        pattern=r'^[a-z0-9][a-z0-9\-]*[a-z0-9]$',
+        description="Custom vanity slug for /aboutme/{slug}. Lowercase letters, numbers and hyphens only.",
+    )
 
 
 class PasswordChangeRequest(BaseModel):
@@ -79,6 +87,8 @@ class UserResponse(BaseModel):
     linkedin_url: Optional[str] = None
     organization_id: int
     created_at: datetime
+    public_token: Optional[str] = None
+    public_slug: Optional[str] = None
 
     model_config = {"from_attributes": True}
 
@@ -89,6 +99,7 @@ class UserDetailResponse(UserResponse):
     motivators: Optional[str] = None
     blockers: Optional[str] = None
     feedback_style: Optional[str] = None
+    public_profile_settings: Optional[dict] = None
 
 
 # Invitation Schemas
@@ -289,6 +300,16 @@ class KnowledgeItemResponse(BaseModel):
     updated_at: Optional[datetime] = None
 
     model_config = {"from_attributes": True}
+
+
+class KnowledgeItemBulkCreate(BaseModel):
+    items: List[KnowledgeItemCreate]
+
+
+class KnowledgeItemBulkResponse(BaseModel):
+    created: int
+    errors: List[str] = []
+    items: List[KnowledgeItemResponse]
 
 
 class AdminSettingUpdate(BaseModel):
@@ -554,3 +575,28 @@ class TipFeedbackRequest(BaseModel):
     """Feedback on a tip."""
     tip_id: int
     helpful: bool
+
+
+# -------- Public Profile (Wizytówka) --------
+
+class PublicTalentItem(BaseModel):
+    rank: int
+    code: str
+    name_pl: str
+    name_en: Optional[str] = None
+    domain: str
+
+    model_config = {"from_attributes": True}
+
+
+class PublicProfileResponse(BaseModel):
+    """Public business card — only fields permitted by owner's privacy settings."""
+    full_name: str
+    job_title: Optional[str] = None
+    avatar_url: Optional[str] = None
+    linkedin_url: Optional[str] = None
+    talents: Optional[List[PublicTalentItem]] = None
+    superpowers: Optional[str] = None
+    motivators: Optional[str] = None
+    blockers: Optional[str] = None
+    feedback_style: Optional[str] = None

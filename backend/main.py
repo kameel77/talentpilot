@@ -41,7 +41,7 @@ def health_check():
 
 
 # Import routers
-from routers import auth, organizations, teams, users, talents, gallup, invitations, assistant, admin, qa, compare, tips
+from routers import auth, organizations, teams, users, talents, gallup, invitations, assistant, admin, qa, compare, tips, public
 
 app.include_router(auth.router, prefix="/api/auth", tags=["Authentication"])
 app.include_router(organizations.router, prefix="/api/organizations", tags=["Organizations"])
@@ -55,6 +55,7 @@ app.include_router(admin.router, prefix="/api/admin", tags=["Admin"])
 app.include_router(qa.router, prefix="/api", tags=["QA v1"])
 app.include_router(compare.router, prefix="/api", tags=["Compare"])
 app.include_router(tips.router, prefix="/api", tags=["Tips"])
+app.include_router(public.router, prefix="/api/public", tags=["Public Profile"])
 
 # External API — mounted as an isolated sub-application.
 # Has its own CORS policy, sanitized error handler, and Swagger docs at /api/external/docs.
