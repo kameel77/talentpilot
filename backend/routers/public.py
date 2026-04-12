@@ -8,6 +8,44 @@ from schemas import PublicProfileResponse, PublicTalentItem
 
 router = APIRouter()
 
+# Source of truth — mirrors frontend/data/gallupTalents.ts
+_NAMES_PL: dict[str, str] = {
+    "achiever": "Osiąganie",
+    "arranger": "Organizator",
+    "belief": "Pryncypialność",
+    "consistency": "Bezstronność",
+    "deliberative": "Rozwaga",
+    "discipline": "Dyscyplina",
+    "focus": "Ukierunkowanie",
+    "responsibility": "Odpowiedzialność",
+    "restorative": "Naprawianie",
+    "activator": "Aktywator",
+    "command": "Dowodzenie",
+    "communication": "Komunikatywność",
+    "competition": "Rywalizacja",
+    "maximizer": "Maksymalista",
+    "self-assurance": "Wiara w siebie",
+    "significance": "Poważanie",
+    "woo": "Czar",
+    "adaptability": "Elastyczność",
+    "connectedness": "Współzależność",
+    "developer": "Rozwijanie innych",
+    "empathy": "Empatia",
+    "harmony": "Zgodność",
+    "includer": "Integrator",
+    "individualization": "Indywidualizacja",
+    "positivity": "Optymista",
+    "relator": "Bliskość",
+    "analytical": "Analityk",
+    "context": "Kontekst",
+    "futuristic": "Wizjoner",
+    "ideation": "Odkrywczość",
+    "input": "Zbieranie",
+    "intellection": "Intelekt",
+    "learner": "Uczenie się",
+    "strategic": "Strateg",
+}
+
 _DEFAULT_SETTINGS = {
     "show_photo": True,
     "show_talents": True,
@@ -50,8 +88,8 @@ def get_public_profile(slug_or_token: str, db: Session = Depends(get_db)):
         talents = []
         for ut in user_talents:
             t = ut.talent
-            # Find Polish translation
-            pl_name = next(
+            # Use static frontend-aligned map first, fall back to DB translation
+            pl_name = _NAMES_PL.get(t.code) or next(
                 (tr.name for tr in t.translations if tr.language == "pl"),
                 t.code,
             )

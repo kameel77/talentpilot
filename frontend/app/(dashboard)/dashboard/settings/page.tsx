@@ -25,6 +25,7 @@ import {
   Copy,
   Check,
   ExternalLink,
+  BookOpen,
 } from "lucide-react";
 import { SettingsSection } from "@/components/dashboard/SettingsSection";
 import { GALLUP_TALENTS } from "@/data/gallupTalents";
@@ -67,6 +68,14 @@ export default function SettingsPage() {
   const [orgSaving, setOrgSaving] = useState(false);
   const [orgMsg, setOrgMsg] = useState<{ type: "success" | "error"; text: string } | null>(null);
 
+  // User Manual
+  const [superpowers, setSuperpowers] = useState("");
+  const [motivators, setMotivators] = useState("");
+  const [blockers, setBlockers] = useState("");
+  const [feedbackStyle, setFeedbackStyle] = useState("");
+  const [manualSaving, setManualSaving] = useState(false);
+  const [manualMsg, setManualMsg] = useState<{ type: "success" | "error"; text: string } | null>(null);
+
   // Wizytówka copy + slug
   const [linkCopied, setLinkCopied] = useState(false);
   const [publicSlug, setPublicSlug] = useState("");
@@ -97,6 +106,12 @@ export default function SettingsPage() {
       initUserFields(u);
       tokenManager.setUser(u);
       setPublicSlug(u.public_slug ?? "");
+      // User Manual fields
+      const ud = u as typeof u & { superpowers?: string; motivators?: string; blockers?: string; feedback_style?: string };
+      setSuperpowers(ud.superpowers ?? "");
+      setMotivators(ud.motivators ?? "");
+      setBlockers(ud.blockers ?? "");
+      setFeedbackStyle(ud.feedback_style ?? "");
 
       // Load privacy settings from public_profile_settings
       if ((u as UserType & { public_profile_settings?: Record<string, boolean> }).public_profile_settings) {
@@ -254,6 +269,27 @@ export default function SettingsPage() {
       setPrivacyMsg({ type: "error", text: "Błąd zapisu." });
     } finally {
       setPrivacySaving(false);
+    }
+  };
+
+  const handleManualSave = async () => {
+    if (!currentUser) return;
+    setManualSaving(true);
+    setManualMsg(null);
+    try {
+      const updated = await api.users.update(currentUser.id, {
+        superpowers: superpowers || undefined,
+        motivators: motivators || undefined,
+        blockers: blockers || undefined,
+        feedback_style: feedbackStyle || undefined,
+      });
+      tokenManager.setUser(updated);
+      setCurrentUser(updated);
+      setManualMsg({ type: "success", text: "Instrukcja obsługi zapisana." });
+    } catch {
+      setManualMsg({ type: "error", text: "Błąd zapisu." });
+    } finally {
+      setManualSaving(false);
     }
   };
 
@@ -589,7 +625,42 @@ export default function SettingsPage() {
         </SettingsSection>
       </div>
 
-      {/* Row 3: Wizytówka (wider) + Notifications */}
+      {/* Row 3: User Manual — full width */}
+      <SettingsSection
+        icon={BookOpen}
+        title="Instrukcja obsługi"
+        description="Powiedz innym jak z Tobą współpracować — widoczne na wizytówce"
+      >
+        <div className="grid gap-5 sm:grid-cols-2">
+          {[
+            { label: "Moje mocne strony", placeholder: "Co naturalnie wnosisz do zespołu? Jakie masz supermoce?", value: superpowers, set: setSuperpowers },
+            { label: "Wyzwalacze i motywatory", placeholder: "Co daje Ci energię? Co sprawia że działasz z pełną mocą?", value: motivators, set: setMotivators },
+            { label: "Blokady i ograniczenia", placeholder: "Co Cię spowalnia lub drażni? Na co uważać?", value: blockers, set: setBlockers },
+            { label: "Jak mi dawać feedback", placeholder: "Jak chcesz otrzymywać informację zwrotną?", value: feedbackStyle, set: setFeedbackStyle },
+          ].map(({ label, placeholder, value, set }) => (
+            <div key={label} className="space-y-2">
+              <Label className="text-sm font-medium text-slate-700">{label}</Label>
+              <textarea
+                className="w-full min-h-[100px] rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-700 placeholder:text-slate-400 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary resize-none"
+                placeholder={placeholder}
+                value={value}
+                onChange={(e) => set(e.target.value)}
+              />
+            </div>
+          ))}
+        </div>
+        {manualMsg && (
+          <p className={cn("text-sm mt-2", manualMsg.type === "success" ? "text-green-600" : "text-destructive")}>
+            {manualMsg.text}
+          </p>
+        )}
+        <Button variant="hero" onClick={handleManualSave} disabled={manualSaving} className="mt-4">
+          <Save className="h-4 w-4 mr-2" />
+          {manualSaving ? "Zapisywanie…" : "Zapisz instrukcję obsługi"}
+        </Button>
+      </SettingsSection>
+
+      {/* Row 4: Wizytówka (wider) + Notifications */}
       <div className="grid gap-6 lg:grid-cols-5">
         {/* Moja Wizytówka — takes 3/5 */}
         <SettingsSection
@@ -712,7 +783,7 @@ export default function SettingsPage() {
         </SettingsSection>
       </div>
 
-      {/* Row 4: Team management + Privacy/security */}
+      {/* Row 5: Team management + Privacy/security */}
       <div className="grid gap-6 lg:grid-cols-2">
         <SettingsSection
           icon={Users}
