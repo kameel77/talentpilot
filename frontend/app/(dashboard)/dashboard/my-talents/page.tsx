@@ -7,13 +7,12 @@ import { DOMAIN_LABELS, GALLUP_TALENTS } from '@/data/gallupTalents';
 import { UserTalent, GallupDomain } from '@/types/talent';
 import { Card } from '@/components/ui/card';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { api, tokenManager, User } from '@/lib/api';
+import { api, tokenManager, User, UserDetailResponse } from '@/lib/api';
 import {
     Upload,
     Sparkles,
     Star,
     ThumbsUp,
-    AlertTriangle,
     Ban,
     MessageCircle,
     Lightbulb,
@@ -22,38 +21,21 @@ import {
     Target,
     Zap,
     ChevronRight,
+    Loader2,
+    Check,
+    X,
+    Pencil,
+    Smile,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import Link from 'next/link';
 
-// Mock personal insights - would come from backend/AI
-const mockPersonalInsights = {
-    strengths: [
-        'Naturalna zdolność do realizacji celów i dotrzymywania terminów',
-        'Strategiczne podejście do rozwiązywania problemów',
-        'Umiejętność szybkiego uczenia się nowych rzeczy',
-        'Doskonała komunikacja i budowanie relacji',
-    ],
-    triggers: [
-        'Brak jasno określonych celów lub priorytetów',
-        'Chaos organizacyjny i brak struktury',
-        'Ignorowanie faktów na rzecz emocji',
-        'Zbyt szybkie tempo bez czasu na analizę',
-    ],
-    blockers: [
-        'Zbyt dużo spotkań bez konkretnych rezultatów',
-        'Mikrozarządzanie i brak autonomii',
-        'Powtarzające się, rutynowe zadania',
-        'Brak możliwości rozwoju i nauki',
-    ],
-    quickTips: [
-        { icon: Target, tip: 'Zacznij dzień od ustalenia 3 najważniejszych celów', domain: 'executing' as GallupDomain },
-        { icon: Zap, tip: 'Wykorzystaj swój talent Strateg do planowania spotkań', domain: 'strategic' as GallupDomain },
-        { icon: MessageCircle, tip: 'Twoja komunikatywność to Twój atut - dziel się pomysłami', domain: 'influencing' as GallupDomain },
-        { icon: ThumbsUp, tip: 'Buduj głębokie relacje, nie powierzchowne kontakty', domain: 'relationship' as GallupDomain },
-    ],
-    feedbackGuidance: 'Najlepiej przyjmuję feedback, który jest konkretny, oparty na faktach i zorientowany na rozwiązania. Doceniam szczere rozmowy z szacunkiem dla mojego czasu. Wolę otrzymać feedback bezpośrednio po sytuacji niż z opóźnieniem.',
-};
+interface ManualFields {
+    superpowers: string;
+    motivators: string;
+    blockers: string;
+    feedback_style: string;
+}
 
 interface TalentListViewProps {
     talents: UserTalent[];
@@ -63,14 +45,13 @@ interface TalentListViewProps {
 function TalentListView({ talents, viewMode }: TalentListViewProps) {
     const limit = viewMode === 'top5' ? 5 : viewMode === 'top15' ? 15 : 34;
     let displayTalents = talents;
-    
+
     if (viewMode === 'bottom5') {
         displayTalents = talents.filter(t => t.rank >= 30 && t.rank <= 34).sort((a, b) => a.rank - b.rank);
     } else {
         displayTalents = talents.filter(t => t.rank <= limit).sort((a, b) => a.rank - b.rank);
     }
 
-    // Group by domain
     const groupedTalents = displayTalents.reduce((acc, userTalent) => {
         const talent = GALLUP_TALENTS.find(t => t.id === userTalent.talentId);
         if (talent) {
@@ -150,7 +131,6 @@ function DomainSummary({ talents }: { talents: UserTalent[] }) {
                                 className={cn("h-full rounded-full transition-all", `bg-domain-${domain}`)}
                                 style={{
                                     width: `${percentage}%`,
-                                    // Fallback colors if classes don't work
                                     backgroundColor: `var(--color-domain-${domain})`
                                 }}
                             />
@@ -185,7 +165,6 @@ function EmptyTalentsView({ onImport }: { onImport: () => void }) {
                     </p>
                 </div>
 
-                {/* Benefits preview */}
                 <div className="pt-6 border-t border-slate-200/60 space-y-3 text-left">
                     <p className="text-sm font-medium text-center text-muted-foreground">Co zyskasz?</p>
                     <div className="grid gap-3">
@@ -223,11 +202,67 @@ function EmptyTalentsView({ onImport }: { onImport: () => void }) {
     );
 }
 
+// Section for one manual field (view + inline edit)
+function ManualSection({
+    icon,
+    title,
+    colorClass,
+    iconColorClass,
+    value,
+    placeholder,
+    editing,
+    editValue,
+    onEditChange,
+}: {
+    icon: React.ReactNode;
+    title: string;
+    colorClass: string;
+    iconColorClass: string;
+    value?: string;
+    placeholder: string;
+    editing: boolean;
+    editValue: string;
+    onEditChange: (v: string) => void;
+}) {
+    return (
+        <Card className={cn("p-6 border-slate-200/60 shadow-sm", colorClass)}>
+            <div className="flex items-center gap-3 mb-3">
+                <div className={cn("rounded-xl p-2.5", iconColorClass)}>
+                    {icon}
+                </div>
+                <h2 className="text-title">{title}</h2>
+            </div>
+            {editing ? (
+                <textarea
+                    className="w-full min-h-[100px] rounded-lg border border-slate-200 bg-white/80 px-3 py-2 text-sm text-slate-700 focus:border-indigo-400 focus:outline-none resize-y"
+                    placeholder={placeholder}
+                    value={editValue}
+                    onChange={e => onEditChange(e.target.value)}
+                />
+            ) : (
+                <p className="text-sm text-muted-foreground leading-relaxed whitespace-pre-wrap">
+                    {value || <span className="italic text-slate-400">Nie uzupełniono jeszcze. Kliknij &quot;Edytuj&quot; lub wygeneruj przez AI.</span>}
+                </p>
+            )}
+        </Card>
+    );
+}
+
 export default function MyTalentsPage() {
     const [talentImportOpen, setTalentImportOpen] = useState(false);
     const [myTalents, setMyTalents] = useState<UserTalent[]>([]);
     const [talentViewMode, setTalentViewMode] = useState<'top5' | 'top15' | 'all' | 'bottom5'>('top15');
     const [currentUser, setCurrentUser] = useState<User | null>(null);
+    const [userDetail, setUserDetail] = useState<UserDetailResponse | null>(null);
+
+    // Manual editing state
+    const [editingManual, setEditingManual] = useState(false);
+    const [editFields, setEditFields] = useState<ManualFields>({ superpowers: '', motivators: '', blockers: '', feedback_style: '' });
+    const [savingManual, setSavingManual] = useState(false);
+
+    // AI generation state
+    const [generating, setGenerating] = useState(false);
+    const [generateError, setGenerateError] = useState<string | null>(null);
 
     useEffect(() => {
         const loadUserData = async () => {
@@ -236,20 +271,20 @@ export default function MyTalentsPage() {
 
             if (user) {
                 try {
-                    // Fetch user talents from backend
-                    const userTalentsData = await api.talents.getUserTalents(user.id);
+                    const [userTalentsData, detail] = await Promise.all([
+                        api.talents.getUserTalents(user.id),
+                        api.users.getDetail(user.id),
+                    ]);
 
-                    // Map backend response to frontend UserTalent type
-                    // Backend returns: { talent: { code: string }, rank: number, ... }
-                    // Frontend expects: { talentId: string, rank: number }
                     const mappedTalents: UserTalent[] = userTalentsData.map((ut: any) => ({
                         talentId: ut.talent.code,
                         rank: ut.rank
                     }));
 
                     setMyTalents(mappedTalents);
+                    setUserDetail(detail);
                 } catch (error) {
-                    console.error('Error fetching user talents:', error);
+                    console.error('Error fetching user data:', error);
                 }
             }
         };
@@ -259,53 +294,88 @@ export default function MyTalentsPage() {
     }, []);
 
     const handleTalentsSave = async (talents: UserTalent[]) => {
-        console.log('[MyTalentsPage] handleTalentsSave called with talents:', talents);
-
-        if (!currentUser) {
-            console.error('[MyTalentsPage] No current user available');
-            return;
-        }
-
+        if (!currentUser) return;
         try {
-            // Convert UserTalent[] to rankings object (code -> rank)
             const rankings: Record<string, number> = {};
-            talents.forEach(t => {
-                rankings[t.talentId] = t.rank;
-            });
-
-            console.log('[MyTalentsPage] Saving to backend for user', currentUser.id, 'rankings:', rankings);
-
-            // Save to backend
+            talents.forEach(t => { rankings[t.talentId] = t.rank; });
             await api.gallup.saveTalents(currentUser.id, rankings, 'pl');
-
-            console.log('[MyTalentsPage] Saved successfully, updating local state');
-
-            // Update local state
             setMyTalents(talents);
         } catch (error) {
-            console.error('[MyTalentsPage] Error saving talents:', error);
-            // Still update local state even if backend save fails
+            console.error('Error saving talents:', error);
             setMyTalents(talents);
+        }
+    };
+
+    const startEditing = () => {
+        setEditFields({
+            superpowers: userDetail?.superpowers || '',
+            motivators: userDetail?.motivators || '',
+            blockers: userDetail?.blockers || '',
+            feedback_style: userDetail?.feedback_style || '',
+        });
+        setEditingManual(true);
+        setGenerateError(null);
+    };
+
+    const cancelEditing = () => {
+        setEditingManual(false);
+        setGenerateError(null);
+    };
+
+    const saveManual = async () => {
+        if (!currentUser || !userDetail) return;
+        setSavingManual(true);
+        try {
+            const updated = await api.users.update(currentUser.id, {
+                superpowers: editFields.superpowers,
+                motivators: editFields.motivators,
+                blockers: editFields.blockers,
+                feedback_style: editFields.feedback_style,
+            });
+            setUserDetail({ ...userDetail, ...editFields });
+            setEditingManual(false);
+        } catch (error) {
+            console.error('Error saving manual:', error);
+        } finally {
+            setSavingManual(false);
+        }
+    };
+
+    const generateManual = async () => {
+        if (!currentUser) return;
+        setGenerating(true);
+        setGenerateError(null);
+        try {
+            const result = await api.users.generateManual(currentUser.id);
+            // Fill edit fields with generated content and switch to edit mode
+            setEditFields({
+                superpowers: result.superpowers || '',
+                motivators: result.motivators || '',
+                blockers: result.blockers || '',
+                feedback_style: result.feedback_style || '',
+            });
+            setEditingManual(true);
+        } catch (error: any) {
+            const msg = error?.response?.data?.detail || 'Błąd generowania. Spróbuj ponownie.';
+            setGenerateError(msg);
+        } finally {
+            setGenerating(false);
         }
     };
 
     const hasTalents = myTalents.length > 0;
 
-    // Get dominant domain
     const getDominantDomain = (): GallupDomain | null => {
         if (!hasTalents) return null;
         const top5 = myTalents.filter(t => t.rank <= 5);
         const domainCounts = top5.reduce((acc, userTalent) => {
             const talent = GALLUP_TALENTS.find(t => t.id === userTalent.talentId);
-            if (talent) {
-                acc[talent.domain] = (acc[talent.domain] || 0) + 1;
-            }
+            if (talent) acc[talent.domain] = (acc[talent.domain] || 0) + 1;
             return acc;
         }, {} as Record<GallupDomain, number>);
 
         const entries = Object.entries(domainCounts) as [GallupDomain, number][];
         if (entries.length === 0) return null;
-        // Sort by count desc
         return entries.sort((a, b) => b[1] - a[1])[0][0];
     };
 
@@ -340,7 +410,7 @@ export default function MyTalentsPage() {
                 <EmptyTalentsView onImport={() => setTalentImportOpen(true)} />
             ) : (
                 <div className="grid gap-6 lg:grid-cols-3">
-                    {/* Left column - Talents */}
+                    {/* Left column - Talents + Manual */}
                     <div className="lg:col-span-2 space-y-6">
                         {/* Top Talents Card */}
                         <Card className="p-6 border-slate-200/60 shadow-sm">
@@ -370,78 +440,115 @@ export default function MyTalentsPage() {
                             <TalentListView talents={myTalents} viewMode={talentViewMode} />
                         </Card>
 
-                        {/* Strengths */}
-                        <Card className="p-6 bg-emerald-50/20 dark:bg-emerald-950/20 border-slate-200/60 shadow-sm">
-                            <div className="flex items-center gap-3 mb-4">
-                                <div className="rounded-xl bg-emerald-500/10 p-2.5 text-emerald-600 dark:text-emerald-400">
-                                    <ThumbsUp className="h-5 w-5" />
-                                </div>
-                                <h2 className="text-title">Mocne strony</h2>
+                        {/* Instrukcja obsługi header */}
+                        <div className="flex items-center justify-between">
+                            <div>
+                                <h2 className="text-lg font-semibold text-slate-900">Instrukcja obsługi</h2>
+                                <p className="text-sm text-muted-foreground">Jak najlepiej ze mną współpracować</p>
                             </div>
-                            <ul className="space-y-2">
-                                {mockPersonalInsights.strengths.map((strength, i) => (
-                                    <li key={i} className="flex items-start gap-2 text-sm">
-                                        <span className="mt-1.5 h-1.5 w-1.5 rounded-full bg-emerald-500 shrink-0" />
-                                        {strength}
-                                    </li>
-                                ))}
-                            </ul>
-                        </Card>
-
-                        {/* Two column grid for Triggers and Blockers */}
-                        <div className="grid gap-6 md:grid-cols-2">
-                            {/* Triggers */}
-                            <Card className="p-6 bg-amber-50/20 dark:bg-amber-950/20 border-slate-200/60 shadow-sm">
-                                <div className="flex items-center gap-3 mb-4">
-                                    <div className="rounded-xl bg-amber-500/10 p-2.5 text-amber-600 dark:text-amber-400">
-                                        <AlertTriangle className="h-5 w-5" />
+                            <div className="flex items-center gap-2">
+                                {generateError && (
+                                    <p className="text-xs text-rose-500">{generateError}</p>
+                                )}
+                                {!editingManual && (
+                                    <Button
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={generateManual}
+                                        disabled={generating}
+                                        className="gap-2 border-indigo-200 text-indigo-700 hover:bg-indigo-50 hover:border-indigo-300"
+                                    >
+                                        {generating ? (
+                                            <Loader2 className="h-4 w-4 animate-spin" />
+                                        ) : (
+                                            <Sparkles className="h-4 w-4" />
+                                        )}
+                                        {generating ? 'Generuję...' : 'Generuj przez AI'}
+                                    </Button>
+                                )}
+                                {!editingManual ? (
+                                    <Button variant="outline" size="sm" onClick={startEditing} className="gap-2">
+                                        <Pencil className="h-4 w-4" />
+                                        Edytuj
+                                    </Button>
+                                ) : (
+                                    <div className="flex items-center gap-2">
+                                        <Button variant="outline" size="sm" onClick={cancelEditing} className="gap-1.5">
+                                            <X className="h-4 w-4" />
+                                            Anuluj
+                                        </Button>
+                                        <Button size="sm" onClick={saveManual} disabled={savingManual} className="gap-1.5 bg-indigo-600 hover:bg-indigo-700">
+                                            {savingManual ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
+                                            Zapisz
+                                        </Button>
                                     </div>
-                                    <h2 className="text-title">Wyzwalacze</h2>
-                                </div>
-                                <ul className="space-y-2">
-                                    {mockPersonalInsights.triggers.map((trigger, i) => (
-                                        <li key={i} className="flex items-start gap-2 text-sm">
-                                            <span className="mt-1.5 h-1.5 w-1.5 rounded-full bg-amber-500 shrink-0" />
-                                            {trigger}
-                                        </li>
-                                    ))}
-                                </ul>
-                            </Card>
-
-                            {/* Blockers */}
-                            <Card className="p-6 bg-rose-50/20 dark:bg-rose-950/20 border-slate-200/60 shadow-sm">
-                                <div className="flex items-center gap-3 mb-4">
-                                    <div className="rounded-xl bg-rose-500/10 p-2.5 text-rose-600 dark:text-rose-400">
-                                        <Ban className="h-5 w-5" />
-                                    </div>
-                                    <h2 className="text-title">Blokady</h2>
-                                </div>
-                                <ul className="space-y-2">
-                                    {mockPersonalInsights.blockers.map((blocker, i) => (
-                                        <li key={i} className="flex items-start gap-2 text-sm">
-                                            <span className="mt-1.5 h-1.5 w-1.5 rounded-full bg-rose-500 shrink-0" />
-                                            {blocker}
-                                        </li>
-                                    ))}
-                                </ul>
-                            </Card>
+                                )}
+                            </div>
                         </div>
 
-                        {/* Feedback Guidance */}
-                        <Card className="p-6 border-slate-200/60 shadow-sm">
-                            <div className="flex items-center gap-3 mb-4">
-                                <div className="rounded-xl bg-primary/10 p-2.5 text-primary">
-                                    <MessageCircle className="h-5 w-5" />
+                        {generating && (
+                            <Card className="p-6 border-indigo-200 bg-indigo-50/40 shadow-sm">
+                                <div className="flex items-center gap-3 text-indigo-700">
+                                    <Loader2 className="h-5 w-5 animate-spin" />
+                                    <p className="text-sm font-medium">AI analizuje Twoje talenty i generuje instrukcję obsługi…</p>
                                 </div>
-                                <h2 className="text-title">Jak dawać mi feedback</h2>
-                            </div>
-                            <p className="text-sm text-muted-foreground leading-relaxed">
-                                {mockPersonalInsights.feedbackGuidance}
-                            </p>
-                        </Card>
+                            </Card>
+                        )}
+
+                        {/* Superpowers */}
+                        <ManualSection
+                            icon={<ThumbsUp className="h-5 w-5" />}
+                            title="Mocne strony"
+                            colorClass="bg-emerald-50/20 dark:bg-emerald-950/20"
+                            iconColorClass="bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
+                            value={userDetail?.superpowers}
+                            placeholder="Twoje naturalne mocne strony i unikalna wartość dla zespołu…"
+                            editing={editingManual}
+                            editValue={editFields.superpowers}
+                            onEditChange={v => setEditFields(f => ({ ...f, superpowers: v }))}
+                        />
+
+                        {/* Motivators + Blockers side by side */}
+                        <div className="grid gap-6 md:grid-cols-2">
+                            <ManualSection
+                                icon={<Smile className="h-5 w-5" />}
+                                title="Motywatory"
+                                colorClass="bg-amber-50/20 dark:bg-amber-950/20"
+                                iconColorClass="bg-amber-500/10 text-amber-600 dark:text-amber-400"
+                                value={userDetail?.motivators}
+                                placeholder="Co daje Ci energię i motywację do działania…"
+                                editing={editingManual}
+                                editValue={editFields.motivators}
+                                onEditChange={v => setEditFields(f => ({ ...f, motivators: v }))}
+                            />
+                            <ManualSection
+                                icon={<Ban className="h-5 w-5" />}
+                                title="Blokady"
+                                colorClass="bg-rose-50/20 dark:bg-rose-950/20"
+                                iconColorClass="bg-rose-500/10 text-rose-600 dark:text-rose-400"
+                                value={userDetail?.blockers}
+                                placeholder="Co spowalnia, frustruje lub drażni Cię we współpracy…"
+                                editing={editingManual}
+                                editValue={editFields.blockers}
+                                onEditChange={v => setEditFields(f => ({ ...f, blockers: v }))}
+                            />
+                        </div>
+
+                        {/* Feedback style */}
+                        <ManualSection
+                            icon={<MessageCircle className="h-5 w-5" />}
+                            title="Jak dawać mi feedback"
+                            colorClass=""
+                            iconColorClass="bg-primary/10 text-primary"
+                            value={userDetail?.feedback_style}
+                            placeholder="Forma, timing i styl komunikacji przy feedbacku…"
+                            editing={editingManual}
+                            editValue={editFields.feedback_style}
+                            onEditChange={v => setEditFields(f => ({ ...f, feedback_style: v }))}
+                        />
                     </div>
 
-                    {/* Right column - Quick Tips & Domain Summary */}
+                    {/* Right column - Domain Summary + Share */}
                     <div className="space-y-6">
                         {/* Domain Distribution */}
                         <Card className="p-6 border-slate-200/60 shadow-sm">
@@ -463,7 +570,12 @@ export default function MyTalentsPage() {
                                 <h2 className="text-title">Szybkie podpowiedzi</h2>
                             </div>
                             <div className="space-y-3">
-                                {mockPersonalInsights.quickTips.map((item, i) => (
+                                {[
+                                    { icon: Target, tip: 'Zacznij dzień od ustalenia 3 najważniejszych celów', domain: 'executing' as GallupDomain },
+                                    { icon: Zap, tip: 'Wykorzystaj swoje talenty do planowania spotkań', domain: 'strategic' as GallupDomain },
+                                    { icon: MessageCircle, tip: 'Dziel się swoją perspektywą — Twój głos ma znaczenie', domain: 'influencing' as GallupDomain },
+                                    { icon: ThumbsUp, tip: 'Buduj głębokie relacje, nie powierzchowne kontakty', domain: 'relationship' as GallupDomain },
+                                ].map((item, i) => (
                                     <div
                                         key={i}
                                         className={cn(
@@ -493,10 +605,21 @@ export default function MyTalentsPage() {
                             <p className="text-sm text-muted-foreground mb-4">
                                 Pozwól zespołowi lepiej zrozumieć Twoje talenty i preferencje współpracy
                             </p>
-                            <Button variant="outline" className="w-full">
-                                Generuj link do profilu
-                                <ChevronRight className="h-4 w-4" />
-                            </Button>
+                            {currentUser?.public_token || currentUser?.public_slug ? (
+                                <Button variant="outline" className="w-full" asChild>
+                                    <Link href={`/aboutme/${currentUser.public_slug || currentUser.public_token}`} target="_blank">
+                                        Otwórz wizytówkę
+                                        <ChevronRight className="h-4 w-4" />
+                                    </Link>
+                                </Button>
+                            ) : (
+                                <Button variant="outline" className="w-full" asChild>
+                                    <Link href="/dashboard/settings">
+                                        Skonfiguruj w Ustawieniach
+                                        <ChevronRight className="h-4 w-4" />
+                                    </Link>
+                                </Button>
+                            )}
                         </Card>
                     </div>
                 </div>

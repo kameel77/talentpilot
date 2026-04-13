@@ -415,6 +415,16 @@ export const api = {
             const response = await apiClient.post('/api/users', data);
             return response.data;
         },
+
+        getDetail: async (id: number): Promise<UserDetailResponse> => {
+            const response = await apiClient.get<UserDetailResponse>(`/api/users/${id}`);
+            return response.data;
+        },
+
+        generateManual: async (userId: number): Promise<{ superpowers: string; motivators: string; blockers: string; feedback_style: string }> => {
+            const response = await apiClient.post(`/api/users/${userId}/generate-manual`);
+            return response.data;
+        },
     },
 
     // Talents
