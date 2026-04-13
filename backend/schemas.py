@@ -600,3 +600,52 @@ class PublicProfileResponse(BaseModel):
     motivators: Optional[str] = None
     blockers: Optional[str] = None
     feedback_style: Optional[str] = None
+
+
+# -------- External Provision --------
+
+class ExternalProvisionOrgTeamRequest(BaseModel):
+    org_name: str = Field(..., min_length=1, max_length=255)
+    org_id: Optional[int] = None
+    team_name: str = Field(..., min_length=1, max_length=255)
+    team_id: Optional[int] = None
+
+
+class ExternalProvisionOrgTeamResponse(BaseModel):
+    org_id: int
+    team_id: int
+    org_created: bool
+    team_created: bool
+
+
+class ExternalProvisionUserTalent(BaseModel):
+    talent_code: str = Field(..., description="Talent code, e.g. 'achiever'")
+    rank: int = Field(..., ge=1, le=34)
+
+
+class ExternalProvisionUser(BaseModel):
+    email: EmailStr
+    full_name: str = Field(..., min_length=1, max_length=255)
+    talents: Optional[List[ExternalProvisionUserTalent]] = None
+
+
+class ExternalProvisionUsersRequest(BaseModel):
+    org_id: int
+    team_id: int
+    users: List[ExternalProvisionUser] = Field(..., min_length=1)
+
+
+class ExternalProvisionUserResult(BaseModel):
+    email: str
+    full_name: str
+    status: str  # "created" | "existing" | "error"
+    user_id: Optional[int] = None
+    error: Optional[str] = None
+
+
+class ExternalProvisionUsersResponse(BaseModel):
+    total: int
+    created: int
+    existing: int
+    errors: int
+    results: List[ExternalProvisionUserResult]

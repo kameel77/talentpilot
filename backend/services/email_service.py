@@ -53,6 +53,49 @@ class EmailService:
 # Globalna instancja
 email_service = EmailService()
 
+def send_invitation_email(to_email: str, full_name: str, invite_token: str, team_name: str):
+    """
+    Wysyła email z zaproszeniem do TalentPilot (ghost user onboarding).
+    """
+    frontend_url = getattr(settings, "frontend_url", "http://localhost:3000").rstrip("/")
+    accept_link = f"{frontend_url}/accept-invitation?token={invite_token}"
+
+    subject = "Zaproszenie do TalentPilot"
+    html_content = f"""
+    <html>
+        <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+            <div style="text-align: center; margin-bottom: 20px;">
+                <h2 style="color: #7c3aed;">TalentPilot</h2>
+            </div>
+
+            <p>Witaj, <strong>{full_name}</strong>,</p>
+
+            <p>Zostałeś/aś zaproszony/a do zespołu <strong>{team_name}</strong> w aplikacji <strong>TalentPilot</strong>.</p>
+
+            <p>Kliknij poniższy przycisk, aby aktywować konto i ustawić hasło:</p>
+
+            <p style="text-align: center; margin: 30px 0;">
+                <a href="{accept_link}" style="background-color: #7c3aed; color: white; padding: 14px 28px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block;">Aktywuj konto</a>
+            </p>
+
+            <p>Jeśli przycisk nie działa, skopiuj poniższy link i wklej go do przeglądarki:</p>
+            <p style="word-break: break-all; color: #666; font-size: 14px;">
+                <a href="{accept_link}">{accept_link}</a>
+            </p>
+
+            <p style="color: #888; font-size: 13px;">Link jest ważny przez 7 dni.</p>
+
+            <hr style="border: 0; border-top: 1px solid #eee; margin: 30px 0;" />
+
+            <p style="font-size: 12px; color: #999; text-align: center;">
+                Wiadomość została wygenerowana automatycznie. Prosimy na nią nie odpowiadać.
+            </p>
+        </body>
+    </html>
+    """
+    email_service.send_email(to_email, subject, html_content)
+
+
 def send_password_reset_email(to_email: str, reset_token: str):
     """
     Wysyła maila z linkiem do zresetowania hasła.

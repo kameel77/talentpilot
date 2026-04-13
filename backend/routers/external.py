@@ -1,16 +1,27 @@
 """External API endpoints for integrations."""
 
 import os
+import secrets
+import hashlib
 import tempfile
+from datetime import datetime, timedelta, timezone
 from fastapi import APIRouter, File, HTTPException, UploadFile, status, Depends, Query
 from sqlalchemy.orm import Session
 from typing import List, Literal
 
-from schemas import ExternalGallupResponse, ExternalPersonInfo, ExternalTalent, ExternalTalentName, ExternalDomain
+from schemas import (
+    ExternalGallupResponse, ExternalPersonInfo, ExternalTalent, ExternalTalentName, ExternalDomain,
+    ExternalProvisionOrgTeamRequest, ExternalProvisionOrgTeamResponse,
+    ExternalProvisionUsersRequest, ExternalProvisionUsersResponse, ExternalProvisionUserResult,
+)
 from services.gallup_pdf_parser import extract_gallup_rankings
-from auth import verify_api_key
+from services.email_service import send_invitation_email
+from auth import verify_api_key, hash_password
 from database import get_db
-from models import Talent, TalentTranslation, ApiKey
+from models import (
+    Talent, TalentTranslation, ApiKey,
+    Organization, Team, User, UserRole, UserTalent, TeamInvitation, InvitationStatus,
+)
 
 router = APIRouter()
 
@@ -147,3 +158,205 @@ def parse_gallup_pdf_external(
         )
 
     return ExternalGallupResponse(language=language, person=person, talents=external_talents)
+
+
+INVITE_TTL_DAYS = 7
+
+
+def _hash_token(token: str) -> str:
+    return hashlib.sha256(token.encode("utf-8")).hexdigest()
+
+
+@router.post(
+    "/provision/org-team",
+    response_model=ExternalProvisionOrgTeamResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Get or create organization and team",
+    description="""
+Used by talentpilot-team to map its local org/team to a TalentPilot org/team.
+
+- If `org_id` is provided, the existing organization is used.
+- If not, a new organization is created with `org_name`.
+- Same logic applies to `team_id` / `team_name`.
+
+Store the returned `org_id` and `team_id` in talentpilot-team for future calls.
+""",
+)
+def provision_org_team(
+    data: ExternalProvisionOrgTeamRequest,
+    db: Session = Depends(get_db),
+    api_key: ApiKey = Depends(verify_api_key),
+) -> ExternalProvisionOrgTeamResponse:
+    org_created = False
+    team_created = False
+
+    if data.org_id is not None:
+        org = db.query(Organization).filter(Organization.id == data.org_id).first()
+        if not org:
+            raise HTTPException(status_code=404, detail="Organization not found")
+    else:
+        org = Organization(name=data.org_name)
+        db.add(org)
+        db.flush()
+        org_created = True
+
+    if data.team_id is not None:
+        team = db.query(Team).filter(
+            Team.id == data.team_id,
+            Team.organization_id == org.id,
+        ).first()
+        if not team:
+            raise HTTPException(status_code=404, detail="Team not found in this organization")
+    else:
+        team = Team(name=data.team_name, organization_id=org.id)
+        db.add(team)
+        db.flush()
+        team_created = True
+
+    db.commit()
+    return ExternalProvisionOrgTeamResponse(
+        org_id=org.id,
+        team_id=team.id,
+        org_created=org_created,
+        team_created=team_created,
+    )
+
+
+@router.post(
+    "/provision/users",
+    response_model=ExternalProvisionUsersResponse,
+    status_code=status.HTTP_200_OK,
+    summary="Bulk provision users with ghost accounts and invitations",
+    description="""
+Creates ghost user accounts for the given list and sends invitation emails.
+
+For each user:
+1. If the email already exists in the organization — adds to team (if not already a member) and skips creation.
+2. If not — creates a ghost account (inactive, no password), assigns talents (all 34 ranks if provided).
+3. Creates a 7-day invitation token and sends an activation email.
+
+`talents` array is optional. If provided, all entries are stored (ranks 1–34).
+""",
+)
+def provision_users(
+    data: ExternalProvisionUsersRequest,
+    db: Session = Depends(get_db),
+    api_key: ApiKey = Depends(verify_api_key),
+) -> ExternalProvisionUsersResponse:
+    org = db.query(Organization).filter(Organization.id == data.org_id).first()
+    if not org:
+        raise HTTPException(status_code=404, detail="Organization not found")
+
+    team = db.query(Team).filter(
+        Team.id == data.team_id,
+        Team.organization_id == org.id,
+    ).first()
+    if not team:
+        raise HTTPException(status_code=404, detail="Team not found in this organization")
+
+    # Pre-fetch talent codes → IDs
+    talent_codes = {
+        t.talent_code
+        for u in data.users
+        if u.talents
+        for t in u.talents
+    }
+    talent_map: dict[str, int] = {}
+    if talent_codes:
+        rows = db.query(Talent).filter(Talent.code.in_(talent_codes)).all()
+        talent_map = {r.code: r.id for r in rows}
+
+    results: list[ExternalProvisionUserResult] = []
+
+    for user_data in data.users:
+        try:
+            existing = db.query(User).filter(
+                User.email == user_data.email,
+                User.organization_id == org.id,
+            ).first()
+
+            if existing:
+                user = existing
+                user_status = "existing"
+            else:
+                random_pw = secrets.token_urlsafe(24)
+                user = User(
+                    email=user_data.email,
+                    hashed_password=hash_password(random_pw),
+                    full_name=user_data.full_name,
+                    role=UserRole.USER,
+                    is_active=False,
+                    is_ghost=True,
+                    organization_id=org.id,
+                )
+                db.add(user)
+                db.flush()
+                user_status = "created"
+
+            # Add to team if not already member
+            if user not in team.members:
+                team.members.append(user)
+
+            # Assign talents (replace existing)
+            if user_data.talents:
+                db.query(UserTalent).filter(UserTalent.user_id == user.id).delete()
+                for t in user_data.talents:
+                    talent_id = talent_map.get(t.talent_code)
+                    if talent_id:
+                        db.add(UserTalent(user_id=user.id, talent_id=talent_id, rank=t.rank))
+
+            # Revoke previous invitations for this team
+            db.query(TeamInvitation).filter(
+                TeamInvitation.user_id == user.id,
+                TeamInvitation.team_id == team.id,
+                TeamInvitation.status == InvitationStatus.ACTIVE,
+            ).update({
+                TeamInvitation.status: InvitationStatus.REVOKED,
+                TeamInvitation.revoked_at: datetime.now(timezone.utc),
+            })
+
+            # Create new invitation
+            invite_token = secrets.token_urlsafe(32)
+            invitation = TeamInvitation(
+                user_id=user.id,
+                team_id=team.id,
+                token_hash=_hash_token(invite_token),
+                status=InvitationStatus.ACTIVE,
+                expires_at=datetime.now(timezone.utc) + timedelta(days=INVITE_TTL_DAYS),
+            )
+            db.add(invitation)
+            db.flush()
+
+            db.commit()
+
+            # Send invitation email (non-blocking — errors logged, not raised)
+            send_invitation_email(
+                to_email=user_data.email,
+                full_name=user_data.full_name,
+                invite_token=invite_token,
+                team_name=team.name,
+            )
+
+            results.append(ExternalProvisionUserResult(
+                email=user_data.email,
+                full_name=user_data.full_name,
+                status=user_status,
+                user_id=user.id,
+            ))
+
+        except Exception as exc:
+            db.rollback()
+            results.append(ExternalProvisionUserResult(
+                email=user_data.email,
+                full_name=user_data.full_name,
+                status="error",
+                error=str(exc),
+            ))
+
+    return ExternalProvisionUsersResponse(
+        total=len(results),
+        created=sum(1 for r in results if r.status == "created"),
+        existing=sum(1 for r in results if r.status == "existing"),
+        errors=sum(1 for r in results if r.status == "error"),
+        results=results,
+    )
