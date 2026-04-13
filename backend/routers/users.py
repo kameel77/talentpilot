@@ -198,6 +198,94 @@ def update_user(
     return user
 
 
+@router.post("/{user_id}/generate-manual", response_model=dict)
+def generate_user_manual(
+    user_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """
+    Generate User Manual content (superpowers, motivators, blockers, feedback_style)
+    using LLM based on the user's top Gallup talents.
+    Returns generated text — does NOT save automatically.
+    """
+    if current_user.id != user_id and current_user.role != UserRole.ADMIN:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied")
+
+    from services.assistant_service import get_openrouter_client, get_user_talents
+    from services.settings_service import get_setting
+
+    talents = get_user_talents(db, user_id, language="pl")
+    if not talents:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="User has no talents imported. Import Gallup talents first."
+        )
+
+    top5 = [t for t in talents if t["rank"] <= 5]
+    talent_list = ", ".join(f"{t['name']} (#{t['rank']})" for t in top5)
+
+    DOMAIN_MAP = {
+        "executing": "Realizowanie",
+        "influencing": "Wywieranie wpływu",
+        "relationship_building": "Budowanie relacji",
+        "strategic_thinking": "Myślenie strategiczne",
+    }
+    domain_summary = {}
+    for t in talents[:15]:
+        d = DOMAIN_MAP.get(t["domain"], t["domain"])
+        domain_summary[d] = domain_summary.get(d, 0) + 1
+    domain_str = ", ".join(f"{d}: {c}" for d, c in sorted(domain_summary.items(), key=lambda x: -x[1]))
+
+    # Try to load system prompt from KB "Instrukcja odpowiedzi" (category: user_manual_generation)
+    from services.assistant_service import retrieve_instruction
+    kb_instruction, _ = retrieve_instruction(db, "user_manual_generation", "pl")
+
+    system_content = kb_instruction or (
+        "Jesteś ekspertem od metodologii Gallup CliftonStrengths. "
+        "Piszesz 'Instrukcję obsługi' użytkownika — zwięzły, praktyczny opis jak z nim współpracować. "
+        "Pisz w pierwszej osobie liczby pojedynczej (np. 'Moja naturalna siła to...'). "
+        "Język polski. Odpowiadaj WYŁĄCZNIE poprawnym JSON-em, bez komentarzy, bez markdown."
+    )
+
+    user_content = f"""Na podstawie profilu talentów wygeneruj instrukcję obsługi.
+
+TOP 5 TALENTÓW: {talent_list}
+ROZKŁAD DOMEN (top 15): {domain_str}
+
+Wygeneruj DOKŁADNIE 4 sekcje w formacie JSON:
+{{
+  "superpowers": "3-5 zdań o naturalnych mocnych stronach i unikalnej wartości jaką wnosi do zespołu. Konkretnie, oparte na talentach.",
+  "motivators": "3-5 zdań o tym co daje tej osobie energię, co ją motywuje, w jakich warunkach działa najlepiej.",
+  "blockers": "3-5 zdań o tym co spowalnia, frustruje lub drażni tę osobę — czego unikać we współpracy.",
+  "feedback_style": "2-4 zdania jak dawać tej osobie feedback — forma, timing, styl komunikacji."
+}}"""
+
+    try:
+        import json
+        model = get_setting(db, "openrouter_model") or "openai/gpt-4o-mini"
+        client = get_openrouter_client()
+        response = client.chat.completions.create(
+            model=model,
+            messages=[
+                {"role": "system", "content": system_content},
+                {"role": "user", "content": user_content},
+            ],
+            temperature=0.7,
+            max_tokens=1200,
+            response_format={"type": "json_object"},
+        )
+        result = json.loads(response.choices[0].message.content)
+        return {
+            "superpowers": result.get("superpowers", ""),
+            "motivators": result.get("motivators", ""),
+            "blockers": result.get("blockers", ""),
+            "feedback_style": result.get("feedback_style", ""),
+        }
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"AI generation failed: {str(e)}")
+
+
 @router.post("/me/change-password", status_code=status.HTTP_204_NO_CONTENT)
 def change_password(
     data: PasswordChangeRequest,
