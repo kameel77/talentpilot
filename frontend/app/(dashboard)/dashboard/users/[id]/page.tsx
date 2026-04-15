@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import {
-    AlertTriangle,
+    TriangleAlert,
     Ban,
     ChevronRight,
     Lightbulb,
@@ -407,7 +407,7 @@ export default function UserProfilePage() {
                             <Card className="p-6 bg-amber-50/20 dark:bg-amber-950/20 border-slate-200/60 shadow-sm">
                                 <div className="flex items-center gap-3 mb-4">
                                     <div className="rounded-xl bg-amber-500/10 p-2.5 text-amber-600 dark:text-amber-400">
-                                        <AlertTriangle className="h-5 w-5" />
+                                        <TriangleAlert className="h-5 w-5" />
                                     </div>
                                     <h2 className="text-title">Motywatory</h2>
                                 </div>

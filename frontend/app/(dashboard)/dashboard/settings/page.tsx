@@ -327,8 +327,10 @@ export default function SettingsPage() {
   const isAdmin = currentUser?.role === "admin";
   const publicToken = currentUser?.public_token;
   const effectiveHandle = currentUser?.public_slug || publicToken;
+  const [origin, setOrigin] = useState("");
+  useEffect(() => { setOrigin(window.location.origin); }, []);
   const wizytowkaUrl = effectiveHandle
-    ? `${typeof window !== "undefined" ? window.location.origin : ""}/aboutme/${effectiveHandle}`
+    ? `${origin}/aboutme/${effectiveHandle}`
     : null;
 
   // Avatar display helper
@@ -355,7 +357,7 @@ export default function SettingsPage() {
             {/* Avatar */}
             <div className="flex items-center gap-5">
               <div className="relative shrink-0">
-                <div className="h-20 w-20 rounded-2xl overflow-hidden bg-blue-600 flex items-center justify-center">
+                <div className="h-20 w-20 aspect-square rounded-2xl overflow-hidden bg-blue-600 flex items-center justify-center shrink-0">
                   {avatarPreview ? (
                     <img src={avatarPreview} alt="Avatar" className="h-full w-full object-cover" />
                   ) : (
