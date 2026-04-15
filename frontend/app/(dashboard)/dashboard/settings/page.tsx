@@ -337,7 +337,7 @@ export default function SettingsPage() {
   const initials = currentUser?.full_name?.split(" ").map((n) => n[0]).join("").toUpperCase().slice(0, 2) ?? "";
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 max-w-full overflow-hidden">
       {/* Header */}
       <div>
         <h1 className="text-headline">Ustawienia</h1>
@@ -355,7 +355,7 @@ export default function SettingsPage() {
         >
           <div className="space-y-4">
             {/* Avatar */}
-            <div className="flex items-center gap-5">
+            <div className="flex items-center gap-4 sm:gap-5 min-w-0">
               <div className="relative shrink-0">
                 <div className="h-20 w-20 aspect-square rounded-2xl overflow-hidden bg-blue-600 flex items-center justify-center shrink-0">
                   {avatarPreview ? (
@@ -379,9 +379,9 @@ export default function SettingsPage() {
                   onChange={handleAvatarChange}
                 />
               </div>
-              <div>
-                <p className="font-medium text-slate-900">{currentUser?.full_name || "—"}</p>
-                <p className="text-sm text-muted-foreground">{currentUser?.email}</p>
+              <div className="min-w-0">
+                <p className="font-medium text-slate-900 truncate">{currentUser?.full_name || "—"}</p>
+                <p className="text-sm text-muted-foreground truncate">{currentUser?.email}</p>
                 <button
                   onClick={() => avatarInputRef.current?.click()}
                   className="text-xs text-primary hover:underline mt-1"
@@ -675,7 +675,7 @@ export default function SettingsPage() {
             {/* Custom slug */}
             <div className="space-y-2">
               <Label htmlFor="public-slug">Twój slug (własny adres)</Label>
-              <div className="flex gap-2">
+              <div className="flex flex-wrap gap-2">
                 <div className="flex items-center rounded-lg border border-slate-200 bg-slate-50 px-3 text-sm text-slate-400 shrink-0 select-none">
                   /aboutme/
                 </div>
