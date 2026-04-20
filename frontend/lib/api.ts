@@ -14,7 +14,7 @@ export interface User {
     email: string;
     full_name: string;
     job_title?: string;
-    role: 'admin' | 'manager' | 'user';
+    role: 'admin' | 'manager' | 'coach' | 'user';
     is_active: boolean;
     is_ghost: boolean;
     avatar_url?: string;
@@ -24,6 +24,7 @@ export interface User {
     created_at: string;
     public_token?: string;
     public_slug?: string;
+    organizations_access?: number[];
 }
 
 export interface Organization {
@@ -607,6 +608,27 @@ export const api = {
             }
         ) => {
             const response = await apiClient.patch<KnowledgeItem>(`/api/admin/knowledge/${knowledgeId}`, payload);
+            return response.data;
+        },
+
+        // Admin: Users Management
+        getUsers: async (): Promise<User[]> => {
+            const response = await apiClient.get<User[]>('/api/admin/users');
+            return response.data;
+        },
+        updateUserRole: async (userId: number, role: 'admin' | 'manager' | 'coach' | 'user'): Promise<User> => {
+            const response = await apiClient.patch<User>(`/api/admin/users/${userId}/role`, { role });
+            return response.data;
+        },
+        getOrganizations: async (): Promise<Organization[]> => {
+            const response = await apiClient.get<Organization[]>('/api/admin/organizations');
+            return response.data;
+        },
+        toggleOrganizationAccess: async (userId: number, organizationId: number, hasAccess: boolean): Promise<number[]> => {
+            const response = await apiClient.post<number[]>(`/api/admin/users/${userId}/organization-access`, {
+                organization_id: organizationId,
+                has_access: hasAccess
+            });
             return response.data;
         },
     },

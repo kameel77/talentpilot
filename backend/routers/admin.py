@@ -6,10 +6,14 @@ from sqlalchemy.orm import Session
 
 from auth import require_role
 from database import get_db
-from models import AnswerReview, GeneratedAnswer, KnowledgeItem, ReviewStatus, UserQuery
+from models import AnswerReview, GeneratedAnswer, KnowledgeItem, ReviewStatus, UserQuery, User, Organization, OrganizationAccess
 from schemas import (
     AdminSettingUpdate,
     AdminSettingsResponse,
+    AdminRoleUpdate,
+    AdminOrgAccessToggle,
+    UserResponse,
+    OrganizationResponse,
     KnowledgeItemBulkCreate,
     KnowledgeItemBulkResponse,
     KnowledgeItemCreate,
@@ -22,6 +26,109 @@ from services.assistant_service import get_embedding
 from services.settings_service import get_all_settings, upsert_setting
 
 router = APIRouter()
+
+
+# -------- User Management --------
+
+@router.get("/users", response_model=list[UserResponse])
+def list_all_users(
+    db: Session = Depends(get_db),
+    current_user=Depends(require_role(["admin"])),
+):
+    """List all users in the system (Superadmin only)."""
+    users = db.query(User).order_by(User.created_at.desc()).all()
+    
+    # Load organization accesses for coaches manually to populate the new schema field
+    for u in users:
+        if u.role.value == "coach":
+            accesses = db.query(OrganizationAccess).filter(OrganizationAccess.user_id == u.id).all()
+            u.organizations_access = [acc.organization_id for acc in accesses]
+        else:
+            u.organizations_access = []
+
+    return users
+
+
+@router.patch("/users/{user_id}/role", response_model=UserResponse)
+def update_user_role(
+    user_id: int,
+    payload: AdminRoleUpdate,
+    db: Session = Depends(get_db),
+    current_user=Depends(require_role(["admin"])),
+):
+    """Change user role (Superadmin only)."""
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+        
+    user.role = payload.role
+    db.commit()
+    db.refresh(user)
+    
+    # Reload access if coach
+    if user.role.value == "coach":
+        accesses = db.query(OrganizationAccess).filter(OrganizationAccess.user_id == user.id).all()
+        user.organizations_access = [acc.organization_id for acc in accesses]
+    else:
+        user.organizations_access = []
+        
+    return user
+
+
+@router.get("/organizations", response_model=list[OrganizationResponse])
+def list_all_organizations(
+    db: Session = Depends(get_db),
+    current_user=Depends(require_role(["admin"])),
+):
+    """List all organizations in the system."""
+    return db.query(Organization).order_by(Organization.name).all()
+
+
+@router.post("/users/{user_id}/organization-access", response_model=list[int])
+def toggle_organization_access(
+    user_id: int,
+    payload: AdminOrgAccessToggle,
+    db: Session = Depends(get_db),
+    current_user=Depends(require_role(["admin"])),
+):
+    """Grant or revoke access to an organization for a coach."""
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+        
+    if user.role.value != "coach":
+        raise HTTPException(status_code=400, detail="Organization access can only be managed for coaches")
+        
+    # Check if organization exists
+    org = db.query(Organization).filter(Organization.id == payload.organization_id).first()
+    if not org:
+        raise HTTPException(status_code=404, detail="Organization not found")
+        
+    existing_access = db.query(OrganizationAccess).filter(
+        OrganizationAccess.user_id == user_id,
+        OrganizationAccess.organization_id == payload.organization_id
+    ).first()
+    
+    if payload.has_access and not existing_access:
+        # Grant access
+        new_access = OrganizationAccess(
+            user_id=user_id,
+            organization_id=payload.organization_id,
+            granted_by=current_user.id
+        )
+        db.add(new_access)
+    elif not payload.has_access and existing_access:
+        # Revoke access
+        db.delete(existing_access)
+        
+    db.commit()
+    
+    # Return updated list of org IDs the user has access to
+    accesses = db.query(OrganizationAccess).filter(OrganizationAccess.user_id == user_id).all()
+    return [acc.organization_id for acc in accesses]
+
+
+# -------- End User Management --------
 
 
 def _build_metadata(explicit_meta: dict, category: str, tags: list[str]) -> dict:

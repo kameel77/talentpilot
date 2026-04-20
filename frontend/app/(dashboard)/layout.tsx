@@ -133,6 +133,7 @@ export default function DashboardLayout({
 
     const adminNavigation = [
         { name: "Ustawienia AI", href: "/dashboard/admin/settings", icon: Shield },
+        { name: "Użytkownicy i dostępy", href: "/dashboard/admin/users", icon: Users },
     ];
 
     const sidebarContent = (

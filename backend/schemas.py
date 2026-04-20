@@ -11,6 +11,7 @@ from models import ReviewStatus
 class UserRole(str, Enum):
     ADMIN = "admin"
     MANAGER = "manager"
+    COACH = "coach"
     USER = "user"
 
 
@@ -89,6 +90,9 @@ class UserResponse(BaseModel):
     created_at: datetime
     public_token: Optional[str] = None
     public_slug: Optional[str] = None
+    
+    # Relationships for admins
+    organizations_access: Optional[List[int]] = None
 
     model_config = {"from_attributes": True}
 
@@ -100,6 +104,15 @@ class UserDetailResponse(UserResponse):
     blockers: Optional[str] = None
     feedback_style: Optional[str] = None
     public_profile_settings: Optional[dict] = None
+
+
+# Admin Management Schemas
+class AdminRoleUpdate(BaseModel):
+    role: UserRole
+
+class AdminOrgAccessToggle(BaseModel):
+    organization_id: int
+    has_access: bool
 
 
 # Invitation Schemas
