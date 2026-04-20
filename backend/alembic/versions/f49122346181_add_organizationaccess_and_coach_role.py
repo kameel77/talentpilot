@@ -18,15 +18,10 @@ depends_on = None
 
 def upgrade() -> None:
     # PostgreSQL does not allow ALTER TYPE ... ADD VALUE inside a transaction block
-    # We step out of the current transaction injected by env.py
-    op.execute("COMMIT")
-    
-    op.execute(
-        "ALTER TYPE userrole ADD VALUE IF NOT EXISTS 'coach';"
-    )
-    
-    # We start a new transaction so the rest of the script (or env.py) completes normally
-    op.execute("BEGIN")
+    with op.get_context().autocommit_block():
+        op.execute(
+            "ALTER TYPE userrole ADD VALUE IF NOT EXISTS 'coach';"
+        )
     
     # Create organization_access table
     op.create_table(
