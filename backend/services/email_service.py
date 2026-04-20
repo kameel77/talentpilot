@@ -58,7 +58,7 @@ def send_invitation_email(to_email: str, full_name: str, invite_token: str, team
     Wysyła email z zaproszeniem do TalentPilot (ghost user onboarding).
     """
     frontend_url = getattr(settings, "frontend_url", "http://localhost:3000").rstrip("/")
-    accept_link = f"{frontend_url}/accept-invitation?token={invite_token}"
+    accept_link = f"{frontend_url}/join?token={invite_token}"
 
     subject = "Zaproszenie do TalentPilot"
     html_content = f"""
