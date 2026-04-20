@@ -3,8 +3,15 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
 from database import get_db
-from models import User, UserTalent
-from schemas import PublicProfileResponse, PublicTalentItem
+from models import User, UserTalent, Team, TeamMember, Organization
+from schemas import (
+    PublicProfileResponse, 
+    PublicTalentItem,
+    PublicTeamPresentationResponse,
+    PresentationMember,
+    PresentationTalentResult,
+    PresentationOrg
+)
 
 router = APIRouter()
 
@@ -115,4 +122,62 @@ def get_public_profile(slug_or_token: str, db: Session = Depends(get_db)):
         motivators=user.motivators if s.get("show_motivators", True) else None,
         blockers=user.blockers if s.get("show_blockers", False) else None,
         feedback_style=user.feedback_style if s.get("show_feedback_style", True) else None,
+    )
+
+
+@router.get("/presentations/{token}", response_model=PublicTeamPresentationResponse)
+def get_presentation(token: str, db: Session = Depends(get_db)):
+    """Fetch team presentation data using a public token."""
+    team = db.query(Team).filter(Team.presentation_token == token).first()
+    if not team:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Presentation not found")
+
+    organization = db.query(Organization).filter(Organization.id == team.organization_id).first()
+    if not organization:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Organization not found")
+
+    members = db.query(TeamMember).filter(TeamMember.team_id == team.id).all()
+    user_ids = [m.user_id for m in members]
+    
+    users = db.query(User).filter(User.id.in_(user_ids), User.is_active == True).all()
+    user_map = {u.id: u for u in users}
+
+    # Fetch talents for all these users
+    user_talents = db.query(UserTalent).filter(UserTalent.user_id.in_(user_ids)).all()
+    talent_map = {}
+    for ut in user_talents:
+        if ut.user_id not in talent_map:
+            talent_map[ut.user_id] = []
+        talent_map[ut.user_id].append(ut)
+
+    presentation_members = []
+    for member in members:
+        user = user_map.get(member.user_id)
+        if not user:
+            continue
+            
+        results = []
+        uts = talent_map.get(user.id, [])
+        for ut in uts:
+            t = ut.talent
+            results.append(PresentationTalentResult(
+                id=str(ut.id),
+                rank=ut.rank,
+                talent=t.code,
+                domain=t.domain.value
+            ))
+            
+        presentation_members.append(PresentationMember(
+            id=str(user.id),
+            name=user.full_name,
+            email=user.email,
+            role=member.role or user.job_title,
+            results=results
+        ))
+
+    return PublicTeamPresentationResponse(
+        id=str(team.id),
+        name=team.name,
+        organization=PresentationOrg(id=str(organization.id), name=organization.name),
+        members=presentation_members
     )

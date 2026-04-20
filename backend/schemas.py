@@ -649,3 +649,32 @@ class ExternalProvisionUsersResponse(BaseModel):
     existing: int
     errors: int
     results: List[ExternalProvisionUserResult]
+
+
+# -------- Public Team Presentation --------
+
+class PresentationTalentResult(BaseModel):
+    id: str
+    rank: int
+    talent: str
+    domain: str
+
+
+class PresentationMember(BaseModel):
+    id: str
+    name: str
+    email: Optional[str] = None
+    role: Optional[str] = None
+    results: List[PresentationTalentResult]
+
+
+class PresentationOrg(BaseModel):
+    id: str
+    name: str
+
+
+class PublicTeamPresentationResponse(BaseModel):
+    id: str
+    name: str
+    organization: PresentationOrg
+    members: List[PresentationMember]

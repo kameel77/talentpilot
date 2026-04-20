@@ -6,6 +6,7 @@ const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
 // Storage keys
 const TOKEN_KEY = 'talentpilot_token';
 const USER_KEY = 'talentpilot_user';
+const ACTIVE_ORG_KEY = 'talentpilot_active_org';
 
 // Types
 export interface User {
@@ -267,6 +268,7 @@ export const tokenManager = {
         if (typeof window === 'undefined') return;
         localStorage.removeItem(TOKEN_KEY);
         localStorage.removeItem(USER_KEY);
+        localStorage.removeItem(ACTIVE_ORG_KEY);
     },
 
     getUser: (): User | null => {
@@ -278,7 +280,21 @@ export const tokenManager = {
     setUser: (user: User): void => {
         if (typeof window === 'undefined') return;
         localStorage.setItem(USER_KEY, JSON.stringify(user));
+        if (!localStorage.getItem(ACTIVE_ORG_KEY) && user.organization_id) {
+            localStorage.setItem(ACTIVE_ORG_KEY, user.organization_id.toString());
+        }
     },
+    
+    getActiveOrgId: (): number | null => {
+        if (typeof window === 'undefined') return null;
+        const val = localStorage.getItem(ACTIVE_ORG_KEY);
+        return val ? parseInt(val, 10) : null;
+    },
+    
+    setActiveOrgId: (orgId: number): void => {
+        if (typeof window === 'undefined') return;
+        localStorage.setItem(ACTIVE_ORG_KEY, orgId.toString());
+    }
 };
 
 // Create axios instance
@@ -295,6 +311,10 @@ apiClient.interceptors.request.use(
         const token = tokenManager.getToken();
         if (token && config.headers) {
             config.headers.Authorization = `Bearer ${token}`;
+        }
+        const activeOrgId = tokenManager.getActiveOrgId();
+        if (activeOrgId && config.headers) {
+            config.headers['X-Organization-Id'] = activeOrgId.toString();
         }
         return config;
     },
@@ -336,6 +356,11 @@ export const api = {
 
         getCurrentUser: async (): Promise<User> => {
             const response = await apiClient.get<User>('/api/auth/me');
+            return response.data;
+        },
+
+        getMyOrganizations: async (): Promise<Array<{id: number, name: string}>> => {
+            const response = await apiClient.get<Array<{id: number, name: string}>>('/api/auth/me/organizations');
             return response.data;
         },
 
@@ -610,6 +635,18 @@ export const api = {
             const response = await apiClient.get<CompareResponse>(`/api/compare/${userAId}/${userBId}`, {
                 params: { language },
             });
+            return response.data;
+        },
+    },
+
+    // Public
+    public: {
+        getProfile: async (slugOrToken: string) => {
+            const response = await apiClient.get(`/api/public/${slugOrToken}`);
+            return response.data;
+        },
+        getPresentation: async (token: string) => {
+            const response = await apiClient.get(`/api/public/presentations/${token}`);
             return response.data;
         },
     },

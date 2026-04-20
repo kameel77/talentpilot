@@ -7,7 +7,7 @@ from typing import List, Optional
 from database import get_db
 from models import User, UserRole
 from schemas import UserCreate, UserUpdate, UserResponse, UserDetailResponse, PasswordChangeRequest
-from auth import get_current_user, require_role, hash_password, verify_password
+from auth import get_current_user, require_role, hash_password, verify_password, get_current_active_org_id
 
 router = APIRouter()
 
@@ -16,7 +16,8 @@ router = APIRouter()
 def create_user(
     data: UserCreate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_role(["admin", "manager"]))
+    current_user: User = Depends(require_role(["admin", "manager"])),
+    active_org_id: int = Depends(get_current_active_org_id)
 ):
     """
     Add user to organization (admin or manager).
@@ -44,7 +45,7 @@ def create_user(
         hashed_password=hash_password(data.password),
         full_name=data.full_name,
         role=data.role,
-        organization_id=current_user.organization_id,
+        organization_id=active_org_id,
         public_token=str(uuid.uuid4()).replace("-", ""),
     )
     db.add(user)
@@ -58,15 +59,15 @@ def create_user(
 def list_users(
     team_id: Optional[int] = Query(None, description="Filter by team ID"),
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    active_org_id: int = Depends(get_current_active_org_id)
 ):
     """
     List users in organization.
     
     - Optional filter by team
-    - Users see only users in their organization
+    - Users see only users in their organization context
     """
-    query = db.query(User).filter(User.organization_id == current_user.organization_id)
+    query = db.query(User).filter(User.organization_id == active_org_id)
     
     if team_id is not None:
         # Filter by team
@@ -81,7 +82,8 @@ def list_users(
 def get_user(
     user_id: int,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user),
+    active_org_id: int = Depends(get_current_active_org_id)
 ):
     """
     Get user details with User Manual fields.
@@ -97,7 +99,7 @@ def get_user(
         )
     
     # Check organization access
-    if user.organization_id != current_user.organization_id:
+    if user.organization_id != active_org_id:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Access denied to this user"
@@ -111,7 +113,8 @@ def update_user(
     user_id: int,
     data: UserUpdate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user),
+    active_org_id: int = Depends(get_current_active_org_id)
 ):
     """
     Update user profile.
@@ -128,7 +131,7 @@ def update_user(
         )
     
     # Check permissions
-    if user.organization_id != current_user.organization_id:
+    if user.organization_id != active_org_id:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Access denied to this user"
@@ -307,7 +310,8 @@ def change_password(
 def delete_user(
     user_id: int,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_role(["admin"]))
+    current_user: User = Depends(require_role(["admin", "coach"])),
+    active_org_id: int = Depends(get_current_active_org_id)
 ):
     """
     Delete user (admin only).
@@ -321,7 +325,7 @@ def delete_user(
         )
     
     # Check organization access
-    if user.organization_id != current_user.organization_id:
+    if user.organization_id != active_org_id:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Access denied to this user"

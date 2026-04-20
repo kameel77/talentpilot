@@ -23,6 +23,7 @@ import enum
 class UserRole(str, enum.Enum):
     ADMIN = "admin"
     MANAGER = "manager"
+    COACH = "coach"
     USER = "user"
 
 
@@ -117,6 +118,24 @@ class User(Base):
     )
 
 
+class OrganizationAccess(Base):
+    """Guest access for coaches into different organizations."""
+    __tablename__ = "organization_access"
+    __table_args__ = (
+        UniqueConstraint("user_id", "organization_id", name="uq_organization_access"),
+    )
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey('users.id', ondelete='CASCADE'), nullable=False)
+    organization_id = Column(Integer, ForeignKey('organizations.id', ondelete='CASCADE'), nullable=False)
+    granted_by = Column(Integer, ForeignKey('users.id', ondelete='SET NULL'), nullable=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+    user = relationship("User", foreign_keys=[user_id])
+    organization = relationship("Organization")
+    granter = relationship("User", foreign_keys=[granted_by])
+
+
 class Team(Base):
     """Team model for grouping users."""
     __tablename__ = "teams"
@@ -124,6 +143,7 @@ class Team(Base):
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String(255), nullable=False)
     description = Column(Text, nullable=True)
+    presentation_token = Column(String(64), unique=True, index=True, nullable=True)
     
     # Multi-tenancy
     organization_id = Column(Integer, ForeignKey('organizations.id', ondelete='CASCADE'), nullable=False)

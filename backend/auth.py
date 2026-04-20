@@ -3,7 +3,7 @@ from datetime import datetime, timedelta
 from typing import Optional
 from jose import JWTError, jwt
 from passlib.context import CryptContext
-from fastapi import Depends, HTTPException, status
+from fastapi import Depends, HTTPException, status, Header
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials, APIKeyHeader
 from sqlalchemy.orm import Session
 
@@ -168,3 +168,36 @@ def verify_api_key(
         )
     
     return key_record
+
+
+def get_current_active_org_id(
+    x_organization_id: Optional[int] = Header(None, alias="X-Organization-Id"),
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+) -> int:
+    """
+    Returns the active organization ID for the request.
+    - If X-Organization-Id is provided, checks if user has access.
+    - If not provided, defaults to user's main organization_id.
+    """
+    if not x_organization_id:
+        return current_user.organization_id
+        
+    if x_organization_id == current_user.organization_id:
+        return x_organization_id
+        
+    # Check if coach/admin has cross-org access
+    if current_user.role.value in ["coach", "admin"]:
+        from models import OrganizationAccess
+        access = db.query(OrganizationAccess).filter(
+            OrganizationAccess.user_id == current_user.id,
+            OrganizationAccess.organization_id == x_organization_id
+        ).first()
+        if access:
+            return x_organization_id
+            
+    # Deny access
+    raise HTTPException(
+        status_code=status.HTTP_403_FORBIDDEN,
+        detail="You do not have access to this organization context"
+    )

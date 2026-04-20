@@ -134,6 +134,30 @@ def get_me(current_user: User = Depends(get_current_user)):
     return current_user
 
 
+@router.get("/me/organizations")
+def get_my_organizations(
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Get all organizations accessible by the current user.
+    - Regular Users/Managers: their own organization
+    - Coach/Admin: their own organization + organizations they have access to
+    """
+    orgs = [{"id": current_user.organization.id, "name": current_user.organization.name}]
+    
+    if current_user.role.value in ["coach", "admin"]:
+        from models import OrganizationAccess
+        access_list = db.query(OrganizationAccess).filter(
+            OrganizationAccess.user_id == current_user.id
+        ).all()
+        for access in access_list:
+            if access.organization and access.organization_id != current_user.organization_id:
+                orgs.append({"id": access.organization.id, "name": access.organization.name})
+                
+    return orgs
+
+
 @router.post("/forgot-password", status_code=status.HTTP_200_OK)
 def forgot_password(
     data: ForgotPasswordRequest,

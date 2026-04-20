@@ -17,8 +17,10 @@ import {
     MessageSquare,
     Menu,
     X,
+    ChevronDown,
+    Building
 } from "lucide-react";
-import { tokenManager, User } from "@/lib/api";
+import { tokenManager, User, api } from "@/lib/api";
 import { cn } from "@/lib/utils";
 
 export default function DashboardLayout({
@@ -32,12 +34,19 @@ export default function DashboardLayout({
     const [loading, setLoading] = useState(true);
     const [sidebarOpen, setSidebarOpen] = useState(false);
     const [userMenuOpen, setUserMenuOpen] = useState(false);
+    const [orgMenuOpen, setOrgMenuOpen] = useState(false);
+    const [organizations, setOrganizations] = useState<Array<{id: number, name: string}>>([]);
+    const [activeOrgId, setActiveOrgId] = useState<number | null>(null);
     const userMenuRef = useRef<HTMLDivElement>(null);
+    const orgMenuRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
         function handleClickOutside(event: MouseEvent) {
             if (userMenuRef.current && !userMenuRef.current.contains(event.target as Node)) {
                 setUserMenuOpen(false);
+            }
+            if (orgMenuRef.current && !orgMenuRef.current.contains(event.target as Node)) {
+                setOrgMenuOpen(false);
             }
         }
         document.addEventListener("mousedown", handleClickOutside);
@@ -45,7 +54,7 @@ export default function DashboardLayout({
     }, []);
 
     useEffect(() => {
-        const checkAuth = () => {
+        const checkAuth = async () => {
             const token = tokenManager.getToken();
             if (!token) {
                 router.push("/login");
@@ -54,6 +63,25 @@ export default function DashboardLayout({
 
             const currentUser = tokenManager.getUser();
             setUser(currentUser);
+            
+            try {
+                if (currentUser && (currentUser.role === 'coach' || currentUser.role === 'admin')) {
+                    const orgs = await api.auth.getMyOrganizations();
+                    setOrganizations(orgs);
+                } else if (currentUser) {
+                    setOrganizations([{id: currentUser.organization_id, name: "Moja Organizacja"}]);
+                }
+                
+                const savedOrgId = tokenManager.getActiveOrgId();
+                if (savedOrgId) {
+                    setActiveOrgId(savedOrgId);
+                } else if (currentUser) {
+                    setActiveOrgId(currentUser.organization_id);
+                }
+            } catch (error) {
+                console.error("Failed to load organizations", error);
+            }
+
             setLoading(false);
         };
 
@@ -68,6 +96,13 @@ export default function DashboardLayout({
     const handleLogout = () => {
         tokenManager.removeToken();
         router.push("/login");
+    };
+
+    const handleOrgChange = (orgId: number) => {
+        tokenManager.setActiveOrgId(orgId);
+        setActiveOrgId(orgId);
+        setOrgMenuOpen(false);
+        window.location.reload(); // Reload to refresh data
     };
 
     if (loading) {
@@ -264,6 +299,48 @@ export default function DashboardLayout({
                     </div>
 
                     <div className="flex items-center gap-4">
+                        {organizations.length > 1 && (
+                            <div className="relative" ref={orgMenuRef}>
+                                <button
+                                    onClick={() => setOrgMenuOpen(!orgMenuOpen)}
+                                    className="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 transition-colors text-sm font-medium text-slate-700"
+                                >
+                                    <Building className="h-4 w-4 text-slate-400" />
+                                    <span className="max-w-[150px] truncate hidden sm:inline">
+                                        {organizations.find(o => o.id === activeOrgId)?.name || 'Organizacja'}
+                                    </span>
+                                    <ChevronDown className="h-4 w-4 text-slate-400" />
+                                </button>
+
+                                {orgMenuOpen && (
+                                    <div className="absolute right-0 mt-2 w-56 origin-top-right rounded-xl bg-white shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none overflow-hidden flex flex-col z-50 animate-in fade-in slide-in-from-top-2 duration-150">
+                                        <div className="px-3 py-2 text-xs font-semibold text-slate-500 uppercase tracking-wider bg-slate-50 border-b border-slate-100">
+                                            Dostępne organizacje
+                                        </div>
+                                        <div className="max-h-[300px] overflow-y-auto p-1">
+                                            {organizations.map(org => (
+                                                <button
+                                                    key={org.id}
+                                                    onClick={() => handleOrgChange(org.id)}
+                                                    className={cn(
+                                                        "flex w-full items-center gap-2 px-3 py-2 rounded-lg text-sm transition-colors text-left",
+                                                        activeOrgId === org.id
+                                                            ? "bg-blue-50 text-blue-700 font-medium"
+                                                            : "text-slate-700 hover:bg-slate-50"
+                                                    )}
+                                                >
+                                                    <span className="truncate">{org.name}</span>
+                                                    {activeOrgId === org.id && (
+                                                        <span className="ml-auto flex h-2 w-2 rounded-full bg-blue-600"></span>
+                                                    )}
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                        )}
+
                         <button className="relative p-2 text-slate-400 hover:text-slate-600">
                             <Bell className="h-5 w-5" />
                             <span className="absolute top-2 right-2 h-2 w-2 bg-orange-500 border-2 border-white rounded-full" />

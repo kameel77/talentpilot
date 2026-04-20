@@ -6,7 +6,7 @@ from typing import List
 from database import get_db
 from models import User, Team, UserRole
 from schemas import TeamCreate, TeamUpdate, TeamResponse
-from auth import get_current_user, require_role
+from auth import get_current_user, require_role, get_current_active_org_id
 from config import settings
 import httpx
 from pydantic import BaseModel
@@ -22,7 +22,8 @@ router = APIRouter()
 def create_team(
     data: TeamCreate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_role(["admin", "manager"]))
+    current_user: User = Depends(require_role(["admin", "manager"])),
+    active_org_id: int = Depends(get_current_active_org_id)
 ):
     """
     Create new team (admin or manager).
@@ -32,7 +33,7 @@ def create_team(
     team = Team(
         name=data.name,
         description=data.description,
-        organization_id=current_user.organization_id,
+        organization_id=active_org_id,
         manager_id=data.manager_id
     )
     db.add(team)
@@ -45,7 +46,8 @@ def create_team(
 @router.get("", response_model=List[TeamResponse])
 def list_teams(
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user),
+    active_org_id: int = Depends(get_current_active_org_id)
 ):
     """
     List all teams in current user's organization.
@@ -53,7 +55,7 @@ def list_teams(
     - Managers see all teams
     - Regular users see only their teams
     """
-    query = db.query(Team).filter(Team.organization_id == current_user.organization_id)
+    query = db.query(Team).filter(Team.organization_id == active_org_id)
     
     # If user is not admin/manager, filter to their teams only
     if current_user.role == UserRole.USER:
@@ -67,7 +69,8 @@ def list_teams(
 def get_team(
     team_id: int,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user),
+    active_org_id: int = Depends(get_current_active_org_id)
 ):
     """
     Get team details.
@@ -83,7 +86,7 @@ def get_team(
         )
     
     # Check organization access
-    if team.organization_id != current_user.organization_id:
+    if team.organization_id != active_org_id:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Access denied to this team"
@@ -97,7 +100,8 @@ def update_team(
     team_id: int,
     data: TeamUpdate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_role(["admin", "manager"]))
+    current_user: User = Depends(require_role(["admin", "manager"])),
+    active_org_id: int = Depends(get_current_active_org_id)
 ):
     """
     Update team (admin or manager).
@@ -111,7 +115,7 @@ def update_team(
         )
     
     # Check organization access
-    if team.organization_id != current_user.organization_id:
+    if team.organization_id != active_org_id:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Access denied to this team"
@@ -135,7 +139,8 @@ def update_team(
 def delete_team(
     team_id: int,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_role(["admin"]))
+    current_user: User = Depends(require_role(["admin"])),
+    active_org_id: int = Depends(get_current_active_org_id)
 ):
     """
     Delete team (admin only).
@@ -149,7 +154,7 @@ def delete_team(
         )
     
     # Check organization access
-    if team.organization_id != current_user.organization_id:
+    if team.organization_id != active_org_id:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Access denied to this team"
@@ -165,7 +170,8 @@ def delete_team(
 async def generate_matrix(
     team_id: int,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_role(["admin", "manager"]))
+    current_user: User = Depends(require_role(["admin", "manager"])),
+    active_org_id: int = Depends(get_current_active_org_id)
 ):
     """
     Generate a presentation matrix for a team in TalentPilot Team application.
@@ -179,7 +185,7 @@ async def generate_matrix(
         )
     
     # Check organization access
-    if team.organization_id != current_user.organization_id:
+    if team.organization_id != active_org_id:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Access denied to this team"
