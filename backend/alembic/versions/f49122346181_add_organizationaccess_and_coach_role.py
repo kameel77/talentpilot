@@ -23,15 +23,19 @@ def upgrade() -> None:
         "ALTER TYPE userrole ADD VALUE IF NOT EXISTS 'coach';"
     )
     
-    # Create organization_access table
-    op.create_table(
-        'organization_access',
-        sa.Column('id', sa.Integer(), primary_key=True, index=True),
-        sa.Column('user_id', sa.Integer(), sa.ForeignKey('users.id', ondelete='CASCADE'), nullable=False),
-        sa.Column('organization_id', sa.Integer(), sa.ForeignKey('organizations.id', ondelete='CASCADE'), nullable=False),
-        sa.Column('granted_at', sa.DateTime(timezone=True), server_default=sa.text('now()')),
-        sa.Column('granted_by', sa.Integer(), sa.ForeignKey('users.id', ondelete='SET NULL'), nullable=True),
-    )
+    # Check if table exists to prevent DuplicateTable from partially applied interrupted migrations
+    conn = op.get_bind()
+    inspector = sa.inspect(conn)
+    if not inspector.has_table('organization_access'):
+        # Create organization_access table
+        op.create_table(
+            'organization_access',
+            sa.Column('id', sa.Integer(), primary_key=True, index=True),
+            sa.Column('user_id', sa.Integer(), sa.ForeignKey('users.id', ondelete='CASCADE'), nullable=False),
+            sa.Column('organization_id', sa.Integer(), sa.ForeignKey('organizations.id', ondelete='CASCADE'), nullable=False),
+            sa.Column('granted_at', sa.DateTime(timezone=True), server_default=sa.text('now()')),
+            sa.Column('granted_by', sa.Integer(), sa.ForeignKey('users.id', ondelete='SET NULL'), nullable=True),
+        )
 
 
 def downgrade() -> None:
