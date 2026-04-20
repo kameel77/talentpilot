@@ -17,10 +17,16 @@ depends_on = None
 
 
 def upgrade() -> None:
-    # Add 'coach' to UserRole enum in PostgreSQL
+    # PostgreSQL does not allow ALTER TYPE ... ADD VALUE inside a transaction block
+    # We step out of the current transaction injected by env.py
+    op.execute("COMMIT")
+    
     op.execute(
         "ALTER TYPE userrole ADD VALUE IF NOT EXISTS 'coach';"
     )
+    
+    # We start a new transaction so the rest of the script (or env.py) completes normally
+    op.execute("BEGIN")
     
     # Create organization_access table
     op.create_table(
