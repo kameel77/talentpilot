@@ -21,6 +21,10 @@ class Settings(BaseSettings):
     openrouter_api_key: str | None = None
     openrouter_base_url: str = "https://openrouter.ai/api/v1"
     
+    # Integration
+    talentpilot_team_url: str | None = None
+    external_api_key: str | None = None
+    
     # Application
     environment: str = "development"
     debug: bool = True

@@ -384,6 +384,11 @@ export const api = {
             const response = await apiClient.post('/api/teams', data);
             return response.data;
         },
+
+        generateMatrix: async (id: number): Promise<{ url: string; message: string }> => {
+            const response = await apiClient.post(`/api/teams/${id}/generate-matrix`);
+            return response.data;
+        },
     },
 
     // Users
