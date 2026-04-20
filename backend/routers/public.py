@@ -3,7 +3,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
 from database import get_db
-from models import User, UserTalent, Team, TeamMember, Organization
+from models import User, UserTalent, Team, Organization
 from schemas import (
     PublicProfileResponse, 
     PublicTalentItem,
