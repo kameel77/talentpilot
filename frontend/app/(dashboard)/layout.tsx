@@ -121,7 +121,7 @@ export default function DashboardLayout({
         { name: "Panel główny", href: "/dashboard", icon: LayoutDashboard },
         { name: "Moje talenty", href: "/dashboard/my-talents", icon: Sparkles },
         { name: "Q&A Copilot", href: "/dashboard/qa", icon: MessageSquare },
-        { name: "Zespół", href: "/dashboard/users", icon: Users },
+        { name: "Zespół", href: "/dashboard/teams", icon: Users },
         { name: "Porównanie 1:1", href: "/dashboard/compare", icon: GitCompare },
         { name: "Dzienna wskazówka", href: "/dashboard/tips", icon: Zap },
     ];

@@ -1,204 +1,209 @@
 "use client";
 
-import { useState, useEffect, useCallback } from 'react';
-import { useParams } from 'next/navigation';
-import Link from 'next/link';
-import { Plus, Users, ArrowLeft } from 'lucide-react';
-import { api } from '@/lib/api';
-import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { useEffect, useState } from "react";
+import { useParams } from "next/navigation";
+import Link from "next/link";
+import { api, type Team } from "@/lib/api";
+import { Building, Users, MapPin, FileText, Calendar, ArrowLeft } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
-interface Team {
+interface Organization {
     id: number;
     name: string;
-    description?: string;
-    members?: Record<string, unknown>[];
-}
-
-interface Org {
-    id: number;
-    name: string;
-    address: string | null;
-    nip: string | null;
-    email: string | null;
-    teams?: Team[];
+    street: string | null;
+    postal_code: string | null;
+    city: string | null;
+    tax_id: string | null;
+    created_at: string;
 }
 
 export default function OrganizationDetailsPage() {
     const params = useParams();
-    const orgId = parseInt(params.id as string);
+    const id = Number(params.id);
 
-    const [org, setOrg] = useState<Org | null>(null);
+    const [org, setOrg] = useState<Organization | null>(null);
+    const [teams, setTeams] = useState<Team[]>([]);
     const [loading, setLoading] = useState(true);
-    const [showModal, setShowModal] = useState(false);
-    const [form, setForm] = useState({ name: '', description: '' });
-    const [submitLoading, setSubmitLoading] = useState(false);
     const [error, setError] = useState("");
 
-    const fetchOrg = useCallback(async () => {
-        try {
-            setLoading(true);
-            const data = await api.organizations.get(orgId);
-            setOrg(data);
-        } catch (err) {
-            console.error(err);
-            setError("Failed to load organization");
-        } finally {
-            setLoading(false);
-        }
-    }, [orgId]);
+    useEffect(() => {
+        const loadData = async () => {
+            try {
+                setLoading(true);
+                const [orgData, allTeams] = await Promise.all([
+                    api.organizations.get(id),
+                    api.teams.list(),
+                ]);
+                setOrg(orgData as Organization);
+                
+                // Filter teams by this organization
+                const orgTeams = allTeams.filter(t => t.organization_id === id);
+                setTeams(orgTeams);
+            } catch (err) {
+                console.error(err);
+                setError("Nie udało się pobrać szczegółów organizacji.");
+            } finally {
+                setLoading(false);
+            }
+        };
 
-    useEffect(() => { fetchOrg(); }, [fetchOrg]);
-
-    const handleAddTeam = async (e: React.FormEvent) => {
-        e.preventDefault();
-        setError("");
-        
-        if (!form.name.trim()) {
-            setError("Nazwa zespołu jest wymagana.");
-            return;
+        if (id) {
+            loadData();
         }
-
-        try {
-            setSubmitLoading(true);
-            await api.teams.create({
-                name: form.name,
-                description: form.description,
-                organization_id: orgId
-            });
-            setShowModal(false);
-            setForm({ name: '', description: '' });
-            fetchOrg(); // reload to get the new team
-        } catch (err: unknown) {
-            console.error(err);
-            setError((err as { response?: { data?: { detail?: string } } })?.response?.data?.detail || "Nie udało się utworzyć zespołu");
-        } finally {
-            setSubmitLoading(false);
-        }
-    };
+    }, [id]);
 
     if (loading) {
         return (
             <div className="flex h-[400px] items-center justify-center">
                 <div className="flex flex-col items-center gap-2">
                     <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
-                    <p className="text-sm font-medium text-slate-500">Wczytywanie szczegółów organizacji...</p>
+                    <p className="text-sm font-medium text-slate-500">Pobieranie szczegółów…</p>
                 </div>
             </div>
         );
     }
 
-    if (!org) {
+    if (error || !org) {
         return (
-            <div className="text-center mt-12 text-slate-500">
-                Nie znaleziono organizacji.
+            <div className="space-y-6">
+                <div className="rounded-2xl border border-rose-200 bg-rose-50 px-6 py-4 text-sm font-medium text-rose-700">
+                    {error || "Organizacja nie istnieje."}
+                </div>
+                <Link href="/dashboard/organizations" className="inline-flex items-center text-sm font-medium text-blue-600 hover:text-blue-700">
+                    <ArrowLeft className="mr-2 h-4 w-4" />
+                    Powrót do listy
+                </Link>
             </div>
         );
     }
 
     return (
-        <div className="space-y-6">
-            <Link href="/dashboard/organizations" className="inline-flex items-center text-sm text-slate-500 hover:text-slate-900 transition-colors">
-                <ArrowLeft className="mr-2 h-4 w-4" />
-                Powrót do listy organizacji
-            </Link>
-
-            <div className="flex flex-wrap items-center justify-between gap-6 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-                <div>
-                    <h1 className="text-3xl font-bold font-heading text-slate-900 tracking-tight">{org.name}</h1>
-                    <div className="mt-2 text-sm text-slate-500 space-y-1">
-                        {org.address && <p>{org.address}</p>}
-                        {org.nip && <p>NIP: {org.nip}</p>}
+        <div className="space-y-8 max-w-5xl mx-auto">
+            {/* Header Section */}
+            <div>
+                <Link 
+                    href="/dashboard/organizations" 
+                    className="inline-flex items-center text-sm font-medium text-slate-500 hover:text-slate-900 mb-6 transition-colors"
+                >
+                    <ArrowLeft className="mr-2 h-4 w-4" />
+                    Organizacje
+                </Link>
+                
+                <div className="flex items-start justify-between">
+                    <div className="flex items-center gap-4">
+                        <div className="h-16 w-16 bg-blue-100 rounded-2xl flex items-center justify-center text-blue-600">
+                            <Building className="h-8 w-8" />
+                        </div>
+                        <div>
+                            <h1 className="text-3xl font-bold font-heading text-slate-900 tracking-tight">
+                                {org.name}
+                            </h1>
+                            <div className="mt-2 flex items-center gap-4 text-sm text-slate-500">
+                                {org.city && (
+                                    <div className="flex items-center gap-1.5">
+                                        <MapPin className="h-4 w-4" />
+                                        {org.city}
+                                    </div>
+                                )}
+                                {org.tax_id && (
+                                    <div className="flex items-center gap-1.5">
+                                        <FileText className="h-4 w-4" />
+                                        NIP: {org.tax_id}
+                                    </div>
+                                )}
+                                <div className="flex items-center gap-1.5">
+                                    <Calendar className="h-4 w-4" />
+                                    Utworzono: {new Date(org.created_at).toLocaleDateString("pl-PL")}
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
+            </div>
 
-                <Dialog open={showModal} onOpenChange={setShowModal}>
-                    <DialogTrigger asChild>
-                        <Button className="inline-flex items-center gap-2 rounded-xl bg-primary px-5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-blue-700">
-                            <Plus className="h-4 w-4" />
-                            Dodaj Zespół
-                        </Button>
-                    </DialogTrigger>
-                    <DialogContent className="max-w-md">
-                        <DialogHeader>
-                            <DialogTitle>Nowy Zespół</DialogTitle>
-                            <DialogDescription>
-                                Utwórz nowy zespół w organizacji {org.name}.
-                            </DialogDescription>
-                        </DialogHeader>
-                        <form onSubmit={handleAddTeam} className="grid gap-4 mt-4">
-                            <div className="grid gap-2">
-                                <Label htmlFor="team-name">Nazwa zespołu *</Label>
-                                <Input
-                                    id="team-name"
-                                    value={form.name}
-                                    onChange={(e) => setForm({ ...form, name: e.target.value })}
-                                    required
-                                    placeholder="np. Sprzedaż B2B"
-                                />
-                            </div>
-                            <div className="grid gap-2">
-                                <Label htmlFor="team-desc">Opis zespołu (opcjonalnie)</Label>
-                                <Input
-                                    id="team-desc"
-                                    value={form.description}
-                                    onChange={(e) => setForm({ ...form, description: e.target.value })}
-                                    placeholder="np. Zespół odpowiedzialny za kluczowych klientów"
-                                />
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                {/* Left column: Organization Details */}
+                <div className="lg:col-span-1 space-y-6">
+                    <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm">
+                        <h2 className="text-lg font-bold text-slate-900 mb-4 flex items-center gap-2">
+                            <FileText className="h-5 w-5 text-slate-400" />
+                            Dane firmy
+                        </h2>
+                        
+                        <div className="space-y-4">
+                            <div>
+                                <p className="text-sm font-medium text-slate-500">Nazwa</p>
+                                <p className="text-base text-slate-900">{org.name}</p>
                             </div>
                             
-                            {error && (
-                                <div className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-2 text-sm text-rose-700">
-                                    {error}
+                            {org.tax_id && (
+                                <div>
+                                    <p className="text-sm font-medium text-slate-500">NIP</p>
+                                    <p className="text-base text-slate-900">{org.tax_id}</p>
                                 </div>
                             )}
 
-                            <div className="flex justify-end gap-3 mt-4 border-t pt-4 border-slate-100">
-                                <Button type="button" variant="outline" onClick={() => setShowModal(false)}>
-                                    Anuluj
-                                </Button>
-                                <Button type="submit" disabled={submitLoading}>
-                                    {submitLoading ? "Tworzenie..." : "Utwórz zespół"}
-                                </Button>
-                            </div>
-                        </form>
-                    </DialogContent>
-                </Dialog>
-            </div>
-
-            <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-                <div className="flex items-center justify-between mb-6">
-                    <h2 className="text-xl font-semibold text-slate-900">Zespoły w tej organizacji</h2>
-                    <div className="flex items-center gap-2 text-sm text-slate-500 font-medium">
-                        <Users className="h-4 w-4" />
-                        <span>{org.teams?.length || 0} Zespołów</span>
+                            {(org.street || org.postal_code || org.city) && (
+                                <div>
+                                    <p className="text-sm font-medium text-slate-500">Adres</p>
+                                    <p className="text-base text-slate-900">
+                                        {org.street && <span className="block">{org.street}</span>}
+                                        {org.postal_code && <span>{org.postal_code} </span>}
+                                        {org.city && <span>{org.city}</span>}
+                                    </p>
+                                </div>
+                            )}
+                        </div>
                     </div>
                 </div>
 
-                {!org.teams || org.teams.length === 0 ? (
-                    <div className="text-center py-12 text-slate-500">
-                        Brak zespołów w tej organizacji.
+                {/* Right column: Teams */}
+                <div className="lg:col-span-2 space-y-6">
+                    <div className="flex items-center justify-between">
+                        <h2 className="text-xl font-bold text-slate-900 flex items-center gap-2">
+                            <Users className="h-6 w-6 text-blue-600" />
+                            Zespoły w organizacji
+                        </h2>
                     </div>
-                ) : (
-                    <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-                        {org.teams.map((team) => (
-                            <Link
-                                key={team.id}
-                                href={`/dashboard/teams/${team.id}`}
-                                className="group block rounded-xl border border-slate-200 bg-slate-50 p-5 hover:bg-white hover:border-blue-200 hover:shadow-md transition-all"
-                            >
-                                <h3 className="text-lg font-bold text-slate-900 group-hover:text-primary mb-2">
-                                    {team.name}
-                                </h3>
-                                <p className="text-sm text-slate-500 line-clamp-2">
-                                    {team.description || "Brak opisu"}
-                                </p>
+
+                    {teams.length === 0 ? (
+                        <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50/50 p-12 text-center">
+                            <Users className="mx-auto h-8 w-8 text-slate-400 mb-3" />
+                            <h3 className="text-sm font-medium text-slate-900">Brak zespołów</h3>
+                            <p className="mt-1 text-sm text-slate-500">
+                                W tej organizacji nie ma jeszcze żadnych zespołów. Przejdź do zakładki Zespoły, aby je utworzyć.
+                            </p>
+                            <Link href="/dashboard/teams" className="mt-4 inline-block">
+                                <Button variant="outline" size="sm">
+                                    Przejdź do zespołów
+                                </Button>
                             </Link>
-                        ))}
-                    </div>
-                )}
+                        </div>
+                    ) : (
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            {teams.map(team => (
+                                <Link 
+                                    key={team.id}
+                                    href={`/dashboard/teams/${team.id}`}
+                                    className="block p-5 bg-white rounded-xl border border-slate-200 shadow-sm hover:border-blue-300 hover:shadow-md transition-all group"
+                                >
+                                    <h3 className="font-bold text-slate-900 group-hover:text-blue-600 transition-colors">
+                                        {team.name}
+                                    </h3>
+                                    {team.description && (
+                                        <p className="text-sm text-slate-500 mt-1 line-clamp-2">
+                                            {team.description}
+                                        </p>
+                                    )}
+                                    <div className="mt-4 flex items-center gap-2 text-xs font-medium text-slate-500 bg-slate-50 rounded-lg px-2.5 py-1.5 w-fit border border-slate-100">
+                                        <Users className="h-3.5 w-3.5" />
+                                        {team.members_count} członków
+                                    </div>
+                                </Link>
+                            ))}
+                        </div>
+                    )}
+                </div>
             </div>
         </div>
     );

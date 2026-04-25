@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { api } from "@/lib/api";
 import TeamGrid from "@/components/dashboard/TeamGrid";
 import MatrixDashboard from "@/components/dashboard/MatrixDashboard";
@@ -9,7 +9,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { UserPlus, Trash2 } from "lucide-react";
+import { UserPlus, Trash2, ChevronDown, Check } from "lucide-react";
 
 interface MemberResult {
     id: string | number;
@@ -56,7 +56,11 @@ export default function TeamDetailPage() {
     const params = useParams();
     const teamId = parseInt(params.id as string);
 
+    const router = useRouter();
+
     const [team, setTeam] = useState<Team | null>(null);
+    const [allTeams, setAllTeams] = useState<Team[]>([]);
+    const [dropdownOpen, setDropdownOpen] = useState(false);
     const [members, setMembers] = useState<TeamMember[]>([]);
     const [allTalents, setAllTalents] = useState<Talent[]>([]);
     const [loading, setLoading] = useState(true);
@@ -72,12 +76,14 @@ export default function TeamDetailPage() {
     const loadTeamData = useCallback(async () => {
         try {
             setLoading(true);
-            const [teamData, matrixData, talentsData] = await Promise.all([
+            const [teamData, matrixData, talentsData, allTeamsData] = await Promise.all([
                 api.teams.get(teamId),
                 api.teams.getMatrix(teamId),
                 api.talents.list(),
+                api.teams.list(),
             ]);
             setTeam(teamData);
+            setAllTeams(allTeamsData || []);
             setMembers(matrixData.members || []);
             setAllTalents(talentsData || []);
         } catch (err) {
@@ -168,7 +174,46 @@ export default function TeamDetailPage() {
         <div className="space-y-6">
             <div className="flex items-start justify-between rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
                 <div>
-                    <h1 className="text-3xl font-bold text-slate-900 mb-2">{team.name}</h1>
+                    <div className="relative">
+                        <button 
+                            onClick={() => setDropdownOpen(!dropdownOpen)}
+                            className="flex items-center gap-2 text-3xl font-bold text-slate-900 mb-2 hover:opacity-80 transition-opacity"
+                        >
+                            <span className="truncate max-w-[300px] sm:max-w-md">{team.name}</span>
+                            <ChevronDown className={`w-6 h-6 text-slate-400 shrink-0 transition-transform ${dropdownOpen ? 'rotate-180' : ''}`} />
+                        </button>
+                        {dropdownOpen && (
+                            <>
+                                <div className="fixed inset-0 z-10" onClick={() => setDropdownOpen(false)} />
+                                <div className="absolute top-full left-0 mt-2 w-72 bg-white border border-slate-200 shadow-xl rounded-xl z-20 py-2 overflow-hidden">
+                                    <div className="px-3 py-2 text-xs font-semibold text-slate-500 uppercase tracking-wider bg-slate-50 border-b border-slate-100 mb-1">
+                                        Zmień kontekst zespołu
+                                    </div>
+                                    <div className="max-h-64 overflow-y-auto">
+                                        {allTeams.length === 0 ? (
+                                            <div className="px-4 py-3 text-sm text-slate-500 text-center">Brak innych zespołów</div>
+                                        ) : (
+                                            allTeams.map(t => (
+                                                <button
+                                                    key={t.id}
+                                                    onClick={() => {
+                                                        setDropdownOpen(false);
+                                                        if (t.id !== team.id) {
+                                                            router.push(`/dashboard/teams/${t.id}`);
+                                                        }
+                                                    }}
+                                                    className={`w-full text-left px-4 py-2.5 text-sm flex items-center justify-between hover:bg-slate-50 transition-colors ${t.id === team.id ? 'text-primary font-medium bg-blue-50/50 hover:bg-blue-50' : 'text-slate-700'}`}
+                                                >
+                                                    <span className="truncate">{t.name}</span>
+                                                    {t.id === team.id && <Check className="w-4 h-4 text-primary shrink-0 ml-2" />}
+                                                </button>
+                                            ))
+                                        )}
+                                    </div>
+                                </div>
+                            </>
+                        )}
+                    </div>
                     {team.description && (
                         <p className="text-slate-500">{team.description}</p>
                     )}

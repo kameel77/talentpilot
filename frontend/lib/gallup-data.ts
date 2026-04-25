@@ -23,10 +23,10 @@ export const DOMAIN_COLORS: Record<GallupDomain, string> = {
  * CSS Variable names for domains (matching globals.css)
  */
 export const DOMAIN_VAR_MAP: Record<GallupDomain, string> = {
-    executing: 'var(--domain-executing)',
-    influencing: 'var(--domain-influencing)',
-    relationship_building: 'var(--domain-relationship)',
-    strategic_thinking: 'var(--domain-strategic)',
+    executing: 'var(--color-domain-executing)',
+    influencing: 'var(--color-domain-influencing)',
+    relationship_building: 'var(--color-domain-relationship)',
+    strategic_thinking: 'var(--color-domain-strategic)',
 };
 
 /**
