@@ -276,7 +276,7 @@ export default function MyTalentsPage() {
                         api.users.getDetail(user.id),
                     ]);
 
-                    const mappedTalents: UserTalent[] = userTalentsData.map((ut: any) => ({
+                    const mappedTalents: UserTalent[] = userTalentsData.map((ut: { talent: { code: string }; rank: number }) => ({
                         talentId: ut.talent.code,
                         rank: ut.rank
                     }));
@@ -326,7 +326,7 @@ export default function MyTalentsPage() {
         if (!currentUser || !userDetail) return;
         setSavingManual(true);
         try {
-            const updated = await api.users.update(currentUser.id, {
+            await api.users.update(currentUser.id, {
                 superpowers: editFields.superpowers,
                 motivators: editFields.motivators,
                 blockers: editFields.blockers,
@@ -355,8 +355,9 @@ export default function MyTalentsPage() {
                 feedback_style: result.feedback_style || '',
             });
             setEditingManual(true);
-        } catch (error: any) {
-            const msg = error?.response?.data?.detail || 'Błąd generowania. Spróbuj ponownie.';
+        } catch (error: unknown) {
+            const err = error as { response?: { data?: { detail?: string } } };
+            const msg = err?.response?.data?.detail || 'Błąd generowania. Spróbuj ponownie.';
             setGenerateError(msg);
         } finally {
             setGenerating(false);

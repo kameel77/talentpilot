@@ -40,6 +40,13 @@ class OrganizationUpdate(BaseModel):
     tax_id: Optional[str] = Field(default=None, max_length=32)
 
 
+class OrganizationTeamSimple(BaseModel):
+    id: int
+    name: str
+    
+    model_config = {"from_attributes": True}
+
+
 class OrganizationResponse(BaseModel):
     id: int
     name: str
@@ -49,6 +56,7 @@ class OrganizationResponse(BaseModel):
     city: Optional[str] = None
     tax_id: Optional[str] = None
     created_at: datetime
+    teams: Optional[List[OrganizationTeamSimple]] = None
 
     model_config = {"from_attributes": True}
 

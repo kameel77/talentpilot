@@ -94,7 +94,7 @@ export default function PresentationContent({ token }: { token: string }) {
 
     useEffect(() => {
         api.public.getPresentation(token)
-            .then(data => { setTeam(data as any); setLoading(false); })
+            .then(data => { setTeam(data as TeamData); setLoading(false); })
             .catch(() => { setError(true); setLoading(false); });
     }, [token]);
 
@@ -158,7 +158,7 @@ export default function PresentationContent({ token }: { token: string }) {
         if (talent) domainCounts[talent.domain]++;
     });
     const domainCountData = (Object.entries(domainCounts) as [GallupDomain, number][])
-        .filter(([_, count]) => count > 0)
+        .filter(([, count]) => count > 0)
         .map(([domain, count]) => ({
             name: DOMAIN_LABELS[domain][locale as 'en' | 'pl'],
             value: count,
@@ -308,7 +308,7 @@ export default function PresentationContent({ token }: { token: string }) {
                                             position: 'sticky', left: 0, background: 'var(--bg-card)',
                                             zIndex: 3, minWidth: 140, borderBottom: 'none',
                                         }} />
-                                        {DOMAIN_ORDER.map((domain, di) => {
+                                        {DOMAIN_ORDER.map((domain) => {
                                             const talents = getTalentsByDomain(domain);
                                             return (
                                                 <th
@@ -548,8 +548,9 @@ export default function PresentationContent({ token }: { token: string }) {
                                         <PolarGrid stroke="var(--border-color)" />
                                         <PolarAngleAxis
                                             dataKey="domain"
-                                            tick={(props: any) => {
-                                                const item = radarData.find(d => d.domain === props.payload.value);
+                                            tick={(props: { payload?: { value: string }, x?: number, y?: number, textAnchor?: string }) => {
+                                                if (!props.payload) return null;
+                                                const item = radarData.find(d => d.domain === props.payload!.value);
                                                 return (
                                                     <text x={props.x} y={props.y} textAnchor={props.textAnchor} fill={item?.color || 'var(--text-secondary)'} fontSize={12} fontWeight={600} dy={props.y > 150 ? 12 : -4}>
                                                         {props.payload.value}
@@ -559,7 +560,7 @@ export default function PresentationContent({ token }: { token: string }) {
                                         />
                                         <PolarRadiusAxis tick={false} axisLine={false} />
                                         <Radar dataKey="value" stroke="var(--text-secondary)" fill="var(--text-secondary)" fillOpacity={0.3} strokeWidth={2} />
-                                        <Tooltip content={({ active, payload }: any) => {
+                                        <Tooltip content={({ active, payload }: { active?: boolean, payload?: Array<{ payload: { domain: string, score: number } }> }) => {
                                             if (!active || !payload?.[0]) return null;
                                             const p = payload[0].payload;
                                             return (

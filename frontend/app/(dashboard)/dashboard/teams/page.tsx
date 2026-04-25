@@ -51,7 +51,7 @@ export default function TeamsPage() {
             ]);
             setTeams(teamsData);
             setOrgs(orgsData);
-        } catch (_err) {
+        } catch {
             setError("Nie udało się pobrać zespołów.");
         } finally {
             setLoading(false);
@@ -82,8 +82,9 @@ export default function TeamsPage() {
             });
             setTeams([created, ...teams]);
             setOpen(false);
-        } catch (err: any) {
-            const detail = err?.response?.data?.detail;
+        } catch (err: unknown) {
+            const error = err as { response?: { data?: { detail?: unknown } } };
+            const detail = error?.response?.data?.detail;
             setCreateError(typeof detail === "string" ? detail : "Nie udało się utworzyć zespołu.");
         } finally {
             setCreating(false);

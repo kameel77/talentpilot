@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useState, useEffect } from "react";
+import { Suspense, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { api } from "@/lib/api";
@@ -25,17 +25,10 @@ function ResetPasswordContent() {
 
     const [password, setPassword] = useState("");
     const [confirmPassword, setConfirmPassword] = useState("");
-    const [status, setStatus] = useState<"idle" | "loading" | "success" | "error">("idle");
-    const [message, setMessage] = useState("");
+    const [status, setStatus] = useState<"idle" | "loading" | "success" | "error">(token ? "idle" : "error");
+    const [message, setMessage] = useState(token ? "" : "Brakujący link do resetowania hasła z Twojego adresu e-mail.");
     const [showPassword, setShowPassword] = useState(false);
     const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-
-    useEffect(() => {
-        if (!token) {
-            setStatus("error");
-            setMessage("Brakujący link do resetowania hasła z Twojego adresu e-mail.");
-        }
-    }, [token]);
 
     const getErrorMessage = (err: unknown) => {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any

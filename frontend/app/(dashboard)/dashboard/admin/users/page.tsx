@@ -3,10 +3,10 @@
 import { useEffect, useState } from "react";
 import { api, User, Organization } from "@/lib/api";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Loader2, Users, Shield, Building, X, Save, UserPlus, Building2 } from "lucide-react";
+import { Loader2, Users, Shield, Building, Save, UserPlus, Building2 } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from "@/components/ui/dialog";
 
 type NewUserRole = 'admin' | 'manager' | 'coach' | 'user';
@@ -127,8 +127,9 @@ export default function AdminUsersPage() {
             });
             setOrganizations([...organizations, created].sort((a, b) => a.name.localeCompare(b.name)));
             setIsOrgCreateModalOpen(false);
-        } catch (error: any) {
-            const detail = error?.response?.data?.detail;
+        } catch (error: unknown) {
+            const err = error as { response?: { data?: { detail?: string | string[] } } };
+            const detail = err?.response?.data?.detail;
             setOrgCreateError(typeof detail === 'string' ? detail : "Nie udało się utworzyć organizacji.");
         } finally {
             setCreatingOrg(false);
@@ -156,8 +157,9 @@ export default function AdminUsersPage() {
             });
             setUsers([created, ...users]);
             setIsCreateModalOpen(false);
-        } catch (error: any) {
-            const detail = error?.response?.data?.detail;
+        } catch (error: unknown) {
+            const err = error as { response?: { data?: { detail?: string | string[] } } };
+            const detail = err?.response?.data?.detail;
             setCreateError(typeof detail === 'string' ? detail : "Nie udało się utworzyć użytkownika.");
         } finally {
             setCreating(false);
@@ -225,7 +227,7 @@ export default function AdminUsersPage() {
                         Lista zalogowanych w systemie
                     </CardTitle>
                     <CardDescription>
-                        Użyj rozwijanej listy, aby awansować lub obniżać uprawnienia. Tylko dla ról "Coach" dostępne jest przyznawanie wglądu do innych organizacji.
+                        Użyj rozwijanej listy, aby awansować lub obniżać uprawnienia. Tylko dla ról &quot;Coach&quot; dostępne jest przyznawanie wglądu do innych organizacji.
                     </CardDescription>
                 </CardHeader>
                 <div className="overflow-x-auto">
@@ -259,7 +261,7 @@ export default function AdminUsersPage() {
                                             <select 
                                                 className="bg-white border border-slate-200 text-slate-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"
                                                 value={user.role}
-                                                onChange={(e) => handleRoleChange(user.id, e.target.value as any)}
+                                                onChange={(e) => handleRoleChange(user.id, e.target.value as 'admin' | 'manager' | 'coach' | 'user')}
                                             >
                                                 <option value="user">User</option>
                                                 <option value="manager">Manager</option>

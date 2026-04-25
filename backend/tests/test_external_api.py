@@ -55,10 +55,12 @@ def test_parse_gallup_external_invalid_file(client, api_key):
     assert "PDF" in response.json()["detail"]
 
 
+from services.gallup_pdf_parser import GallupPersonInfo
+
 @patch("routers.external.extract_gallup_rankings")
 def test_parse_gallup_external_default_both_languages(mock_extract, client, api_key, seed_talents_for_external):
     """Default (pl+en): both language fields populated, domain object with number and both names."""
-    mock_extract.return_value = ({"achiever": 1}, 5)
+    mock_extract.return_value = ({"achiever": 1}, 5, GallupPersonInfo())
 
     response = client.post(
         PARSE_URL,
@@ -84,7 +86,7 @@ def test_parse_gallup_external_default_both_languages(mock_extract, client, api_
 @patch("routers.external.extract_gallup_rankings")
 def test_parse_gallup_external_language_pl(mock_extract, client, api_key, seed_talents_for_external):
     """language=pl: only Polish names returned, English fields are null."""
-    mock_extract.return_value = ({"achiever": 1}, 5)
+    mock_extract.return_value = ({"achiever": 1}, 5, GallupPersonInfo())
 
     response = client.post(
         PARSE_URL,
@@ -108,7 +110,7 @@ def test_parse_gallup_external_language_pl(mock_extract, client, api_key, seed_t
 @patch("routers.external.extract_gallup_rankings")
 def test_parse_gallup_external_language_en(mock_extract, client, api_key, seed_talents_for_external):
     """language=en: only English names returned, Polish fields are null."""
-    mock_extract.return_value = ({"achiever": 1}, 5)
+    mock_extract.return_value = ({"achiever": 1}, 5, GallupPersonInfo())
 
     response = client.post(
         PARSE_URL,
@@ -131,7 +133,7 @@ def test_parse_gallup_external_language_en(mock_extract, client, api_key, seed_t
 
 @patch("routers.external.extract_gallup_rankings")
 def test_parse_gallup_external_no_results(mock_extract, client, api_key):
-    mock_extract.return_value = ({}, None)
+    mock_extract.return_value = ({}, None, GallupPersonInfo())
 
     response = client.post(
         PARSE_URL,

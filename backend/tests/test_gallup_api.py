@@ -29,10 +29,12 @@ def test_parse_pdf_invalid_file(client, auth_headers_user):
     assert response.status_code == 400
     assert "PDF" in response.json()["detail"]
 
+from services.gallup_pdf_parser import GallupPersonInfo
+
 @patch("routers.gallup.extract_gallup_rankings")
 def test_parse_pdf_success(mock_extract, client, auth_headers_user, seed_talents):
-    # Mock return value: {code: rank}, page_index
-    mock_extract.return_value = ({"achiever": 1}, 5)
+    # Mock return value: {code: rank}, page_index, person_info
+    mock_extract.return_value = ({"achiever": 1}, 5, GallupPersonInfo())
     
     pdf_content = b"%PDF-1.4 test content"
     response = client.post(
@@ -50,7 +52,7 @@ def test_parse_pdf_success(mock_extract, client, auth_headers_user, seed_talents
 
 @patch("routers.gallup.extract_gallup_rankings")
 def test_parse_pdf_no_results(mock_extract, client, auth_headers_user):
-    mock_extract.return_value = ({}, None)
+    mock_extract.return_value = ({}, None, GallupPersonInfo())
     
     pdf_content = b"%PDF-1.4 test content"
     response = client.post(

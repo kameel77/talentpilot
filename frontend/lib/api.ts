@@ -401,6 +401,11 @@ export const api = {
 
     // Organizations
     organizations: {
+        list: async (): Promise<Organization[]> => {
+            const response = await apiClient.get<Organization[]>('/api/organizations');
+            return response.data;
+        },
+
         create: async (data: OrganizationCreateData): Promise<Organization> => {
             const response = await apiClient.post<Organization>('/api/organizations', data);
             return response.data;
@@ -414,6 +419,10 @@ export const api = {
         update: async (id: number, data: OrganizationUpdateData): Promise<Organization> => {
             const response = await apiClient.patch<Organization>(`/api/organizations/${id}`, data);
             return response.data;
+        },
+
+        delete: async (id: number): Promise<void> => {
+            await apiClient.delete(`/api/organizations/${id}`);
         },
     },
 
@@ -442,6 +451,15 @@ export const api = {
         generateMatrix: async (id: number): Promise<{ url: string; message: string }> => {
             const response = await apiClient.post(`/api/teams/${id}/generate-matrix`);
             return response.data;
+        },
+
+        getMatrix: async (id: number) => {
+            const response = await apiClient.get(`/api/teams/${id}/matrix`);
+            return response.data;
+        },
+
+        removeMember: async (teamId: number, userId: number): Promise<void> => {
+            await apiClient.delete(`/api/teams/${teamId}/members/${userId}`);
         },
     },
 

@@ -58,7 +58,7 @@ export default function UsersPage() {
         try {
             const data = await api.users.list();
             setUsers(data);
-        } catch (_err) {
+        } catch {
             setError("Failed to load users");
         } finally {
             setLoading(false);
@@ -69,7 +69,7 @@ export default function UsersPage() {
         try {
             const data = await api.teams.list();
             setTeams(data);
-        } catch (_err) {
+        } catch {
             setTeams([]);
         }
     };
@@ -78,7 +78,7 @@ export default function UsersPage() {
         try {
             const data = await api.talents.list();
             setTalents(data);
-        } catch (_err) {
+        } catch {
             setTalents([]);
         }
     };
@@ -126,7 +126,7 @@ export default function UsersPage() {
             await loadTeams();
             setTeamOpen(false);
             resetTeam();
-        } catch (_err) {
+        } catch {
             setTeamError("Failed to create team. Please try again.");
         } finally {
             setTeamLoading(false);
@@ -172,7 +172,7 @@ export default function UsersPage() {
             const response = await api.invitations.createGhostInvite(payload);
             setInviteToken(response.invite_token);
             await loadUsers();
-        } catch (_err) {
+        } catch {
             setInviteError("Failed to create invite. Please try again.");
         } finally {
             setInviteLoading(false);

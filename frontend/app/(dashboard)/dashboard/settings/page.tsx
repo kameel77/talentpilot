@@ -298,8 +298,9 @@ export default function SettingsPage() {
       });
       setOrgCreateOpen(false);
       setOrgMsg({ type: "success", text: "Organizacja została utworzona." });
-    } catch (err: any) {
-      const detail = err?.response?.data?.detail;
+    } catch (err: unknown) {
+      const error = err as { response?: { data?: { detail?: string } } };
+      const detail = error?.response?.data?.detail;
       setNewOrgMsg({ type: "error", text: typeof detail === "string" ? detail : "Nie udało się utworzyć organizacji." });
     } finally {
       setNewOrgSaving(false);
@@ -369,8 +370,9 @@ export default function SettingsPage() {
       setCurrentUser(updated);
       setPublicSlug(updated.public_slug ?? "");
       setSlugMsg({ type: "success", text: "Slug zapisany." });
-    } catch (e: any) {
-      const detail = e?.response?.data?.detail;
+    } catch (e: unknown) {
+      const error = e as { response?: { data?: { detail?: string } } };
+      const detail = error?.response?.data?.detail;
       setSlugMsg({ type: "error", text: detail ?? "Błąd zapisu. Spróbuj inny slug." });
     } finally {
       setSlugSaving(false);
@@ -420,7 +422,10 @@ export default function SettingsPage() {
               <div className="relative shrink-0">
                 <div className="h-20 w-20 aspect-square rounded-2xl overflow-hidden bg-blue-600 flex items-center justify-center shrink-0">
                   {avatarPreview ? (
-                    <img src={avatarPreview} alt="Avatar" className="h-full w-full object-cover" />
+                    <>
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src={avatarPreview} alt="Avatar" className="h-full w-full object-cover" />
+                    </>
                   ) : (
                     <span className="text-white font-bold text-2xl">{initials}</span>
                   )}

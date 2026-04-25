@@ -1,13 +1,13 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { ArrowRight, MessageCircle, Sparkles, Users, Loader2, Send } from "lucide-react";
+import { MessageCircle, Sparkles, Users, Loader2, Send } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
-import { api, QAAnswer, QAQueryResponse } from "@/lib/api";
-import { ChatBubble, ResponseBlock, ContextCard, TeamMemberCard } from "@/components/qa/QAComponents";
+import { api, QAAnswer, User, UserTalentResponse } from "@/lib/api";
+import { ChatBubble, ContextCard, TeamMemberCard } from "@/components/qa/QAComponents";
 import { getRenderer } from "@/components/qa/QARenderers";
 
 const quickPrompts = [
@@ -34,8 +34,8 @@ export default function QACopilotPage() {
     const [isLoading, setIsLoading] = useState(false);
     const [messages, setMessages] = useState<ChatMessage[]>([]);
     const [myTalents, setMyTalents] = useState<string[]>([]);
-    const [teamMembers, setTeamMembers] = useState<any[]>([]);
-    const [selectedMember, setSelectedMember] = useState<any>(null);
+    const [teamMembers, setTeamMembers] = useState<User[]>([]);
+    const [selectedMember, setSelectedMember] = useState<User | null>(null);
 
     useEffect(() => {
         const loadInitialData = async () => {
@@ -43,10 +43,10 @@ export default function QACopilotPage() {
                 const user = api.tokenManager.getUser();
                 if (user) {
                     const talents = await api.talents.getUserTalents(user.id);
-                    setMyTalents(talents.map((t: any) => t.talent.translation.name));
+                    setMyTalents(talents.map((t: UserTalentResponse) => t.talent.translation.name));
                 }
                 const members = await api.users.list();
-                setTeamMembers(members.filter((m: any) => m.id !== api.tokenManager.getUser()?.id));
+                setTeamMembers(members.filter((m: User) => m.id !== api.tokenManager.getUser()?.id));
 
                 try {
                     const history = await api.qa.getHistory();

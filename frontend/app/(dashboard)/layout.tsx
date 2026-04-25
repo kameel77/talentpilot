@@ -90,6 +90,7 @@ export default function DashboardLayout({
 
     // Close sidebar on route change (mobile)
     useEffect(() => {
+        // eslint-disable-next-line react-hooks/set-state-in-effect
         setSidebarOpen(false);
     }, [pathname]);
 
@@ -132,6 +133,7 @@ export default function DashboardLayout({
     ];
 
     const adminNavigation = [
+        { name: "Organizacje", href: "/dashboard/organizations", icon: Building },
         { name: "Ustawienia AI", href: "/dashboard/admin/settings", icon: Shield },
         { name: "Użytkownicy i dostępy", href: "/dashboard/admin/users", icon: Users },
     ];
@@ -182,53 +184,58 @@ export default function DashboardLayout({
                     })}
                 </div>
 
-                {user?.role === 'admin' && (
+                {(user?.role === 'admin' || user?.role === 'coach') && (
                     <div className="mt-8">
                         <h3 className="px-4 text-[10px] font-bold uppercase tracking-widest text-slate-500 mb-2">
                             Administracja
                         </h3>
                         <div className="space-y-3">
-                            <div className="space-y-1">
-                                <Link
-                                    href="/dashboard/admin/knowledge"
-                                    className={cn(
-                                        "flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 group text-sm font-medium",
-                                        pathname === "/dashboard/admin/knowledge"
-                                            ? "bg-blue-600 text-white"
-                                            : "text-slate-400 hover:text-white hover:bg-white/5"
-                                    )}
-                                >
-                                    <Database className={cn(
-                                        "h-5 w-5",
-                                        pathname === "/dashboard/admin/knowledge"
-                                            ? "text-white"
-                                            : "text-slate-500 group-hover:text-white"
-                                    )} />
-                                    Baza wiedzy
-                                </Link>
-                                <div className="ml-8 space-y-1">
-                                    {knowledgeLinks.map((item) => {
-                                        const isActive = pathname === item.href;
-                                        return (
-                                            <Link
-                                                key={item.name}
-                                                href={item.href}
-                                                className={cn(
-                                                    "flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-semibold tracking-wide transition-all",
-                                                    isActive
-                                                        ? "bg-white/10 text-white"
-                                                        : "text-slate-400 hover:text-white hover:bg-white/5"
-                                                )}
-                                            >
-                                                {item.name}
-                                            </Link>
-                                        );
-                                    })}
+                            {user?.role === 'admin' && (
+                                <div className="space-y-1">
+                                    <Link
+                                        href="/dashboard/admin/knowledge"
+                                        className={cn(
+                                            "flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 group text-sm font-medium",
+                                            pathname === "/dashboard/admin/knowledge"
+                                                ? "bg-blue-600 text-white"
+                                                : "text-slate-400 hover:text-white hover:bg-white/5"
+                                        )}
+                                    >
+                                        <Database className={cn(
+                                            "h-5 w-5",
+                                            pathname === "/dashboard/admin/knowledge"
+                                                ? "text-white"
+                                                : "text-slate-500 group-hover:text-white"
+                                        )} />
+                                        Baza wiedzy
+                                    </Link>
+                                    <div className="ml-8 space-y-1">
+                                        {knowledgeLinks.map((item) => {
+                                            const isActive = pathname === item.href;
+                                            return (
+                                                <Link
+                                                    key={item.name}
+                                                    href={item.href}
+                                                    className={cn(
+                                                        "flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-semibold tracking-wide transition-all",
+                                                        isActive
+                                                            ? "bg-white/10 text-white"
+                                                            : "text-slate-400 hover:text-white hover:bg-white/5"
+                                                    )}
+                                                >
+                                                    {item.name}
+                                                </Link>
+                                            );
+                                        })}
+                                    </div>
                                 </div>
-                            </div>
+                            )}
                             <div className="space-y-1">
                                 {adminNavigation.map((item) => {
-                                    const isActive = pathname === item.href;
+                                    // Coach only sees Organizations
+                                    if (user?.role === 'coach' && item.name !== 'Organizacje') return null;
+                                    
+                                    const isActive = pathname === item.href || pathname.startsWith(item.href + '/');
                                     return (
                                         <Link
                                             key={item.name}
@@ -353,6 +360,7 @@ export default function DashboardLayout({
                                 className="h-10 w-10 bg-blue-600 text-white flex items-center justify-center rounded-full font-bold text-sm hover:ring-2 hover:ring-blue-600/50 hover:ring-offset-2 transition-all focus:outline-none overflow-hidden"
                             >
                                 {user?.avatar_url ? (
+                                    // eslint-disable-next-line @next/next/no-img-element
                                     <img src={user.avatar_url} alt="" className="h-full w-full object-cover" />
                                 ) : (
                                     user?.full_name?.split(' ').map(n => n[0]).join('').toUpperCase() || "AK"

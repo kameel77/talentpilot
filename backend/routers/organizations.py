@@ -1,13 +1,46 @@
 """Organizations router for CRUD operations."""
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
+from typing import List
 
 from database import get_db
-from models import User, Organization
+from models import User, Organization, UserRole, OrganizationAccess
 from schemas import OrganizationCreate, OrganizationUpdate, OrganizationResponse
 from auth import get_current_user, require_role
 
 router = APIRouter()
+
+
+@router.get("", response_model=List[OrganizationResponse])
+def list_organizations(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """
+    List organizations visible to the current user.
+    - Admin: all organizations
+    - Coach: home organization + accessed organizations
+    - Manager/User: only their home organization
+    """
+    if current_user.role == UserRole.ADMIN:
+        organizations = db.query(Organization).all()
+    elif current_user.role == UserRole.COACH:
+        org_ids = {current_user.organization_id}
+        if current_user.organization_id is None:
+            org_ids = set()
+        access_rows = db.query(OrganizationAccess.organization_id).filter(
+            OrganizationAccess.user_id == current_user.id
+        ).all()
+        org_ids.update(org_id for (org_id,) in access_rows)
+        if not org_ids:
+            return []
+        organizations = db.query(Organization).filter(Organization.id.in_(org_ids)).all()
+    else:
+        if current_user.organization_id is None:
+            return []
+        organizations = db.query(Organization).filter(Organization.id == current_user.organization_id).all()
+        
+    return organizations
 
 
 @router.post("", response_model=OrganizationResponse, status_code=status.HTTP_201_CREATED)
@@ -39,11 +72,30 @@ def get_organization(
 ):
     """
     Get organization details.
-
-    - Users can only access their own organization
+    
+    - Admin: can access any
+    - Coach: can access home org or via OrganizationAccess
+    - Others: only home org
     """
-    # Check if user belongs to this organization
-    if current_user.organization_id != organization_id:
+    has_access = False
+    
+    if current_user.role == UserRole.ADMIN:
+        has_access = True
+    elif current_user.role == UserRole.COACH:
+        if current_user.organization_id == organization_id:
+            has_access = True
+        else:
+            access = db.query(OrganizationAccess).filter(
+                OrganizationAccess.user_id == current_user.id,
+                OrganizationAccess.organization_id == organization_id
+            ).first()
+            if access:
+                has_access = True
+    else:
+        if current_user.organization_id == organization_id:
+            has_access = True
+
+    if not has_access:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Access denied to this organization"
@@ -90,3 +142,26 @@ def update_organization(
     db.refresh(organization)
 
     return organization
+
+@router.delete("/{organization_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_organization(
+    organization_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_role(["admin", "coach"])),
+):
+    """Delete an organization. Admin or coach only. Coach can only delete their own organization if permitted."""
+    if current_user.role != UserRole.ADMIN and current_user.organization_id != organization_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Access denied"
+        )
+    
+    organization = db.query(Organization).filter(Organization.id == organization_id).first()
+    if not organization:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Organization not found"
+        )
+        
+    db.delete(organization)
+    db.commit()

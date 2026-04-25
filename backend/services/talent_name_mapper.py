@@ -52,6 +52,7 @@ TALENT_MAP: Dict[str, str] = {
     "elastyczność": "adaptability",
     "analityk": "analytical",
     "organizator": "arranger",
+    "organizacja": "arranger",
     "pryncypialność": "belief",
     "dowodzenie": "command",
     "komunikatywność": "communication",

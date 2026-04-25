@@ -14,7 +14,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
-import { api, tokenManager, User, DomainDistribution, UserTalentResponse } from "@/lib/api";
+import { api, tokenManager, User, UserTalentResponse } from "@/lib/api";
 
 interface DashboardData {
     users: User[];
@@ -64,7 +64,7 @@ export default function DashboardPage() {
                     teamDomains,
                     usersWithTalents,
                 });
-            } catch (_err) {
+            } catch {
                 setError("Nie udało się załadować danych. Spróbuj odświeżyć stronę.");
             } finally {
                 setLoading(false);

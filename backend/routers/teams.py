@@ -5,7 +5,15 @@ from typing import List
 
 from database import get_db
 from models import User, Team, UserRole, OrganizationAccess, Organization
-from schemas import TeamCreate, TeamUpdate, TeamResponse
+from schemas import (
+    TeamCreate, 
+    TeamUpdate, 
+    TeamResponse,
+    PublicTeamPresentationResponse,
+    PresentationOrg,
+    PresentationMember,
+    PresentationTalentResult
+)
 from auth import get_current_user, require_role, get_current_active_org_id
 from config import settings
 import httpx
@@ -208,11 +216,67 @@ def delete_team(
     return None
 
 
+@router.get("/{team_id}/matrix", response_model=PublicTeamPresentationResponse)
+def get_team_matrix(
+    team_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+    active_org_id: int = Depends(get_current_active_org_id)
+):
+    """
+    Get matrix data for a team.
+    """
+    team = db.query(Team).filter(Team.id == team_id).first()
+    
+    if not team:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Team not found"
+        )
+    
+    # Check organization access
+    if team.organization_id != active_org_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Access denied to this team"
+        )
+
+    org = team.organization
+    
+    presentation_members = []
+    for member in team.members:
+        results = []
+        for ut in member.user_talents:
+            talent = ut.talent
+            if talent:
+                results.append(PresentationTalentResult(
+                    id=str(ut.id),
+                    rank=ut.rank,
+                    talent=talent.code,
+                    domain=talent.domain.value
+                ))
+                
+        presentation_members.append(PresentationMember(
+            id=str(member.id),
+            name=member.full_name,
+            email=member.email,
+            role=member.role.value if hasattr(member.role, "value") else member.role,
+            results=results
+        ))
+
+    return PublicTeamPresentationResponse(
+        id=str(team.id),
+        name=team.name,
+        organization=PresentationOrg(id=str(org.id), name=org.name),
+        members=presentation_members
+    )
+
+
 @router.post("/{team_id}/generate-matrix", response_model=GenerateMatrixResponse)
 async def generate_matrix(
     team_id: int,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_role(["admin", "manager"])),
+    current_user: User = Depends(require_role(["admin", "manager", "coach"])),
     active_org_id: int = Depends(get_current_active_org_id)
 ):
     """
@@ -227,7 +291,8 @@ async def generate_matrix(
         )
     
     # Check organization access
-    if team.organization_id != active_org_id:
+    accessible = _accessible_org_ids(db, current_user)
+    if team.organization_id not in accessible:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Access denied to this team"
@@ -257,7 +322,7 @@ async def generate_matrix(
         users_payload.append({
             "full_name": member.full_name,
             "email": member.email,
-            "role": member.role.value,
+            "role": member.role.value if hasattr(member.role, "value") else member.role,
             "talents": talents_payload
         })
 
@@ -310,3 +375,38 @@ async def generate_matrix(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Integration error: {str(e)}"
         )
+
+@router.delete("/{team_id}/members/{user_id}", status_code=status.HTTP_204_NO_CONTENT)
+def remove_team_member(
+    team_id: int,
+    user_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_role(["admin", "manager", "coach"])),
+):
+    """Remove a user from a team."""
+    team = db.query(Team).filter(Team.id == team_id).first()
+    if not team:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Team not found"
+        )
+    
+    # Check organization access
+    accessible = _accessible_org_ids(db, current_user)
+    if team.organization_id not in accessible:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Access denied to this team"
+        )
+
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="User not found"
+        )
+        
+    if user in team.members:
+        team.members.remove(user)
+        db.commit()
+

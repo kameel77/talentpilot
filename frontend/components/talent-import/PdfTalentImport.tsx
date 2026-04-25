@@ -129,7 +129,7 @@ export function PdfTalentImport({ userId, onUsersChange, onImportComplete, onSwi
             setProgress(100);
             setParsedData(data);
             setStatus('success');
-        } catch (error) {
+        } catch {
             clearInterval(processInterval);
             setErrorMessage('Nie udało się przetworzyć pliku. Spróbuj ponownie lub wprowadź dane ręcznie.');
             setStatus('error');
