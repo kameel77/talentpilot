@@ -1,7 +1,6 @@
 """Organizations router for CRUD operations."""
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
-from typing import List
 
 from database import get_db
 from models import User, Organization
@@ -15,19 +14,20 @@ router = APIRouter()
 def create_organization(
     data: OrganizationCreate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_role(["admin"]))
+    current_user: User = Depends(require_role(["admin", "coach"])),
 ):
-    """
-    Create new organization (admin only).
-    
-    Note: In practice, organizations are created during registration.
-    This endpoint is for admin-level operations.
-    """
-    organization = Organization(name=data.name)
+    """Create a new organization (admin or coach)."""
+    organization = Organization(
+        name=data.name,
+        street=data.street,
+        postal_code=data.postal_code,
+        city=data.city,
+        tax_id=data.tax_id,
+    )
     db.add(organization)
     db.commit()
     db.refresh(organization)
-    
+
     return organization
 
 
@@ -39,7 +39,7 @@ def get_organization(
 ):
     """
     Get organization details.
-    
+
     - Users can only access their own organization
     """
     # Check if user belongs to this organization
@@ -48,15 +48,15 @@ def get_organization(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Access denied to this organization"
         )
-    
+
     organization = db.query(Organization).filter(Organization.id == organization_id).first()
-    
+
     if not organization:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Organization not found"
         )
-    
+
     return organization
 
 
@@ -65,13 +65,9 @@ def update_organization(
     organization_id: int,
     data: OrganizationUpdate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_role(["admin"]))
+    current_user: User = Depends(require_role(["manager"])),
 ):
-    """
-    Update organization (admin only).
-
-    - Only admins of the organization can update it
-    """
+    """Update organization details. Manager-only and limited to their own organization."""
     if current_user.organization_id != organization_id:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
@@ -86,10 +82,9 @@ def update_organization(
             detail="Organization not found"
         )
 
-    if data.name is not None:
-        organization.name = data.name
-    if data.address is not None:
-        organization.address = data.address
+    payload = data.model_dump(exclude_unset=True)
+    for field, value in payload.items():
+        setattr(organization, field, value)
 
     db.commit()
     db.refresh(organization)

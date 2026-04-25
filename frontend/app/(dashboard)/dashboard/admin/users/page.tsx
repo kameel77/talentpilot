@@ -4,8 +4,44 @@ import { useEffect, useState } from "react";
 import { api, User, Organization } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Loader2, Users, Shield, Building, X, Save } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Loader2, Users, Shield, Building, X, Save, UserPlus, Building2 } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from "@/components/ui/dialog";
+
+type NewUserRole = 'admin' | 'manager' | 'coach' | 'user';
+
+interface NewUserForm {
+    email: string;
+    password: string;
+    full_name: string;
+    role: NewUserRole;
+    organization_id: string;
+}
+
+const EMPTY_NEW_USER: NewUserForm = {
+    email: "",
+    password: "",
+    full_name: "",
+    role: "user",
+    organization_id: "",
+};
+
+interface NewOrgForm {
+    name: string;
+    street: string;
+    postal_code: string;
+    city: string;
+    tax_id: string;
+}
+
+const EMPTY_NEW_ORG: NewOrgForm = {
+    name: "",
+    street: "",
+    postal_code: "",
+    city: "",
+    tax_id: "",
+};
 
 export default function AdminUsersPage() {
     const [users, setUsers] = useState<User[]>([]);
@@ -16,6 +52,18 @@ export default function AdminUsersPage() {
     const [selectedCoach, setSelectedCoach] = useState<User | null>(null);
     const [isOrgModalOpen, setIsOrgModalOpen] = useState(false);
     const [savingAccess, setSavingAccess] = useState<number | null>(null);
+
+    // Create-user modal state
+    const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+    const [newUser, setNewUser] = useState<NewUserForm>(EMPTY_NEW_USER);
+    const [creating, setCreating] = useState(false);
+    const [createError, setCreateError] = useState<string | null>(null);
+
+    // Create-organization modal state
+    const [isOrgCreateModalOpen, setIsOrgCreateModalOpen] = useState(false);
+    const [newOrg, setNewOrg] = useState<NewOrgForm>(EMPTY_NEW_ORG);
+    const [creatingOrg, setCreatingOrg] = useState(false);
+    const [orgCreateError, setOrgCreateError] = useState<string | null>(null);
 
     useEffect(() => {
         fetchData();
@@ -52,6 +100,70 @@ export default function AdminUsersPage() {
         setIsOrgModalOpen(true);
     };
 
+    const openCreateModal = () => {
+        setNewUser(EMPTY_NEW_USER);
+        setCreateError(null);
+        setIsCreateModalOpen(true);
+    };
+
+    const openCreateOrgModal = () => {
+        setNewOrg(EMPTY_NEW_ORG);
+        setOrgCreateError(null);
+        setIsOrgCreateModalOpen(true);
+    };
+
+    const handleCreateOrganization = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setOrgCreateError(null);
+
+        try {
+            setCreatingOrg(true);
+            const created = await api.organizations.create({
+                name: newOrg.name.trim(),
+                street: newOrg.street.trim() || undefined,
+                postal_code: newOrg.postal_code.trim() || undefined,
+                city: newOrg.city.trim() || undefined,
+                tax_id: newOrg.tax_id.trim() || undefined,
+            });
+            setOrganizations([...organizations, created].sort((a, b) => a.name.localeCompare(b.name)));
+            setIsOrgCreateModalOpen(false);
+        } catch (error: any) {
+            const detail = error?.response?.data?.detail;
+            setOrgCreateError(typeof detail === 'string' ? detail : "Nie udało się utworzyć organizacji.");
+        } finally {
+            setCreatingOrg(false);
+        }
+    };
+
+    const handleCreateUser = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setCreateError(null);
+
+        const orgOptional = newUser.role === 'admin' || newUser.role === 'coach';
+        if (!orgOptional && !newUser.organization_id) {
+            setCreateError("Wybierz organizację domyślną.");
+            return;
+        }
+
+        try {
+            setCreating(true);
+            const created = await api.admin.createUser({
+                email: newUser.email.trim(),
+                password: newUser.password,
+                full_name: newUser.full_name.trim(),
+                role: newUser.role,
+                organization_id: newUser.organization_id ? Number(newUser.organization_id) : null,
+            });
+            setUsers([created, ...users]);
+            setIsCreateModalOpen(false);
+        } catch (error: any) {
+            const detail = error?.response?.data?.detail;
+            setCreateError(typeof detail === 'string' ? detail : "Nie udało się utworzyć użytkownika.");
+        } finally {
+            setCreating(false);
+        }
+    };
+
     const handleToggleOrgAccess = async (orgId: number, hasAccess: boolean) => {
         if (!selectedCoach) return;
         
@@ -85,14 +197,26 @@ export default function AdminUsersPage() {
 
     return (
         <div className="space-y-8 max-w-6xl mx-auto">
-            <div>
-                <h1 className="text-3xl font-bold font-heading text-slate-900 tracking-tight flex items-center gap-3">
-                    <Users className="h-8 w-8 text-blue-600" />
-                    Użytkownicy i dostępy
-                </h1>
-                <p className="mt-1 text-slate-500 font-medium">
-                    Zarządzaj kontami, rolami i dostępami do organizacji trenerskich.
-                </p>
+            <div className="flex items-start justify-between gap-4">
+                <div>
+                    <h1 className="text-3xl font-bold font-heading text-slate-900 tracking-tight flex items-center gap-3">
+                        <Users className="h-8 w-8 text-blue-600" />
+                        Użytkownicy i dostępy
+                    </h1>
+                    <p className="mt-1 text-slate-500 font-medium">
+                        Zarządzaj kontami, rolami i dostępami do organizacji trenerskich.
+                    </p>
+                </div>
+                <div className="flex gap-2 shrink-0">
+                    <Button variant="outline" onClick={openCreateOrgModal}>
+                        <Building2 className="h-4 w-4 mr-2" />
+                        Dodaj organizację
+                    </Button>
+                    <Button onClick={openCreateModal}>
+                        <UserPlus className="h-4 w-4 mr-2" />
+                        Dodaj użytkownika
+                    </Button>
+                </div>
             </div>
 
             <Card className="border-slate-200/60 shadow-sm overflow-hidden">
@@ -228,6 +352,212 @@ export default function AdminUsersPage() {
                             })}
                         </div>
                     </div>
+                </DialogContent>
+            </Dialog>
+
+            {/* Create User Modal */}
+            <Dialog open={isCreateModalOpen} onOpenChange={setIsCreateModalOpen}>
+                <DialogContent className="sm:max-w-[520px]">
+                    <DialogHeader>
+                        <DialogTitle className="flex items-center gap-2 text-xl">
+                            <UserPlus className="h-5 w-5 text-blue-600" />
+                            Dodaj użytkownika
+                        </DialogTitle>
+                        <DialogDescription>
+                            Utwórz nowe konto. Dla ról <strong>Admin</strong> i <strong>Coach</strong> pole „Organizacja domyślna” jest opcjonalne.
+                        </DialogDescription>
+                    </DialogHeader>
+
+                    <form onSubmit={handleCreateUser} className="space-y-4 py-2">
+                        <div className="space-y-2">
+                            <Label htmlFor="new-user-name">Imię i nazwisko</Label>
+                            <Input
+                                id="new-user-name"
+                                value={newUser.full_name}
+                                onChange={(e) => setNewUser({ ...newUser, full_name: e.target.value })}
+                                required
+                                minLength={1}
+                                maxLength={255}
+                            />
+                        </div>
+
+                        <div className="space-y-2">
+                            <Label htmlFor="new-user-email">Email</Label>
+                            <Input
+                                id="new-user-email"
+                                type="email"
+                                value={newUser.email}
+                                onChange={(e) => setNewUser({ ...newUser, email: e.target.value })}
+                                required
+                                autoComplete="off"
+                            />
+                        </div>
+
+                        <div className="space-y-2">
+                            <Label htmlFor="new-user-password">Hasło</Label>
+                            <Input
+                                id="new-user-password"
+                                type="password"
+                                value={newUser.password}
+                                onChange={(e) => setNewUser({ ...newUser, password: e.target.value })}
+                                required
+                                minLength={8}
+                                maxLength={72}
+                                autoComplete="new-password"
+                            />
+                            <p className="text-xs text-slate-500">Minimum 8 znaków.</p>
+                        </div>
+
+                        <div className="space-y-2">
+                            <Label htmlFor="new-user-role">Rola w systemie</Label>
+                            <select
+                                id="new-user-role"
+                                className="bg-white border border-slate-200 text-slate-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"
+                                value={newUser.role}
+                                onChange={(e) => setNewUser({ ...newUser, role: e.target.value as NewUserRole })}
+                            >
+                                <option value="user">User</option>
+                                <option value="manager">Manager</option>
+                                <option value="coach">Coach</option>
+                                <option value="admin">Admin</option>
+                            </select>
+                        </div>
+
+                        <div className="space-y-2">
+                            <Label htmlFor="new-user-org">
+                                Organizacja domyślna
+                                {(newUser.role === 'admin' || newUser.role === 'coach') && (
+                                    <span className="ml-2 text-xs font-normal text-slate-500">
+                                        (opcjonalna dla {newUser.role === 'admin' ? 'admina' : 'coacha'})
+                                    </span>
+                                )}
+                            </Label>
+                            <select
+                                id="new-user-org"
+                                className="bg-white border border-slate-200 text-slate-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"
+                                value={newUser.organization_id}
+                                onChange={(e) => setNewUser({ ...newUser, organization_id: e.target.value })}
+                                required={newUser.role !== 'admin' && newUser.role !== 'coach'}
+                            >
+                                <option value="">— wybierz —</option>
+                                {organizations.map((org) => (
+                                    <option key={org.id} value={org.id}>{org.name}</option>
+                                ))}
+                            </select>
+                        </div>
+
+                        {createError && (
+                            <div className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-md px-3 py-2">
+                                {createError}
+                            </div>
+                        )}
+
+                        <DialogFooter className="pt-2">
+                            <DialogClose asChild>
+                                <Button type="button" variant="outline" disabled={creating}>Anuluj</Button>
+                            </DialogClose>
+                            <Button type="submit" disabled={creating}>
+                                {creating ? (
+                                    <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Tworzenie…</>
+                                ) : (
+                                    <><Save className="h-4 w-4 mr-2" />Utwórz użytkownika</>
+                                )}
+                            </Button>
+                        </DialogFooter>
+                    </form>
+                </DialogContent>
+            </Dialog>
+
+            {/* Create Organization Modal */}
+            <Dialog open={isOrgCreateModalOpen} onOpenChange={setIsOrgCreateModalOpen}>
+                <DialogContent className="sm:max-w-[520px]">
+                    <DialogHeader>
+                        <DialogTitle className="flex items-center gap-2 text-xl">
+                            <Building2 className="h-5 w-5 text-blue-600" />
+                            Dodaj organizację
+                        </DialogTitle>
+                        <DialogDescription>
+                            Utwórz nową organizację. Pola adresowe i NIP są opcjonalne.
+                        </DialogDescription>
+                    </DialogHeader>
+
+                    <form onSubmit={handleCreateOrganization} className="space-y-4 py-2">
+                        <div className="space-y-2">
+                            <Label htmlFor="new-org-name">Nazwa organizacji</Label>
+                            <Input
+                                id="new-org-name"
+                                value={newOrg.name}
+                                onChange={(e) => setNewOrg({ ...newOrg, name: e.target.value })}
+                                required
+                                minLength={1}
+                                maxLength={255}
+                            />
+                        </div>
+
+                        <div className="space-y-2">
+                            <Label htmlFor="new-org-street">Ulica i numer</Label>
+                            <Input
+                                id="new-org-street"
+                                value={newOrg.street}
+                                onChange={(e) => setNewOrg({ ...newOrg, street: e.target.value })}
+                                maxLength={255}
+                                placeholder="ul. Przykładowa 1"
+                            />
+                        </div>
+
+                        <div className="grid gap-3 sm:grid-cols-2">
+                            <div className="space-y-2">
+                                <Label htmlFor="new-org-postal">Kod pocztowy</Label>
+                                <Input
+                                    id="new-org-postal"
+                                    value={newOrg.postal_code}
+                                    onChange={(e) => setNewOrg({ ...newOrg, postal_code: e.target.value })}
+                                    maxLength={20}
+                                    placeholder="00-000"
+                                />
+                            </div>
+                            <div className="space-y-2">
+                                <Label htmlFor="new-org-city">Miasto</Label>
+                                <Input
+                                    id="new-org-city"
+                                    value={newOrg.city}
+                                    onChange={(e) => setNewOrg({ ...newOrg, city: e.target.value })}
+                                    maxLength={120}
+                                    placeholder="Warszawa"
+                                />
+                            </div>
+                        </div>
+
+                        <div className="space-y-2">
+                            <Label htmlFor="new-org-nip">NIP</Label>
+                            <Input
+                                id="new-org-nip"
+                                value={newOrg.tax_id}
+                                onChange={(e) => setNewOrg({ ...newOrg, tax_id: e.target.value })}
+                                maxLength={32}
+                                placeholder="0000000000"
+                            />
+                        </div>
+
+                        {orgCreateError && (
+                            <div className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-md px-3 py-2">
+                                {orgCreateError}
+                            </div>
+                        )}
+
+                        <DialogFooter className="pt-2">
+                            <DialogClose asChild>
+                                <Button type="button" variant="outline" disabled={creatingOrg}>Anuluj</Button>
+                            </DialogClose>
+                            <Button type="submit" disabled={creatingOrg}>
+                                {creatingOrg ? (
+                                    <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Tworzenie…</>
+                                ) : (
+                                    <><Save className="h-4 w-4 mr-2" />Utwórz organizację</>
+                                )}
+                            </Button>
+                        </DialogFooter>
+                    </form>
                 </DialogContent>
             </Dialog>
 

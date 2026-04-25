@@ -141,12 +141,17 @@ def get_my_organizations(
 ):
     """
     Get all organizations accessible by the current user.
-    - Regular Users/Managers: their own organization
-    - Coach/Admin: their own organization + organizations they have access to
+    - Admin: all organizations in the system
+    - Coach: home organization + organizations granted via OrganizationAccess
+    - Manager/User: home organization only
     """
+    if current_user.role.value == "admin":
+        all_orgs = db.query(Organization).order_by(Organization.name).all()
+        return [{"id": o.id, "name": o.name} for o in all_orgs]
+
     orgs = [{"id": current_user.organization.id, "name": current_user.organization.name}]
-    
-    if current_user.role.value in ["coach", "admin"]:
+
+    if current_user.role.value == "coach":
         from models import OrganizationAccess
         access_list = db.query(OrganizationAccess).filter(
             OrganizationAccess.user_id == current_user.id
@@ -154,7 +159,7 @@ def get_my_organizations(
         for access in access_list:
             if access.organization and access.organization_id != current_user.organization_id:
                 orgs.append({"id": access.organization.id, "name": access.organization.name})
-                
+
     return orgs
 
 

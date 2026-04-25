@@ -28,6 +28,15 @@ import {
   BookOpen,
 } from "lucide-react";
 import { SettingsSection } from "@/components/dashboard/SettingsSection";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+  DialogClose,
+} from "@/components/ui/dialog";
 import { GALLUP_TALENTS } from "@/data/gallupTalents";
 import { UserTalent } from "@/types/talent";
 import { api, tokenManager, type User as UserType, type Organization } from "@/lib/api";
@@ -64,9 +73,22 @@ export default function SettingsPage() {
 
   // Organization form
   const [orgName, setOrgName] = useState("");
-  const [orgAddress, setOrgAddress] = useState("");
+  const [orgStreet, setOrgStreet] = useState("");
+  const [orgPostalCode, setOrgPostalCode] = useState("");
+  const [orgCity, setOrgCity] = useState("");
+  const [orgTaxId, setOrgTaxId] = useState("");
   const [orgSaving, setOrgSaving] = useState(false);
   const [orgMsg, setOrgMsg] = useState<{ type: "success" | "error"; text: string } | null>(null);
+
+  // Create-organization modal (admin / coach)
+  const [orgCreateOpen, setOrgCreateOpen] = useState(false);
+  const [newOrgName, setNewOrgName] = useState("");
+  const [newOrgStreet, setNewOrgStreet] = useState("");
+  const [newOrgPostal, setNewOrgPostal] = useState("");
+  const [newOrgCity, setNewOrgCity] = useState("");
+  const [newOrgTaxId, setNewOrgTaxId] = useState("");
+  const [newOrgSaving, setNewOrgSaving] = useState(false);
+  const [newOrgMsg, setNewOrgMsg] = useState<{ type: "success" | "error"; text: string } | null>(null);
 
   // User Manual
   const [superpowers, setSuperpowers] = useState("");
@@ -129,7 +151,10 @@ export default function SettingsPage() {
     api.organizations.get(user.organization_id).then((o) => {
       setOrg(o);
       setOrgName(o.name);
-      setOrgAddress(o.address ?? "");
+      setOrgStreet(o.street ?? "");
+      setOrgPostalCode(o.postal_code ?? "");
+      setOrgCity(o.city ?? "");
+      setOrgTaxId(o.tax_id ?? "");
     });
   }, []);
 
@@ -235,7 +260,10 @@ export default function SettingsPage() {
     try {
       const updated = await api.organizations.update(org.id, {
         name: orgName || undefined,
-        address: orgAddress || undefined,
+        street: orgStreet || undefined,
+        postal_code: orgPostalCode || undefined,
+        city: orgCity || undefined,
+        tax_id: orgTaxId || undefined,
       });
       setOrg(updated);
       setOrgMsg({ type: "success", text: "Dane organizacji zostały zapisane." });
@@ -243,6 +271,38 @@ export default function SettingsPage() {
       setOrgMsg({ type: "error", text: "Błąd zapisu. Sprawdź uprawnienia." });
     } finally {
       setOrgSaving(false);
+    }
+  };
+
+  const openOrgCreateModal = () => {
+    setNewOrgName("");
+    setNewOrgStreet("");
+    setNewOrgPostal("");
+    setNewOrgCity("");
+    setNewOrgTaxId("");
+    setNewOrgMsg(null);
+    setOrgCreateOpen(true);
+  };
+
+  const handleOrgCreate = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setNewOrgMsg(null);
+    setNewOrgSaving(true);
+    try {
+      await api.organizations.create({
+        name: newOrgName.trim(),
+        street: newOrgStreet.trim() || undefined,
+        postal_code: newOrgPostal.trim() || undefined,
+        city: newOrgCity.trim() || undefined,
+        tax_id: newOrgTaxId.trim() || undefined,
+      });
+      setOrgCreateOpen(false);
+      setOrgMsg({ type: "success", text: "Organizacja została utworzona." });
+    } catch (err: any) {
+      const detail = err?.response?.data?.detail;
+      setNewOrgMsg({ type: "error", text: typeof detail === "string" ? detail : "Nie udało się utworzyć organizacji." });
+    } finally {
+      setNewOrgSaving(false);
     }
   };
 
@@ -324,7 +384,8 @@ export default function SettingsPage() {
     setTimeout(() => setLinkCopied(false), 2000);
   };
 
-  const isAdmin = currentUser?.role === "admin";
+  const isManager = currentUser?.role === "manager";
+  const canCreateOrg = currentUser?.role === "admin" || currentUser?.role === "coach";
   const publicToken = currentUser?.public_token;
   const effectiveHandle = currentUser?.public_slug || publicToken;
   const [origin, setOrigin] = useState("");
@@ -588,7 +649,7 @@ export default function SettingsPage() {
         <SettingsSection
           icon={Building2}
           title="Organizacja"
-          description={isAdmin ? "Informacje o organizacji" : "Dane organizacji (odczyt)"}
+          description={isManager ? "Informacje o organizacji" : "Dane organizacji (odczyt)"}
           className="lg:col-span-2"
         >
           <div className="space-y-4">
@@ -598,18 +659,50 @@ export default function SettingsPage() {
                 id="org-name"
                 value={orgName}
                 onChange={(e) => setOrgName(e.target.value)}
-                disabled={!isAdmin}
+                disabled={!isManager}
                 placeholder="Nazwa firmy"
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="org-address">Adres</Label>
+              <Label htmlFor="org-street">Ulica i numer</Label>
               <Input
-                id="org-address"
-                value={orgAddress}
-                onChange={(e) => setOrgAddress(e.target.value)}
-                disabled={!isAdmin}
-                placeholder="ul. Przykładowa 1, Warszawa"
+                id="org-street"
+                value={orgStreet}
+                onChange={(e) => setOrgStreet(e.target.value)}
+                disabled={!isManager}
+                placeholder="ul. Przykładowa 1"
+              />
+            </div>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div className="space-y-2">
+                <Label htmlFor="org-postal">Kod pocztowy</Label>
+                <Input
+                  id="org-postal"
+                  value={orgPostalCode}
+                  onChange={(e) => setOrgPostalCode(e.target.value)}
+                  disabled={!isManager}
+                  placeholder="00-000"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="org-city">Miasto</Label>
+                <Input
+                  id="org-city"
+                  value={orgCity}
+                  onChange={(e) => setOrgCity(e.target.value)}
+                  disabled={!isManager}
+                  placeholder="Warszawa"
+                />
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="org-nip">NIP</Label>
+              <Input
+                id="org-nip"
+                value={orgTaxId}
+                onChange={(e) => setOrgTaxId(e.target.value)}
+                disabled={!isManager}
+                placeholder="0000000000"
               />
             </div>
             {orgMsg && (
@@ -617,10 +710,16 @@ export default function SettingsPage() {
                 {orgMsg.text}
               </p>
             )}
-            {isAdmin && (
+            {isManager && (
               <Button variant="hero" onClick={handleOrgSave} disabled={orgSaving} className="w-full">
                 <Save className="h-4 w-4 mr-2" />
                 {orgSaving ? "Zapisywanie…" : "Zapisz"}
+              </Button>
+            )}
+            {canCreateOrg && (
+              <Button variant="outline" onClick={openOrgCreateModal} className="w-full">
+                <Building2 className="h-4 w-4 mr-2" />
+                Dodaj nową organizację
               </Button>
             )}
           </div>
@@ -868,6 +967,91 @@ export default function SettingsPage() {
           </div>
         </div>
       </div>
+
+      {/* Create Organization Dialog */}
+      <Dialog open={orgCreateOpen} onOpenChange={setOrgCreateOpen}>
+        <DialogContent className="sm:max-w-[520px]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-xl">
+              <Building2 className="h-5 w-5 text-blue-600" />
+              Dodaj organizację
+            </DialogTitle>
+            <DialogDescription>
+              Utwórz nową organizację. Pola adresowe i NIP są opcjonalne.
+            </DialogDescription>
+          </DialogHeader>
+
+          <form onSubmit={handleOrgCreate} className="space-y-4 py-2">
+            <div className="space-y-2">
+              <Label htmlFor="settings-new-org-name">Nazwa organizacji</Label>
+              <Input
+                id="settings-new-org-name"
+                value={newOrgName}
+                onChange={(e) => setNewOrgName(e.target.value)}
+                required
+                minLength={1}
+                maxLength={255}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="settings-new-org-street">Ulica i numer</Label>
+              <Input
+                id="settings-new-org-street"
+                value={newOrgStreet}
+                onChange={(e) => setNewOrgStreet(e.target.value)}
+                maxLength={255}
+                placeholder="ul. Przykładowa 1"
+              />
+            </div>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div className="space-y-2">
+                <Label htmlFor="settings-new-org-postal">Kod pocztowy</Label>
+                <Input
+                  id="settings-new-org-postal"
+                  value={newOrgPostal}
+                  onChange={(e) => setNewOrgPostal(e.target.value)}
+                  maxLength={20}
+                  placeholder="00-000"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="settings-new-org-city">Miasto</Label>
+                <Input
+                  id="settings-new-org-city"
+                  value={newOrgCity}
+                  onChange={(e) => setNewOrgCity(e.target.value)}
+                  maxLength={120}
+                  placeholder="Warszawa"
+                />
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="settings-new-org-nip">NIP</Label>
+              <Input
+                id="settings-new-org-nip"
+                value={newOrgTaxId}
+                onChange={(e) => setNewOrgTaxId(e.target.value)}
+                maxLength={32}
+                placeholder="0000000000"
+              />
+            </div>
+            {newOrgMsg && (
+              <p className={cn("text-sm", newOrgMsg.type === "success" ? "text-green-600" : "text-destructive")}>
+                {newOrgMsg.text}
+              </p>
+            )}
+            <DialogFooter className="pt-2">
+              <DialogClose asChild>
+                <Button type="button" variant="outline" disabled={newOrgSaving}>Anuluj</Button>
+              </DialogClose>
+              <Button type="submit" variant="hero" disabled={newOrgSaving}>
+                <Save className="h-4 w-4 mr-2" />
+                {newOrgSaving ? "Tworzenie…" : "Utwórz organizację"}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
 
       {/* Talent Import Dialog */}
       <TalentImportDialog

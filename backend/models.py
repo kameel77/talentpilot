@@ -62,10 +62,14 @@ class Organization(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String(255), nullable=False)
-    address = Column(String(500), nullable=True)
+    address = Column(String(500), nullable=True)  # legacy single-line address; superseded by structured fields below
+    street = Column(String(255), nullable=True)
+    postal_code = Column(String(20), nullable=True)
+    city = Column(String(120), nullable=True)
+    tax_id = Column(String(32), nullable=True)  # NIP
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
-    
+
     # Relationships
     users = relationship("User", back_populates="organization", cascade="all, delete-orphan")
     teams = relationship("Team", back_populates="organization", cascade="all, delete-orphan")

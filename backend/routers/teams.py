@@ -4,12 +4,38 @@ from sqlalchemy.orm import Session
 from typing import List
 
 from database import get_db
-from models import User, Team, UserRole
+from models import User, Team, UserRole, OrganizationAccess, Organization
 from schemas import TeamCreate, TeamUpdate, TeamResponse
 from auth import get_current_user, require_role, get_current_active_org_id
 from config import settings
 import httpx
 from pydantic import BaseModel
+
+
+def _accessible_org_ids(db: Session, user: User) -> set[int]:
+    """Return the set of organization IDs the user can access for team operations."""
+    if user.role == UserRole.ADMIN:
+        return {org_id for (org_id,) in db.query(Organization.id).all()}
+    org_ids = {user.organization_id}
+    if user.role == UserRole.COACH:
+        access_rows = db.query(OrganizationAccess.organization_id).filter(
+            OrganizationAccess.user_id == user.id
+        ).all()
+        org_ids.update(org_id for (org_id,) in access_rows)
+    return org_ids
+
+
+def _serialize_team(team: Team) -> dict:
+    return {
+        "id": team.id,
+        "name": team.name,
+        "description": team.description,
+        "organization_id": team.organization_id,
+        "organization_name": team.organization.name if team.organization else None,
+        "manager_id": team.manager_id,
+        "members_count": len(team.members),
+        "created_at": team.created_at,
+    }
 
 class GenerateMatrixResponse(BaseModel):
     url: str
@@ -22,25 +48,33 @@ router = APIRouter()
 def create_team(
     data: TeamCreate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_role(["admin", "manager"])),
+    current_user: User = Depends(require_role(["admin", "manager", "coach"])),
     active_org_id: int = Depends(get_current_active_org_id)
 ):
-    """
-    Create new team (admin or manager).
-    
-    - Team belongs to current user's organization
-    """
+    """Create a new team within an organization the user can access."""
+    target_org_id = data.organization_id or active_org_id
+
+    accessible = _accessible_org_ids(db, current_user)
+    if target_org_id not in accessible:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You do not have access to this organization"
+        )
+
+    if not db.query(Organization).filter(Organization.id == target_org_id).first():
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Organization not found")
+
     team = Team(
         name=data.name,
         description=data.description,
-        organization_id=active_org_id,
-        manager_id=data.manager_id
+        organization_id=target_org_id,
+        manager_id=data.manager_id,
     )
     db.add(team)
     db.commit()
     db.refresh(team)
-    
-    return team
+
+    return _serialize_team(team)
 
 
 @router.get("", response_model=List[TeamResponse])
@@ -50,19 +84,27 @@ def list_teams(
     active_org_id: int = Depends(get_current_active_org_id)
 ):
     """
-    List all teams in current user's organization.
-    
-    - Managers see all teams
-    - Regular users see only their teams
+    List teams visible to the current user.
+
+    - Admin: all teams across all organizations
+    - Coach: teams across home organization + organizations they have access to
+    - Manager: teams in the active organization
+    - User: only the teams they belong to within the active organization
     """
-    query = db.query(Team).filter(Team.organization_id == active_org_id)
-    
-    # If user is not admin/manager, filter to their teams only
-    if current_user.role == UserRole.USER:
-        query = query.join(Team.members).filter(User.id == current_user.id)
-    
-    teams = query.all()
-    return teams
+    if current_user.role in (UserRole.ADMIN, UserRole.COACH):
+        org_ids = _accessible_org_ids(db, current_user)
+        teams = db.query(Team).filter(Team.organization_id.in_(org_ids)).all()
+    elif current_user.role == UserRole.MANAGER:
+        teams = db.query(Team).filter(Team.organization_id == active_org_id).all()
+    else:
+        teams = (
+            db.query(Team)
+            .join(Team.members)
+            .filter(Team.organization_id == active_org_id, User.id == current_user.id)
+            .all()
+        )
+
+    return [_serialize_team(t) for t in teams]
 
 
 @router.get("/{team_id}", response_model=TeamResponse)

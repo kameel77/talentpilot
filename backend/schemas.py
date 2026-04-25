@@ -25,17 +25,29 @@ class GallupDomain(str, Enum):
 # Organization Schemas
 class OrganizationCreate(BaseModel):
     name: str = Field(..., min_length=1, max_length=255)
+    street: Optional[str] = Field(default=None, max_length=255)
+    postal_code: Optional[str] = Field(default=None, max_length=20)
+    city: Optional[str] = Field(default=None, max_length=120)
+    tax_id: Optional[str] = Field(default=None, max_length=32)
 
 
 class OrganizationUpdate(BaseModel):
     name: Optional[str] = Field(default=None, min_length=1, max_length=255)
     address: Optional[str] = Field(default=None, max_length=500)
+    street: Optional[str] = Field(default=None, max_length=255)
+    postal_code: Optional[str] = Field(default=None, max_length=20)
+    city: Optional[str] = Field(default=None, max_length=120)
+    tax_id: Optional[str] = Field(default=None, max_length=32)
 
 
 class OrganizationResponse(BaseModel):
     id: int
     name: str
     address: Optional[str] = None
+    street: Optional[str] = None
+    postal_code: Optional[str] = None
+    city: Optional[str] = None
+    tax_id: Optional[str] = None
     created_at: datetime
 
     model_config = {"from_attributes": True}
@@ -115,6 +127,14 @@ class AdminOrgAccessToggle(BaseModel):
     has_access: bool
 
 
+class AdminUserCreate(BaseModel):
+    email: EmailStr
+    password: str = Field(..., min_length=8, max_length=72)
+    full_name: str = Field(..., min_length=1, max_length=255)
+    role: UserRole = UserRole.USER
+    organization_id: Optional[int] = None
+
+
 # Invitation Schemas
 class GhostInviteTalent(BaseModel):
     talent_id: int
@@ -147,6 +167,7 @@ class TeamCreate(BaseModel):
     name: str = Field(..., min_length=1, max_length=255)
     description: Optional[str] = None
     manager_id: Optional[int] = None
+    organization_id: Optional[int] = None
 
 
 class TeamUpdate(BaseModel):
@@ -160,9 +181,11 @@ class TeamResponse(BaseModel):
     name: str
     description: Optional[str] = None
     organization_id: int
+    organization_name: Optional[str] = None
     manager_id: Optional[int] = None
+    members_count: Optional[int] = None
     created_at: datetime
-    
+
     model_config = {"from_attributes": True}
 
 

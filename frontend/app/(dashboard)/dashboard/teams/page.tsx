@@ -2,34 +2,91 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { api } from "@/lib/api";
-import { KPICard } from "@/components/ui/KPICard";
-import { Users, Plus } from "lucide-react";
+import { api, tokenManager, type Team } from "@/lib/api";
+import { Users, Plus, Loader2, Save } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+    Dialog,
+    DialogContent,
+    DialogHeader,
+    DialogTitle,
+    DialogDescription,
+    DialogFooter,
+    DialogClose,
+} from "@/components/ui/dialog";
 
-interface Team {
+interface OrgOption {
     id: number;
     name: string;
-    description?: string;
-    manager_id?: number;
 }
 
 export default function TeamsPage() {
     const [teams, setTeams] = useState<Team[]>([]);
+    const [orgs, setOrgs] = useState<OrgOption[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState("");
 
+    const currentUser = tokenManager.getUser();
+    const canCreate = currentUser?.role === "admin" || currentUser?.role === "coach";
+
+    // Create-team modal
+    const [open, setOpen] = useState(false);
+    const [name, setName] = useState("");
+    const [organizationId, setOrganizationId] = useState("");
+    const [creating, setCreating] = useState(false);
+    const [createError, setCreateError] = useState<string | null>(null);
+
     useEffect(() => {
-        loadTeams();
+        loadAll();
     }, []);
 
-    const loadTeams = async () => {
+    const loadAll = async () => {
         try {
-            const data = await api.teams.list();
-            setTeams(data);
+            setLoading(true);
+            const [teamsData, orgsData] = await Promise.all([
+                api.teams.list(),
+                api.auth.getMyOrganizations(),
+            ]);
+            setTeams(teamsData);
+            setOrgs(orgsData);
         } catch (_err) {
-            setError("Failed to load teams");
+            setError("Nie udało się pobrać zespołów.");
         } finally {
             setLoading(false);
+        }
+    };
+
+    const openModal = () => {
+        setName("");
+        setOrganizationId("");
+        setCreateError(null);
+        setOpen(true);
+    };
+
+    const handleCreate = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setCreateError(null);
+
+        if (!organizationId) {
+            setCreateError("Wybierz organizację.");
+            return;
+        }
+
+        try {
+            setCreating(true);
+            const created = await api.teams.create({
+                name: name.trim(),
+                organization_id: Number(organizationId),
+            });
+            setTeams([created, ...teams]);
+            setOpen(false);
+        } catch (err: any) {
+            const detail = err?.response?.data?.detail;
+            setCreateError(typeof detail === "string" ? detail : "Nie udało się utworzyć zespołu.");
+        } finally {
+            setCreating(false);
         }
     };
 
@@ -38,7 +95,7 @@ export default function TeamsPage() {
             <div className="flex h-[400px] items-center justify-center">
                 <div className="flex flex-col items-center gap-2">
                     <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
-                    <p className="text-sm font-medium text-slate-500">Loading your teams...</p>
+                    <p className="text-sm font-medium text-slate-500">Pobieranie zespołów…</p>
                 </div>
             </div>
         );
@@ -48,34 +105,17 @@ export default function TeamsPage() {
         <div className="space-y-10">
             <div className="flex flex-wrap items-center justify-between gap-6">
                 <div>
-                    <h1 className="text-3xl font-bold font-heading text-slate-900 tracking-tight">Teams</h1>
+                    <h1 className="text-3xl font-bold font-heading text-slate-900 tracking-tight">Zespoły</h1>
                     <p className="mt-2 text-slate-500 max-w-2xl">
-                        Organize your workforce into high-performing units based on their unique talent combinations.
+                        Zarządzaj zespołami i analizuj ich kompozycje talentowe.
                     </p>
                 </div>
-                <button className="inline-flex items-center gap-2 rounded-xl bg-primary px-5 py-2.5 text-sm font-semibold text-white hover:bg-blue-700 transition-all shadow-sm hover:shadow-md active:scale-95">
-                    <Plus className="h-4 w-4" />
-                    Add Team
-                </button>
-            </div>
-
-            {/* Metrics Overview */}
-            <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-                <KPICard
-                    title="Active Teams"
-                    value={teams.length}
-                    icon={<Users className="h-5 w-5" />}
-                />
-                <KPICard
-                    title="Avg Team Size"
-                    value="4.5"
-                    description="People per team"
-                />
-                <KPICard
-                    title="Top Domain"
-                    value="Strategic"
-                    description="Most frequent in org"
-                />
+                {canCreate && (
+                    <Button onClick={openModal}>
+                        <Plus className="h-4 w-4 mr-2" />
+                        Dodaj zespół
+                    </Button>
+                )}
             </div>
 
             {error && (
@@ -85,21 +125,23 @@ export default function TeamsPage() {
             )}
 
             {teams.length === 0 ? (
-                <div className="rounded-3xl border border-dashed border-slate-300 bg-slate-50/50 p-16 text-center animate-fade-up">
+                <div className="rounded-3xl border border-dashed border-slate-300 bg-slate-50/50 p-16 text-center">
                     <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-white shadow-sm">
                         <Users className="h-8 w-8 text-slate-400" />
                     </div>
-                    <h3 className="text-lg font-semibold text-slate-900">No teams found</h3>
+                    <h3 className="text-lg font-semibold text-slate-900">Brak zespołów</h3>
                     <p className="mt-2 text-slate-500 max-w-xs mx-auto">
-                        Your organization has no teams yet. Start by defining your first collaborative unit.
+                        Nie masz jeszcze żadnych zespołów. Stwórz swój pierwszy.
                     </p>
-                    <button className="mt-6 inline-flex items-center gap-2 rounded-xl bg-primary px-6 py-3 text-sm font-semibold text-white hover:bg-blue-700 transition-all shadow-sm hover:shadow-md">
-                        <Plus className="h-4 w-4" />
-                        Create Your First Team
-                    </button>
+                    {canCreate && (
+                        <Button onClick={openModal} className="mt-6">
+                            <Plus className="h-4 w-4 mr-2" />
+                            Dodaj zespół
+                        </Button>
+                    )}
                 </div>
             ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 animate-fade-up">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                     {teams.map((team) => (
                         <Link
                             key={team.id}
@@ -107,25 +149,85 @@ export default function TeamsPage() {
                             className="group flex flex-col justify-between rounded-2xl border border-slate-200 bg-white p-6 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:border-blue-100 hover:shadow-xl hover:shadow-blue-500/5"
                         >
                             <div>
-                                <h3 className="text-lg font-bold text-slate-900 group-hover:text-primary transition-colors mb-2">
+                                <h3 className="text-lg font-bold text-slate-900 group-hover:text-primary transition-colors mb-1">
                                     {team.name}
                                 </h3>
-                                {team.description && (
-                                    <p className="text-sm text-slate-500 line-clamp-2">{team.description}</p>
+                                {team.organization_name && (
+                                    <p className="text-sm text-slate-500 line-clamp-1">{team.organization_name}</p>
                                 )}
                             </div>
-                            <div className="mt-8 flex items-center justify-between">
-                                <span className="text-xs font-semibold text-primary opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1">
-                                    Manage team
-                                    <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                                    </svg>
-                                </span>
+                            <div className="mt-8 flex items-center gap-2 text-sm text-slate-500">
+                                <Users className="h-4 w-4" />
+                                <span>{team.members_count ?? 0} członków</span>
                             </div>
                         </Link>
                     ))}
                 </div>
             )}
+
+            {/* Create Team Modal */}
+            <Dialog open={open} onOpenChange={setOpen}>
+                <DialogContent className="sm:max-w-[480px]">
+                    <DialogHeader>
+                        <DialogTitle className="flex items-center gap-2 text-xl">
+                            <Users className="h-5 w-5 text-blue-600" />
+                            Dodaj zespół
+                        </DialogTitle>
+                        <DialogDescription>
+                            Zespół jest tworzony w ramach wybranej organizacji.
+                        </DialogDescription>
+                    </DialogHeader>
+
+                    <form onSubmit={handleCreate} className="space-y-4 py-2">
+                        <div className="space-y-2">
+                            <Label htmlFor="team-name">Nazwa zespołu *</Label>
+                            <Input
+                                id="team-name"
+                                value={name}
+                                onChange={(e) => setName(e.target.value)}
+                                required
+                                minLength={1}
+                                maxLength={255}
+                            />
+                        </div>
+
+                        <div className="space-y-2">
+                            <Label htmlFor="team-org">Organizacja *</Label>
+                            <select
+                                id="team-org"
+                                className="bg-white border border-slate-200 text-slate-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"
+                                value={organizationId}
+                                onChange={(e) => setOrganizationId(e.target.value)}
+                                required
+                            >
+                                <option value="">— wybierz organizację —</option>
+                                {orgs.map((org) => (
+                                    <option key={org.id} value={org.id}>{org.name}</option>
+                                ))}
+                            </select>
+                        </div>
+
+                        {createError && (
+                            <div className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-md px-3 py-2">
+                                {createError}
+                            </div>
+                        )}
+
+                        <DialogFooter className="pt-2">
+                            <DialogClose asChild>
+                                <Button type="button" variant="outline" disabled={creating}>Anuluj</Button>
+                            </DialogClose>
+                            <Button type="submit" disabled={creating}>
+                                {creating ? (
+                                    <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Tworzenie…</>
+                                ) : (
+                                    <><Save className="h-4 w-4 mr-2" />Utwórz zespół</>
+                                )}
+                            </Button>
+                        </DialogFooter>
+                    </form>
+                </DialogContent>
+            </Dialog>
         </div>
     );
 }

@@ -4,14 +4,17 @@ from datetime import datetime
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
-from auth import require_role
+import uuid
+
+from auth import hash_password, require_role
 from database import get_db
-from models import AnswerReview, GeneratedAnswer, KnowledgeItem, ReviewStatus, UserQuery, User, Organization, OrganizationAccess
+from models import AnswerReview, GeneratedAnswer, KnowledgeItem, ReviewStatus, UserQuery, User, UserRole, Organization, OrganizationAccess
 from schemas import (
     AdminSettingUpdate,
     AdminSettingsResponse,
     AdminRoleUpdate,
     AdminOrgAccessToggle,
+    AdminUserCreate,
     UserResponse,
     OrganizationResponse,
     KnowledgeItemBulkCreate,
@@ -47,6 +50,50 @@ def list_all_users(
             u.organizations_access = []
 
     return users
+
+
+@router.post("/users", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
+def create_user(
+    payload: AdminUserCreate,
+    db: Session = Depends(get_db),
+    current_user=Depends(require_role(["admin"])),
+):
+    """Create a new user (Superadmin only).
+
+    For non-admin roles, organization_id is required. For admin role, it falls
+    back to the creating admin's organization_id when omitted.
+    """
+    if db.query(User).filter(User.email == payload.email).first():
+        raise HTTPException(status_code=400, detail="Email already registered")
+
+    role = UserRole(payload.role.value)
+    organization_id = payload.organization_id
+    roles_without_default_org = {UserRole.ADMIN, UserRole.COACH}
+    if role not in roles_without_default_org and organization_id is None:
+        raise HTTPException(
+            status_code=422,
+            detail="organization_id is required for this role",
+        )
+    if organization_id is None:
+        organization_id = current_user.organization_id
+
+    if not db.query(Organization).filter(Organization.id == organization_id).first():
+        raise HTTPException(status_code=404, detail="Organization not found")
+
+    user = User(
+        email=payload.email,
+        hashed_password=hash_password(payload.password),
+        full_name=payload.full_name,
+        role=role,
+        organization_id=organization_id,
+        public_token=str(uuid.uuid4()).replace("-", ""),
+    )
+    db.add(user)
+    db.commit()
+    db.refresh(user)
+
+    user.organizations_access = []
+    return user
 
 
 @router.patch("/users/{user_id}/role", response_model=UserResponse)

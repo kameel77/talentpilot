@@ -31,7 +31,28 @@ export interface Organization {
     id: number;
     name: string;
     address?: string;
+    street?: string;
+    postal_code?: string;
+    city?: string;
+    tax_id?: string;
     created_at: string;
+}
+
+export interface OrganizationCreateData {
+    name: string;
+    street?: string;
+    postal_code?: string;
+    city?: string;
+    tax_id?: string;
+}
+
+export interface OrganizationUpdateData {
+    name?: string;
+    address?: string;
+    street?: string;
+    postal_code?: string;
+    city?: string;
+    tax_id?: string;
 }
 
 export interface UserUpdateData {
@@ -71,7 +92,9 @@ export interface Team {
     name: string;
     description?: string;
     organization_id: number;
+    organization_name?: string;
     manager_id?: number;
+    members_count?: number;
     created_at: string;
 }
 
@@ -378,8 +401,8 @@ export const api = {
 
     // Organizations
     organizations: {
-        create: async (name: string) => {
-            const response = await apiClient.post('/api/organizations', { name });
+        create: async (data: OrganizationCreateData): Promise<Organization> => {
+            const response = await apiClient.post<Organization>('/api/organizations', data);
             return response.data;
         },
 
@@ -388,7 +411,7 @@ export const api = {
             return response.data;
         },
 
-        update: async (id: number, data: { name?: string; address?: string }): Promise<Organization> => {
+        update: async (id: number, data: OrganizationUpdateData): Promise<Organization> => {
             const response = await apiClient.patch<Organization>(`/api/organizations/${id}`, data);
             return response.data;
         },
@@ -406,8 +429,13 @@ export const api = {
             return response.data;
         },
 
-        create: async (data: { name: string; description?: string; manager_id?: number }) => {
-            const response = await apiClient.post('/api/teams', data);
+        create: async (data: {
+            name: string;
+            description?: string;
+            manager_id?: number;
+            organization_id?: number;
+        }): Promise<Team> => {
+            const response = await apiClient.post<Team>('/api/teams', data);
             return response.data;
         },
 
@@ -614,6 +642,16 @@ export const api = {
         // Admin: Users Management
         getUsers: async (): Promise<User[]> => {
             const response = await apiClient.get<User[]>('/api/admin/users');
+            return response.data;
+        },
+        createUser: async (data: {
+            email: string;
+            password: string;
+            full_name: string;
+            role: 'admin' | 'manager' | 'coach' | 'user';
+            organization_id?: number | null;
+        }): Promise<User> => {
+            const response = await apiClient.post<User>('/api/admin/users', data);
             return response.data;
         },
         updateUserRole: async (userId: number, role: 'admin' | 'manager' | 'coach' | 'user'): Promise<User> => {
