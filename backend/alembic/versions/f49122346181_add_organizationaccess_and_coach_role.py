@@ -20,7 +20,7 @@ def upgrade() -> None:
     # Postgres 12+ supports ALTER TYPE ... ADD VALUE inside a transaction block natively.
     # Alembic runs inside a global transaction block natively so we execute it normally without hacks.
     op.execute(
-        "ALTER TYPE userrole ADD VALUE IF NOT EXISTS 'coach';"
+        "ALTER TYPE userrole ADD VALUE IF NOT EXISTS 'COACH';"
     )
     
     # Check if table exists to prevent DuplicateTable from partially applied interrupted migrations
