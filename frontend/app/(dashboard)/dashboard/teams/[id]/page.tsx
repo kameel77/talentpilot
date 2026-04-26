@@ -33,6 +33,7 @@ interface Talent {
     code: string;
     translation?: {
         name: string;
+        description?: string;
     };
     domain: string;
 }
@@ -493,13 +494,21 @@ export default function TeamDetailPage() {
                                             </td>
                                             <td className="py-4 px-6">
                                                 <div className="flex flex-wrap gap-1.5 max-w-md">
-                                                    {top5.length > 0 ? top5.map((t) => (
-                                                        <TalentBadge
-                                                            key={t.talent}
-                                                            name={`${t.rank}. ${t.talent}`}
-                                                            domain={t.domain}
-                                                        />
-                                                    )) : (
+                                                    {top5.length > 0 ? top5.map((t) => {
+                                                        const talentInfo = allTalents.find(at => at.code === t.talent || at.translation?.name === t.talent);
+                                                        const translatedName = talentInfo?.translation?.name || t.talent;
+                                                        const translatedDesc = talentInfo?.translation?.description || undefined;
+
+                                                        return (
+                                                            <TalentBadge
+                                                                key={t.talent}
+                                                                name={`${t.rank}. ${translatedName}`}
+                                                                domain={t.domain}
+                                                                description={translatedDesc}
+                                                                hideDomainLabel
+                                                            />
+                                                        );
+                                                    }) : (
                                                         <span className="text-sm text-slate-400 italic">Brak wprowadzonych talentów</span>
                                                     )}
                                                 </div>

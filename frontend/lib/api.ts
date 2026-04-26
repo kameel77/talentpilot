@@ -453,7 +453,7 @@ export const api = {
             description?: string;
             manager_id?: number | null;
         }): Promise<Team> => {
-            const response = await apiClient.put<Team>(`/api/teams/${id}`, data);
+            const response = await apiClient.patch<Team>(`/api/teams/${id}`, data);
             return response.data;
         },
 

@@ -32,10 +32,12 @@ export default function TalentBadge({
     name,
     domain,
     description,
+    hideDomainLabel = false,
 }: {
     name: string;
     domain?: string;
     description?: string;
+    hideDomainLabel?: boolean;
 }) {
     const normalized = normalizeDomain(domain);
     const color = domainColors[normalized] || "var(--color-domain-executing)";
@@ -52,9 +54,11 @@ export default function TalentBadge({
                 aria-hidden="true"
             />
             <span>{name}</span>
-            <span className="text-[10px] uppercase tracking-wide text-slate-400">
-                {label}
-            </span>
+            {!hideDomainLabel && (
+                <span className="text-[10px] uppercase tracking-wide text-slate-400">
+                    {label}
+                </span>
+            )}
             {description && (
                 <span className="pointer-events-none absolute -top-12 left-1/2 w-56 -translate-x-1/2 rounded-lg bg-slate-900 px-3 py-2 text-[11px] text-slate-100 opacity-0 shadow-lg transition-opacity group-hover:opacity-100">
                     {description}
