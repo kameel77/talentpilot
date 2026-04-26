@@ -19,10 +19,11 @@ import {
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { DOMAIN_LABELS, GALLUP_TALENTS } from "@/data/gallupTalents";
+import { DOMAIN_LABELS, GALLUP_TALENTS } from "@/lib/gallup-data";
 import { api, tokenManager } from "@/lib/api";
 import { cn } from "@/lib/utils";
-import { GallupDomain, UserTalent } from "@/types/talent";
+import { GallupDomain } from '@/lib/gallup-data';
+import { UserTalent } from '@/types/talent';
 
 interface UserProfile {
     id: number;
@@ -58,8 +59,8 @@ interface TalentListViewProps {
 function normalizeApiDomain(domain?: string): GallupDomain {
     if (!domain) return "executing";
     const normalized = domain.toLowerCase().replace(/\s+/g, "_");
-    if (normalized.includes("strategic")) return "strategic";
-    if (normalized.includes("relationship")) return "relationship";
+    if (normalized.includes("strategic")) return "strategic_thinking";
+    if (normalized.includes("relationship")) return "relationship_building";
     if (normalized.includes("influencing")) return "influencing";
     return "executing";
 }
@@ -79,7 +80,7 @@ function TalentListView({ talents, viewMode, talentLookup }: TalentListViewProps
         return acc;
     }, {} as Record<GallupDomain, Array<UserTalent & { talent: { namePl: string; domain: GallupDomain } }>>);
 
-    const domains: GallupDomain[] = ["executing", "influencing", "relationship", "strategic"];
+    const domains: GallupDomain[] = ["executing", "influencing", "relationship_building", "strategic_thinking"];
 
     return (
         <div className="space-y-4">
@@ -129,7 +130,7 @@ function DomainSummary({ talents, talentLookup }: { talents: UserTalent[]; talen
         return acc;
     }, {} as Record<GallupDomain, number>);
 
-    const domains: GallupDomain[] = ["executing", "influencing", "relationship", "strategic"];
+    const domains: GallupDomain[] = ["executing", "influencing", "relationship_building", "strategic_thinking"];
     const maxCount = Math.max(...Object.values(domainCounts), 1);
 
     return (
@@ -174,8 +175,8 @@ const quickTipTemplates = [
 const quickTipIcons: Record<GallupDomain, typeof Target> = {
     executing: Target,
     influencing: MessageCircle,
-    relationship: ThumbsUp,
-    strategic: Zap,
+    relationship_building: ThumbsUp,
+    strategic_thinking: Zap,
 };
 
 function parseBulletList(value?: string): string[] {
@@ -246,17 +247,17 @@ export default function UserProfilePage() {
     const talentLookup = useMemo(() => {
         const lookup = new Map<string, { name: string; namePl: string; domain: GallupDomain }>();
         GALLUP_TALENTS.forEach((talent) => {
-            lookup.set(talent.id, {
-                name: talent.name,
-                namePl: talent.namePl,
-                domain: talent.domain,
+            lookup.set(talent.code, {
+                name: talent.en,
+                namePl: talent.pl,
+                domain: talent.domain as GallupDomain,
             });
         });
         memberTalentResponse.forEach((ut) => {
             if (lookup.has(ut.talent.code)) return;
             lookup.set(ut.talent.code, {
-                name: ut.talent.translation.name,
-                namePl: ut.talent.translation.name,
+                name: ut.talent.translation?.name || ut.talent.code,
+                namePl: ut.talent.translation?.name || ut.talent.code,
                 domain: normalizeApiDomain(ut.talent.domain),
             });
         });
@@ -266,10 +267,10 @@ export default function UserProfilePage() {
     const currentUserLookup = useMemo(() => {
         const lookup = new Map<string, { name: string; namePl: string; domain: GallupDomain }>();
         GALLUP_TALENTS.forEach((talent) => {
-            lookup.set(talent.id, {
-                name: talent.name,
-                namePl: talent.namePl,
-                domain: talent.domain,
+            lookup.set(talent.code, {
+                name: talent.en,
+                namePl: talent.pl,
+                domain: talent.domain as GallupDomain,
             });
         });
         return lookup;
@@ -487,8 +488,8 @@ export default function UserProfilePage() {
                                                 "flex items-start gap-3 p-3 rounded-lg text-sm",
                                                 item.domain === "executing" && "bg-domain-executing-light text-domain-executing",
                                                 item.domain === "influencing" && "bg-domain-influencing-light text-domain-influencing",
-                                                item.domain === "relationship" && "bg-domain-relationship-light text-domain-relationship",
-                                                item.domain === "strategic" && "bg-domain-strategic-light text-domain-strategic"
+                                                item.domain === "relationship_building" && "bg-domain-relationship-light text-domain-relationship",
+                                                item.domain === "strategic_thinking" && "bg-domain-strategic-light text-domain-strategic"
                                             )}
                                         >
                                             <item.icon className="h-4 w-4 mt-0.5 shrink-0" />

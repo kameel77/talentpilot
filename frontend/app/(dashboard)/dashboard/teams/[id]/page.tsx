@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { UserPlus, Trash2, ChevronDown, Check, Crown, Edit2, Upload, Search, FileText, X, Loader2 } from "lucide-react";
-import { GALLUP_TALENTS } from "@/data/gallupTalents";
+import { GALLUP_TALENTS } from "@/lib/gallup-data";
 import { cn } from "@/lib/utils";
 
 
@@ -179,13 +179,22 @@ export default function TeamDetailPage() {
     };
 
     const toggleLeader = async (member: TeamMember) => {
+        const previousMembers = [...members];
         try {
             const newManagerId = member.is_leader ? null : parseInt(member.id as string, 10);
+            
+            // Optimistic update for UI responsiveness
+            setMembers(members.map(m => ({
+                ...m,
+                is_leader: m.id === member.id ? (newManagerId !== null) : false
+            })));
+
             await api.teams.update(teamId, { manager_id: newManagerId });
             await loadTeamData();
         } catch (err) {
             console.error(err);
-            alert("Błąd podczas zmiany lidera.");
+            setMembers(previousMembers);
+            alert("Błąd podczas zmiany lidera. Sprawdź, czy masz odpowiednie uprawnienia.");
         }
     };
 
@@ -384,8 +393,8 @@ export default function TeamDetailPage() {
                                                 >
                                                     <option value={0}>-- Wybierz talent --</option>
                                                     {allTalents.map(t => {
-                                                        const localTalent = GALLUP_TALENTS.find(gt => gt.id === t.code || gt.name === t.code || gt.namePl === t.code);
-                                                        const translatedName = localTalent?.namePl || t.translation?.name || t.code;
+                                                        const localTalent = GALLUP_TALENTS.find(gt => gt.code === t.code || gt.en === t.code || gt.pl === t.code);
+                                                        const translatedName = localTalent?.pl || t.translation?.name || t.code;
                                                         return (
                                                             <option key={t.id} value={t.id} disabled={selectedTalents.includes(t.id) && selectedTalents[idx] !== t.id}>
                                                                 {translatedName}
@@ -501,9 +510,9 @@ export default function TeamDetailPage() {
                                             <td className="py-4 px-6">
                                                 <div className="flex flex-wrap gap-1.5 max-w-md">
                                                     {top5.length > 0 ? top5.map((t) => {
-                                                        const localTalentInfo = GALLUP_TALENTS.find(gt => gt.id === t.talent || gt.name === t.talent || gt.namePl === t.talent);
-                                                        const translatedName = localTalentInfo?.namePl || t.talent;
-                                                        const translatedDesc = localTalentInfo?.descriptionPl || undefined;
+                                                        const localTalentInfo = GALLUP_TALENTS.find(gt => gt.code === t.talent || gt.en === t.talent || gt.pl === t.talent || gt.code.toLowerCase() === t.talent.toLowerCase());
+                                                        const translatedName = localTalentInfo?.pl || t.talent;
+                                                        const translatedDesc = localTalentInfo?.pl_desc || undefined;
 
                                                         return (
                                                             <div

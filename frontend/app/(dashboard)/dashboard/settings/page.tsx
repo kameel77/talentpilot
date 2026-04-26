@@ -37,7 +37,7 @@ import {
   DialogFooter,
   DialogClose,
 } from "@/components/ui/dialog";
-import { GALLUP_TALENTS } from "@/data/gallupTalents";
+import { GALLUP_TALENTS } from "@/lib/gallup-data";
 import { UserTalent } from "@/types/talent";
 import { api, tokenManager, type User as UserType, type Organization } from "@/lib/api";
 import { cn } from "@/lib/utils";
@@ -591,12 +591,12 @@ export default function SettingsPage() {
               <>
                 <div className="grid gap-2 sm:grid-cols-2">
                   {myTalents.slice(0, 10).map((userTalent) => {
-                    const talent = GALLUP_TALENTS.find(t => t.id === userTalent.talentId);
+                    const talent = GALLUP_TALENTS.find(t => t.code === userTalent.talentId);
                     if (!talent) return null;
                     const isTop5 = userTalent.rank <= 5;
                     return (
                       <div
-                        key={talent.id}
+                        key={talent.code}
                         className={cn(
                           "flex items-center gap-3 p-3 rounded-lg",
                           isTop5 ? "bg-primary/10 ring-1 ring-primary/30" : "bg-muted/50"
@@ -609,7 +609,7 @@ export default function SettingsPage() {
                           {userTalent.rank}
                         </div>
                         <div className="flex-1 min-w-0">
-                          <p className="font-medium truncate">{talent.namePl}</p>
+                          <p className="font-medium truncate">{talent.pl}</p>
                         </div>
                         <DomainBadge domain={talent.domain} size="sm" />
                       </div>

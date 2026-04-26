@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { DomainBadge } from '@/components/ui/DomainBadge';
-import { GALLUP_TALENTS, getTalentsByDomain, DOMAIN_LABELS } from '@/data/gallupTalents';
+import { GALLUP_TALENTS, getTalentsByDomain, DOMAIN_LABELS } from '@/lib/gallup-data';
 import { GallupDomain, UserTalent, GallupTalent } from '@/types/talent';
 import { Search, X, Lightbulb, Trophy, Star, Medal } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -16,7 +16,7 @@ interface ManualTalentInputProps {
     initialTalents?: UserTalent[];
 }
 
-const DOMAINS: GallupDomain[] = ['executing', 'influencing', 'relationship', 'strategic'];
+const DOMAINS: GallupDomain[] = ['executing', 'influencing', 'relationship_building', 'strategic_thinking'];
 
 type RankingView = '5' | '15' | '34';
 
@@ -31,12 +31,12 @@ export function ManualTalentInput({ onSave, initialTalents = [] }: ManualTalentI
     const filteredTalents = useMemo(() => {
         return GALLUP_TALENTS
             .filter((talent) => {
-                const matchesSearch = talent.namePl.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                    talent.name.toLowerCase().includes(searchQuery.toLowerCase());
+                const matchesSearch = talent.pl.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                    talent.en.toLowerCase().includes(searchQuery.toLowerCase());
                 const matchesDomain = activeTab === 'all' || talent.domain === activeTab;
                 return matchesSearch && matchesDomain;
             })
-            .sort((a, b) => a.namePl.localeCompare(b.namePl, 'pl'));
+            .sort((a, b) => a.pl.localeCompare(b.pl, 'pl'));
     }, [searchQuery, activeTab]);
 
     const getRank = (talentId: string) => selectedTalents.find(t => t.talentId === talentId)?.rank;
@@ -114,7 +114,7 @@ export function ManualTalentInput({ onSave, initialTalents = [] }: ManualTalentI
             .filter(t => t && t.rank <= maxRank)
             .sort((a, b) => a.rank - b.rank)
             .map(ut => {
-                const talent = GALLUP_TALENTS.find(t => t.id === ut.talentId);
+                const talent = GALLUP_TALENTS.find(t => t.code === ut.talentId);
                 return talent ? { ...ut, talent } : null;
             })
             .filter((t): t is (UserTalent & { talent: GallupTalent }) => t !== null && !!t.talent);
@@ -164,13 +164,13 @@ export function ManualTalentInput({ onSave, initialTalents = [] }: ManualTalentI
                             className={cn(
                                 activeTab === domain && domain === 'executing' && "bg-domain-executing hover:bg-domain-executing/90",
                                 activeTab === domain && domain === 'influencing' && "bg-domain-influencing hover:bg-domain-influencing/90",
-                                activeTab === domain && domain === 'relationship' && "bg-domain-relationship hover:bg-domain-relationship/90",
-                                activeTab === domain && domain === 'strategic' && "bg-domain-strategic hover:bg-domain-strategic/90",
+                                activeTab === domain && domain === 'relationship_building' && "bg-domain-relationship hover:bg-domain-relationship/90",
+                                activeTab === domain && domain === 'strategic_thinking' && "bg-domain-strategic hover:bg-domain-strategic/90",
                                 activeTab === domain && "text-white",
                                 activeTab !== domain && domain === 'executing' && "hover:bg-domain-executing-light hover:text-domain-executing hover:border-domain-executing/30",
                                 activeTab !== domain && domain === 'influencing' && "hover:bg-domain-influencing-light hover:text-domain-influencing hover:border-domain-influencing/30",
-                                activeTab !== domain && domain === 'relationship' && "hover:bg-domain-relationship-light hover:text-domain-relationship hover:border-domain-relationship/30",
-                                activeTab !== domain && domain === 'strategic' && "hover:bg-domain-strategic-light hover:text-domain-strategic hover:border-domain-strategic/30",
+                                activeTab !== domain && domain === 'relationship_building' && "hover:bg-domain-relationship-light hover:text-domain-relationship hover:border-domain-relationship/30",
+                                activeTab !== domain && domain === 'strategic_thinking' && "hover:bg-domain-strategic-light hover:text-domain-strategic hover:border-domain-strategic/30",
                             )}
                         >
                             {DOMAIN_LABELS[domain]?.pl || domain} ({getTalentsByDomain(domain).length})
@@ -188,12 +188,12 @@ export function ManualTalentInput({ onSave, initialTalents = [] }: ManualTalentI
                     <ScrollArea className="h-[500px] rounded-xl border border-slate-200/60 bg-white p-4 shadow-sm">
                         <div className="space-y-2">
                             {filteredTalents.map(talent => {
-                                const rank = getRank(talent.id);
+                                const rank = getRank(talent.code);
                                 const hasRank = rank !== undefined;
 
                                 return (
                                     <div
-                                        key={talent.id}
+                                        key={talent.code}
                                         className={cn(
                                             "flex items-center gap-2 p-2 rounded-xl transition-all border",
                                             hasRank
@@ -207,8 +207,8 @@ export function ManualTalentInput({ onSave, initialTalents = [] }: ManualTalentI
                                                 type="number"
                                                 min={1}
                                                 max={34}
-                                                value={editingTalentId === talent.id ? editingValue : (rank ?? '')}
-                                                onFocus={() => handleFocus(talent.id, rank)}
+                                                value={editingTalentId === talent.code ? editingValue : (rank ?? '')}
+                                                onFocus={() => handleFocus(talent.code, rank)}
                                                 onBlur={handleBlur}
                                                 onKeyDown={handleKeyDown}
                                                 onChange={(e) => handleChange(e.target.value)}
@@ -221,8 +221,8 @@ export function ManualTalentInput({ onSave, initialTalents = [] }: ManualTalentI
                                         </div>
 
                                         <div className="flex-1 min-w-0">
-                                            <p className="font-medium text-sm truncate">{talent.namePl}</p>
-                                            <p className="text-[10px] text-muted-foreground truncate">{talent.name}</p>
+                                            <p className="font-medium text-sm truncate">{talent.pl}</p>
+                                            <p className="text-[10px] text-muted-foreground truncate">{talent.en}</p>
                                         </div>
                                         <div className="shrink-0">
                                             <DomainBadge domain={talent.domain} size="sm" />
@@ -311,8 +311,8 @@ export function ManualTalentInput({ onSave, initialTalents = [] }: ManualTalentI
                                             />
                                         </div>
                                         <div className="flex-1 min-w-0">
-                                            <p className="font-medium text-sm truncate">{talent.namePl}</p>
-                                            <p className="text-[10px] text-muted-foreground truncate">{talent.name}</p>
+                                            <p className="font-medium text-sm truncate">{talent.pl}</p>
+                                            <p className="text-[10px] text-muted-foreground truncate">{talent.en}</p>
                                         </div>
                                         <div className="shrink-0">
                                             <DomainBadge domain={talent.domain} size="sm" />

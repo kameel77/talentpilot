@@ -1,6 +1,6 @@
-import { GallupDomain } from '@/types/talent';
+import { GallupDomain } from '@/lib/gallup-data';
 export type DomainType = GallupDomain;
-import { DOMAIN_LABELS } from '@/data/gallupTalents';
+import { DOMAIN_LABELS } from '@/lib/gallup-data';
 import { cn } from '@/lib/utils';
 
 interface DomainBadgeProps {
@@ -11,8 +11,6 @@ interface DomainBadgeProps {
 }
 
 export function DomainBadge({ domain, size = 'md', showLabel = true, className }: DomainBadgeProps) {
-    // console.log('[DomainBadge] Rendering domain:', domain);
-
     if (!domain) return null;
 
     const label = DOMAIN_LABELS[domain as GallupDomain]?.pl || domain;
@@ -26,8 +24,8 @@ export function DomainBadge({ domain, size = 'md', showLabel = true, className }
                 size === 'lg' && "px-3.5 py-1.5 text-sm",
                 domain === 'executing' && "bg-domain-executing-light text-domain-executing border-domain-executing/30",
                 domain === 'influencing' && "bg-domain-influencing-light text-domain-influencing border-domain-influencing/30",
-                domain === 'relationship' && "bg-domain-relationship-light text-domain-relationship border-domain-relationship/30",
-                domain === 'strategic' && "bg-domain-strategic-light text-domain-strategic border-domain-strategic/30",
+                domain === 'relationship_building' && "bg-domain-relationship-light text-domain-relationship border-domain-relationship/30",
+                domain === 'strategic_thinking' && "bg-domain-strategic-light text-domain-strategic border-domain-strategic/30",
                 className
             )}
         >

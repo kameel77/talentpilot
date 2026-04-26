@@ -4,7 +4,7 @@ import { useState, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { DomainBadge } from '@/components/ui/DomainBadge';
-import { GALLUP_TALENTS } from '@/data/gallupTalents';
+import { GALLUP_TALENTS } from '@/lib/gallup-data';
 import { UserTalent } from '@/types/talent';
 import { api } from '@/lib/api';
 import {
@@ -199,9 +199,9 @@ export function PdfTalentImport({ userId, onUsersChange, onImportComplete, onSwi
     };
 
     const getTalentDisplayName = (talentId: string) => {
-        const talent = GALLUP_TALENTS.find(t => t.id === talentId);
+        const talent = GALLUP_TALENTS.find(t => t.code === talentId);
         if (!talent) return talentId;
-        return language === 'pl' ? talent.namePl : talent.name;
+        return language === 'pl' ? talent.pl : talent.en;
     };
 
     return (
@@ -351,7 +351,7 @@ export function PdfTalentImport({ userId, onUsersChange, onImportComplete, onSwi
                                             <div className="flex-1 min-w-0">
                                                 <p className="font-medium truncate">{getTalentDisplayName(talentId)}</p>
                                             </div>
-                                            <DomainBadge domain={GALLUP_TALENTS.find(t => t.id === talentId)?.domain || 'executing'} size="sm" />
+                                            <DomainBadge domain={GALLUP_TALENTS.find(t => t.code === talentId)?.domain || 'executing'} size="sm" />
                                         </div>
                                     );
                                 })}

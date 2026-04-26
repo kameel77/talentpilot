@@ -1,13 +1,8 @@
-export type GallupDomain = 'executing' | 'influencing' | 'relationship' | 'strategic';
-
-export interface GallupTalent {
-    id: string;
-    name: string;
-    namePl: string;
-    domain: GallupDomain;
-    description: string;
-    descriptionPl: string;
-}
+/**
+ * Re-export canonical talent types from lib/gallup-data.ts
+ * This file exists for backwards compatibility with existing imports.
+ */
+export type { GallupDomain, GallupTalent } from '@/lib/gallup-data';
 
 export interface UserTalent {
     talentId: string;

@@ -136,7 +136,8 @@ def get_team(
         )
     
     # Check organization access
-    if team.organization_id != active_org_id:
+    accessible = _accessible_org_ids(db, current_user)
+    if team.organization_id not in accessible:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Access denied to this team"
@@ -165,7 +166,8 @@ def update_team(
         )
     
     # Check organization access
-    if team.organization_id != active_org_id:
+    accessible = _accessible_org_ids(db, current_user)
+    if team.organization_id not in accessible:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Access denied to this team"
@@ -205,7 +207,8 @@ def delete_team(
         )
     
     # Check organization access
-    if team.organization_id != active_org_id:
+    accessible = _accessible_org_ids(db, current_user)
+    if team.organization_id not in accessible:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Access denied to this team"
@@ -236,7 +239,8 @@ def get_team_matrix(
         )
     
     # Check organization access
-    if team.organization_id != active_org_id:
+    accessible = _accessible_org_ids(db, current_user)
+    if team.organization_id not in accessible:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Access denied to this team"

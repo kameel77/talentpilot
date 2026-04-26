@@ -3,8 +3,8 @@
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { TalentImportDialog } from '@/components/talent-import/TalentImportDialog';
-import { DOMAIN_LABELS, GALLUP_TALENTS } from '@/data/gallupTalents';
-import { UserTalent, GallupDomain } from '@/types/talent';
+import { DOMAIN_LABELS, GALLUP_TALENTS, GallupDomain } from '@/lib/gallup-data';
+import { UserTalent } from '@/types/talent';
 import { Card } from '@/components/ui/card';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { api, tokenManager, User, UserDetailResponse } from '@/lib/api';
@@ -53,7 +53,7 @@ function TalentListView({ talents, viewMode }: TalentListViewProps) {
     }
 
     const groupedTalents = displayTalents.reduce((acc, userTalent) => {
-        const talent = GALLUP_TALENTS.find(t => t.id === userTalent.talentId);
+        const talent = GALLUP_TALENTS.find(t => t.code === userTalent.talentId);
         if (talent) {
             if (!acc[talent.domain]) acc[talent.domain] = [];
             acc[talent.domain].push({ ...userTalent, talent });
@@ -61,7 +61,7 @@ function TalentListView({ talents, viewMode }: TalentListViewProps) {
         return acc;
     }, {} as Record<GallupDomain, Array<UserTalent & { talent: typeof GALLUP_TALENTS[0] }>>);
 
-    const domains: GallupDomain[] = ['executing', 'influencing', 'relationship', 'strategic'];
+    const domains: GallupDomain[] = ['executing', 'influencing', 'relationship_building', 'strategic_thinking'];
 
     return (
         <div className="space-y-4">
@@ -77,7 +77,7 @@ function TalentListView({ talents, viewMode }: TalentListViewProps) {
                         <div className="flex flex-wrap gap-2">
                             {domainTalents.map(({ talent, rank }) => (
                                 <div
-                                    key={talent.id}
+                                    key={talent.code}
                                     className={cn(
                                         "inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium border transition-colors",
                                         `domain-${domain}`
@@ -89,7 +89,7 @@ function TalentListView({ talents, viewMode }: TalentListViewProps) {
                                     >
                                         {rank}
                                     </span>
-                                    {talent.namePl}
+                                    {talent.pl}
                                 </div>
                             ))}
                         </div>
@@ -104,14 +104,14 @@ function DomainSummary({ talents }: { talents: UserTalent[] }) {
     const top15 = talents.filter(t => t.rank <= 15);
 
     const domainCounts = top15.reduce((acc, userTalent) => {
-        const talent = GALLUP_TALENTS.find(t => t.id === userTalent.talentId);
+        const talent = GALLUP_TALENTS.find(t => t.code === userTalent.talentId);
         if (talent) {
             acc[talent.domain] = (acc[talent.domain] || 0) + 1;
         }
         return acc;
     }, {} as Record<GallupDomain, number>);
 
-    const domains: GallupDomain[] = ['executing', 'influencing', 'relationship', 'strategic'];
+    const domains: GallupDomain[] = ['executing', 'influencing', 'relationship_building', 'strategic_thinking'];
     const maxCount = Math.max(...Object.values(domainCounts), 1);
 
     return (
@@ -370,7 +370,7 @@ export default function MyTalentsPage() {
         if (!hasTalents) return null;
         const top5 = myTalents.filter(t => t.rank <= 5);
         const domainCounts = top5.reduce((acc, userTalent) => {
-            const talent = GALLUP_TALENTS.find(t => t.id === userTalent.talentId);
+            const talent = GALLUP_TALENTS.find(t => t.code === userTalent.talentId);
             if (talent) acc[talent.domain] = (acc[talent.domain] || 0) + 1;
             return acc;
         }, {} as Record<GallupDomain, number>);
@@ -573,9 +573,9 @@ export default function MyTalentsPage() {
                             <div className="space-y-3">
                                 {[
                                     { icon: Target, tip: 'Zacznij dzień od ustalenia 3 najważniejszych celów', domain: 'executing' as GallupDomain },
-                                    { icon: Zap, tip: 'Wykorzystaj swoje talenty do planowania spotkań', domain: 'strategic' as GallupDomain },
+                                    { icon: Zap, tip: 'Wykorzystaj swoje talenty do planowania spotkań', domain: 'strategic_thinking' as GallupDomain },
                                     { icon: MessageCircle, tip: 'Dziel się swoją perspektywą — Twój głos ma znaczenie', domain: 'influencing' as GallupDomain },
-                                    { icon: ThumbsUp, tip: 'Buduj głębokie relacje, nie powierzchowne kontakty', domain: 'relationship' as GallupDomain },
+                                    { icon: ThumbsUp, tip: 'Buduj głębokie relacje, nie powierzchowne kontakty', domain: 'relationship_building' as GallupDomain },
                                 ].map((item, i) => (
                                     <div
                                         key={i}
@@ -583,8 +583,8 @@ export default function MyTalentsPage() {
                                             "flex items-start gap-3 p-3 rounded-lg text-sm",
                                             item.domain === 'executing' && "bg-domain-executing-light text-domain-executing",
                                             item.domain === 'influencing' && "bg-domain-influencing-light text-domain-influencing",
-                                            item.domain === 'relationship' && "bg-domain-relationship-light text-domain-relationship",
-                                            item.domain === 'strategic' && "bg-domain-strategic-light text-domain-strategic",
+                                            item.domain === 'relationship_building' && "bg-domain-relationship-light text-domain-relationship",
+                                            item.domain === 'strategic_thinking' && "bg-domain-strategic-light text-domain-strategic",
                                         )}
                                     >
                                         <item.icon className="h-4 w-4 mt-0.5 shrink-0" />
