@@ -560,6 +560,7 @@ export default function PresentationContent({ token }: { token: string }) {
                                         />
                                         <PolarRadiusAxis tick={false} axisLine={false} />
                                         <Radar dataKey="value" stroke="var(--text-secondary)" fill="var(--text-secondary)" fillOpacity={0.3} strokeWidth={2} />
+                                        {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
                                         <Tooltip content={({ active, payload }: any) => {
                                             if (!active || !payload?.[0]) return null;
                                             const p = payload[0].payload;

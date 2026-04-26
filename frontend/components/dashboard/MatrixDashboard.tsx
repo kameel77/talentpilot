@@ -317,6 +317,7 @@ export default function MatrixDashboard({ members }: MatrixDashboardProps) {
                                         />
                                         <PolarRadiusAxis tick={false} axisLine={false} />
                                         <Radar dataKey="value" stroke="#94a3b8" fill="#cbd5e1" fillOpacity={0.3} strokeWidth={2} />
+                                        {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
                                         <Tooltip content={({ active, payload }: any) => {
                                             if (!active || !payload?.[0]) return null;
                                             const p = payload[0].payload;
