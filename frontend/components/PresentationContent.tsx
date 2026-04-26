@@ -504,7 +504,7 @@ export default function PresentationContent({ token }: { token: string }) {
                     <div style={{ display: 'grid', gridTemplateColumns: '4fr 2fr 4fr', gap: 20 }}>
                         <div className="glass-card" style={{ padding: 24, display: 'flex', flexDirection: 'column' }}>
                             <h3 style={{ fontSize: 16, fontWeight: 600, marginBottom: 16 }}>
-                                {tt('domainCount')} {showTop10 ? tt('top10') : tt('top5')}
+                                {t('domainCount')} {showTop10 ? t('top10') : t('top5')}
                             </h3>
                             {sourceMembers.length > 0 ? (
                                 <ResponsiveContainer width="100%" height={300}>
@@ -525,7 +525,7 @@ export default function PresentationContent({ token }: { token: string }) {
                         {/* Team Rank Tag List */}
                         <div className="glass-card" style={{ padding: 24 }}>
                             <h3 style={{ fontSize: 14, fontWeight: 600, marginBottom: 12 }}>
-                                {tt('teamRankList')}
+                                {t('teamRankList')}
                             </h3>
                             <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                                 {teamTopN.map(tr => {
@@ -541,18 +541,18 @@ export default function PresentationContent({ token }: { token: string }) {
                         </div>
 
                         <div className="glass-card" style={{ padding: 24 }}>
-                            <h3 style={{ fontSize: 16, fontWeight: 600, marginBottom: 16 }}>{tt('domainStrength')} — Radar</h3>
+                            <h3 style={{ fontSize: 16, fontWeight: 600, marginBottom: 16 }}>{t('domainStrength')} — Radar</h3>
                             {sourceMembers.length > 0 ? (
                                 <ResponsiveContainer width="100%" height={300}>
                                     <RadarChart data={radarData} cx="50%" cy="50%" outerRadius={100}>
                                         <PolarGrid stroke="var(--border-color)" />
                                         <PolarAngleAxis
                                             dataKey="domain"
-                                            tick={(props: { payload?: { value: string }, x?: number, y?: number, textAnchor?: string }) => {
-                                                if (!props.payload) return null;
+                                            tick={(props: { payload?: { value: string }, x?: string | number, y?: string | number, textAnchor?: "end" | "inherit" | "middle" | "start" }) => {
+                                                if (!props.payload) return <text></text>;
                                                 const item = radarData.find(d => d.domain === props.payload!.value);
                                                 return (
-                                                    <text x={props.x} y={props.y} textAnchor={props.textAnchor} fill={item?.color || 'var(--text-secondary)'} fontSize={12} fontWeight={600} dy={props.y > 150 ? 12 : -4}>
+                                                    <text x={props.x} y={props.y} textAnchor={props.textAnchor} fill={item?.color || 'var(--text-secondary)'} fontSize={12} fontWeight={600} dy={typeof props.y === 'number' && props.y > 150 ? 12 : -4}>
                                                         {props.payload.value}
                                                     </text>
                                                 );
@@ -560,13 +560,13 @@ export default function PresentationContent({ token }: { token: string }) {
                                         />
                                         <PolarRadiusAxis tick={false} axisLine={false} />
                                         <Radar dataKey="value" stroke="var(--text-secondary)" fill="var(--text-secondary)" fillOpacity={0.3} strokeWidth={2} />
-                                        <Tooltip content={({ active, payload }: { active?: boolean, payload?: Array<{ payload: { domain: string, score: number } }> }) => {
+                                        <Tooltip content={({ active, payload }: any) => {
                                             if (!active || !payload?.[0]) return null;
                                             const p = payload[0].payload;
                                             return (
                                                 <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border-color)', borderRadius: 8, padding: '8px 12px', color: 'var(--text-primary)' }}>
                                                     <div style={{ fontWeight: 600 }}>{p.domain}</div>
-                                                    <div>{p.score} {tt('pts')}</div>
+                                                    <div>{p.score} {t('pts')}</div>
                                                 </div>
                                             );
                                         }} />
@@ -580,7 +580,7 @@ export default function PresentationContent({ token }: { token: string }) {
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
                     <div className="glass-card" style={{ padding: 24, gridColumn: '1 / -1' }}>
                         <h3 style={{ fontSize: 16, fontWeight: 600, marginBottom: 16 }}>
-                            {tt('heatmap')} — Most common in Top 10
+                            {t('heatmap')} — Most common in Top 10
                         </h3>
                         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
                             {Object.entries(talentTop10Counts)
@@ -602,10 +602,10 @@ export default function PresentationContent({ token }: { token: string }) {
                     <div className="glass-card" style={{ padding: 24 }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
                             <TrendingDown size={18} style={{ color: '#ef4444' }} />
-                            <h3 style={{ fontSize: 16, fontWeight: 600 }}>{tt('teamWeaknesses')}</h3>
+                            <h3 style={{ fontSize: 16, fontWeight: 600 }}>{t('teamWeaknesses')}</h3>
                         </div>
                         <p style={{ fontSize: 12, color: 'var(--text-secondary)', marginBottom: 16 }}>
-                            {tt('teamWeaknessesDesc')}
+                            {t('teamWeaknessesDesc')}
                         </p>
                         {teamWeaknesses.length > 0 ? (
                             <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
@@ -621,23 +621,23 @@ export default function PresentationContent({ token }: { token: string }) {
                                                 <div style={{ width: `${w.percentage}%`, height: '100%', borderRadius: 4, background: 'linear-gradient(90deg, #ef4444, #dc2626)' }} />
                                             </div>
                                             <div style={{ flex: '0 0 70px', fontSize: 12, color: 'var(--text-secondary)', textAlign: 'right' }}>
-                                                {w.percentage}% {tt('ofTeam')}
+                                                {w.percentage}% {t('ofTeam')}
                                             </div>
                                         </div>
                                     );
                                 })}
                             </div>
-                        ) : <p style={{ color: 'var(--text-secondary)', fontSize: 13 }}>✅ {tt('noWeaknesses')}</p>}
+                        ) : <p style={{ color: 'var(--text-secondary)', fontSize: 13 }}>✅ {t('noWeaknesses')}</p>}
                     </div>
 
                     {/* P1: SPOF Alerts */}
                     <div className="glass-card" style={{ padding: 24 }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
                             <ShieldAlert size={18} style={{ color: '#f59e0b' }} />
-                            <h3 style={{ fontSize: 16, fontWeight: 600 }}>{tt('spofAlerts')}</h3>
+                            <h3 style={{ fontSize: 16, fontWeight: 600 }}>{t('spofAlerts')}</h3>
                         </div>
                         <p style={{ fontSize: 12, color: 'var(--text-secondary)', marginBottom: 16 }}>
-                            {tt('spofAlertsDesc')}
+                            {t('spofAlertsDesc')}
                         </p>
                         {spofList.length > 0 ? (
                             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
@@ -658,14 +658,14 @@ export default function PresentationContent({ token }: { token: string }) {
                                                     {talent[locale as 'en' | 'pl']}
                                                 </div>
                                                 <div style={{ fontSize: 11, color: 'var(--text-secondary)' }}>
-                                                    {tt('soleCarrier')}: {carrier.name} (#{spof.memberRank})
+                                                    {t('soleCarrier')}: {carrier.name} (#{spof.memberRank})
                                                 </div>
                                             </div>
                                         </div>
                                     );
                                 })}
                             </div>
-                        ) : <p style={{ color: 'var(--text-secondary)', fontSize: 13 }}>✅ {tt('noSpof')}</p>}
+                        ) : <p style={{ color: 'var(--text-secondary)', fontSize: 13 }}>✅ {t('noSpof')}</p>}
                     </div>
                     </div>
                 </div>
@@ -705,7 +705,7 @@ export default function PresentationContent({ token }: { token: string }) {
                                                 {specialist.isSpecialist && (
                                                     <span
                                                         className="specialist-star"
-                                                        data-tooltip={tt('specialistTooltip')}
+                                                        data-tooltip={t('specialistTooltip')}
                                                         style={{
                                                             position: 'absolute', top: -6, right: -8,
                                                             cursor: 'help',
@@ -721,7 +721,7 @@ export default function PresentationContent({ token }: { token: string }) {
 
                                         <div style={{ marginBottom: 16 }}>
                                             <p style={{ fontSize: 11, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 8 }}>
-                                                {showTop10 ? tt('top10') : tt('top5')}
+                                                {showTop10 ? t('top10') : t('top5')}
                                             </p>
                                             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
                                                 {topN.map(r => {

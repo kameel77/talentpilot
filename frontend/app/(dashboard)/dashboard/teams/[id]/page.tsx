@@ -5,6 +5,7 @@ import { useParams, useRouter } from "next/navigation";
 import { api } from "@/lib/api";
 
 import MatrixDashboard from "@/components/dashboard/MatrixDashboard";
+import TalentBadge from "@/components/dashboard/TalentBadge";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -52,20 +53,6 @@ interface Team {
     name: string;
     description?: string;
 }
-
-const getDomainColor = (domain: string) => {
-    const domainMap: Record<string, string> = {
-        'Executing': 'bg-purple-100 text-purple-700 border-purple-200',
-        'Wykonywanie': 'bg-purple-100 text-purple-700 border-purple-200',
-        'Influencing': 'bg-yellow-100 text-yellow-700 border-yellow-200',
-        'Wpływanie': 'bg-yellow-100 text-yellow-700 border-yellow-200',
-        'Relationship Building': 'bg-blue-100 text-blue-700 border-blue-200',
-        'Budowanie relacji': 'bg-blue-100 text-blue-700 border-blue-200',
-        'Strategic Thinking': 'bg-red-100 text-red-700 border-red-200',
-        'Myślenie strategiczne': 'bg-red-100 text-red-700 border-red-200',
-    };
-    return domainMap[domain] || 'bg-slate-100 text-slate-700 border-slate-200';
-};
 
 export default function TeamDetailPage() {
     const params = useParams();
@@ -179,7 +166,6 @@ export default function TeamDetailPage() {
             await api.users.update(editingMember.id as number, {
                 full_name: editingMember.name,
                 email: editingMember.email,
-                job_title: editingMember.role,
             });
             setEditingMember(null);
             await loadTeamData();
@@ -212,7 +198,7 @@ export default function TeamDetailPage() {
         for (let i = 0; i < files.length; i++) {
             setPdfImportItems(prev => prev.map((it, idx) => idx === i ? { ...it, status: 'processing' } : it));
             try {
-                const data = await api.invitations.parsePdf(files[i]);
+                const data = await api.gallup.parsePdf(files[i]);
                 const name = `${data.person?.first_name || ''} ${data.person?.last_name || ''}`.trim() || files[i].name.replace('.pdf', '');
                 
                 const mappedTalents = (data.talents || []).map((t: { talent: string; rank: number }) => {
@@ -508,13 +494,11 @@ export default function TeamDetailPage() {
                                             <td className="py-4 px-6">
                                                 <div className="flex flex-wrap gap-1.5 max-w-md">
                                                     {top5.length > 0 ? top5.map((t) => (
-                                                        <span 
-                                                            key={t.talent} 
-                                                            className={`text-[11px] px-2.5 py-1 rounded-full border font-medium truncate max-w-[140px] ${getDomainColor(t.domain)}`} 
-                                                            title={t.talent}
-                                                        >
-                                                            {t.rank}. {t.talent}
-                                                        </span>
+                                                        <TalentBadge
+                                                            key={t.talent}
+                                                            name={`${t.rank}. ${t.talent}`}
+                                                            domain={t.domain}
+                                                        />
                                                     )) : (
                                                         <span className="text-sm text-slate-400 italic">Brak wprowadzonych talentów</span>
                                                     )}

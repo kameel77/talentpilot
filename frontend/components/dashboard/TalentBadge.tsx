@@ -20,7 +20,12 @@ function normalizeDomain(domain?: string) {
     if (!domain) {
         return "executing";
     }
-    return domain.toLowerCase().replace(/\s+/g, "_");
+    const d = domain.toLowerCase().trim();
+    if (d === 'wykonywanie') return 'executing';
+    if (d === 'wpływanie' || d === 'wywieranie wpływu') return 'influencing';
+    if (d === 'budowanie relacji') return 'relationship_building';
+    if (d === 'myślenie strategiczne') return 'strategic_thinking';
+    return d.replace(/\s+/g, "_");
 }
 
 export default function TalentBadge({

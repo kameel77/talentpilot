@@ -305,11 +305,11 @@ export default function MatrixDashboard({ members }: MatrixDashboardProps) {
                                         <PolarGrid stroke="#e2e8f0" />
                                         <PolarAngleAxis
                                             dataKey="domain"
-                                            tick={(props: { payload?: { value: string }, x?: number, y?: number, textAnchor?: string }) => {
-                                                if (!props.payload) return null;
+                                            tick={(props: { payload?: { value: string }, x?: string | number, y?: string | number, textAnchor?: "end" | "inherit" | "middle" | "start" }) => {
+                                                if (!props.payload) return <text></text>;
                                                 const item = radarData.find(d => d.domain === props.payload!.value);
                                                 return (
-                                                    <text x={props.x} y={props.y} textAnchor={props.textAnchor} fill={item?.color || '#64748b'} fontSize={12} fontWeight={600} dy={props.y > 150 ? 12 : -4}>
+                                                    <text x={props.x} y={props.y} textAnchor={props.textAnchor} fill={item?.color || '#64748b'} fontSize={12} fontWeight={600} dy={typeof props.y === 'number' && props.y > 150 ? 12 : -4}>
                                                         {props.payload.value}
                                                     </text>
                                                 );
@@ -317,7 +317,7 @@ export default function MatrixDashboard({ members }: MatrixDashboardProps) {
                                         />
                                         <PolarRadiusAxis tick={false} axisLine={false} />
                                         <Radar dataKey="value" stroke="#94a3b8" fill="#cbd5e1" fillOpacity={0.3} strokeWidth={2} />
-                                        <Tooltip content={({ active, payload }: { active?: boolean, payload?: Array<{ payload: { domain: string, score: number } }> }) => {
+                                        <Tooltip content={({ active, payload }: any) => {
                                             if (!active || !payload?.[0]) return null;
                                             const p = payload[0].payload;
                                             return (
