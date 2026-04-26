@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { TalentImportDialog } from '@/components/talent-import/TalentImportDialog';
-import { DOMAIN_LABELS, GALLUP_TALENTS, GallupDomain } from '@/lib/gallup-data';
+import { DOMAIN_LABELS, DOMAIN_CSS_KEY, GALLUP_TALENTS, GallupDomain } from '@/lib/gallup-data';
 import { UserTalent } from '@/types/talent';
 import { Card } from '@/components/ui/card';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -80,12 +80,12 @@ function TalentListView({ talents, viewMode }: TalentListViewProps) {
                                     key={talent.code}
                                     className={cn(
                                         "inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium border transition-colors",
-                                        `domain-${domain}`
+                                        `domain-${DOMAIN_CSS_KEY[domain]}`
                                     )}
                                 >
                                     <span
                                         className="w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold text-white shadow-sm"
-                                        style={{ backgroundColor: `var(--color-domain-${domain})` }}
+                                        style={{ backgroundColor: `var(--color-domain-${DOMAIN_CSS_KEY[domain]})` }}
                                     >
                                         {rank}
                                     </span>
@@ -128,10 +128,10 @@ function DomainSummary({ talents }: { talents: UserTalent[] }) {
                         </div>
                         <div className="h-2 bg-muted rounded-full overflow-hidden">
                             <div
-                                className={cn("h-full rounded-full transition-all", `bg-domain-${domain}`)}
+                                className={cn("h-full rounded-full transition-all", `bg-domain-${DOMAIN_CSS_KEY[domain]}`)}
                                 style={{
                                     width: `${percentage}%`,
-                                    backgroundColor: `var(--color-domain-${domain})`
+                                    backgroundColor: `var(--color-domain-${DOMAIN_CSS_KEY[domain]})`
                                 }}
                             />
                         </div>

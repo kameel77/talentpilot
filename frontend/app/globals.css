@@ -38,11 +38,6 @@
   --color-domain-relationship-light: #EBF5FF;
   --color-domain-strategic: #1FAD91;
   --color-domain-strategic-light: #E9FBF8;
-  /* Aliases for canonical domain names (relationship_building, strategic_thinking) */
-  --color-domain-relationship_building: #1A80E6;
-  --color-domain-relationship_building-light: #EBF5FF;
-  --color-domain-strategic_thinking: #1FAD91;
-  --color-domain-strategic_thinking-light: #E9FBF8;
 
   /* Status colors */
   --color-success: hsl(152 60% 42%);

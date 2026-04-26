@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { UserPlus, Trash2, ChevronDown, Check, Crown, Edit2, Upload, Search, FileText, X, Loader2 } from "lucide-react";
-import { GALLUP_TALENTS } from "@/lib/gallup-data";
+import { GALLUP_TALENTS, DOMAIN_CSS_KEY } from "@/lib/gallup-data";
 import { cn } from "@/lib/utils";
 
 
@@ -519,12 +519,12 @@ export default function TeamDetailPage() {
                                                                 key={t.talent}
                                                                 className={cn(
                                                                     "relative inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium border transition-colors hover:[&>.talent-tooltip]:opacity-100",
-                                                                    `domain-${t.domain}`
+                                                                    `domain-${DOMAIN_CSS_KEY[t.domain as keyof typeof DOMAIN_CSS_KEY] || t.domain}`
                                                                 )}
                                                             >
                                                                 <span
                                                                     className="w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold text-white shadow-sm"
-                                                                    style={{ backgroundColor: `var(--color-domain-${t.domain})` }}
+                                                                    style={{ backgroundColor: `var(--color-domain-${DOMAIN_CSS_KEY[t.domain as keyof typeof DOMAIN_CSS_KEY] || t.domain})` }}
                                                                 >
                                                                     {t.rank}
                                                                 </span>

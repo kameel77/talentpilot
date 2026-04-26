@@ -40,6 +40,17 @@ export function getDomainStyle(domain: GallupDomain, opacity: number = 100): str
     return `color-mix(in srgb, ${varName} ${opacity}%, transparent)`;
 }
 
+/**
+ * Maps canonical domain names to short CSS class keys used in globals.css.
+ * Use this when building dynamic CSS class names like `domain-${cssKey}`.
+ */
+export const DOMAIN_CSS_KEY: Record<GallupDomain, string> = {
+    executing: 'executing',
+    influencing: 'influencing',
+    relationship_building: 'relationship',
+    strategic_thinking: 'strategic',
+};
+
 export const DOMAIN_LABELS: Record<GallupDomain, { en: string; pl: string }> = {
     executing: { en: 'Executing', pl: 'Wykonywanie' },
     influencing: { en: 'Influencing', pl: 'Wywieranie wpływu' },
