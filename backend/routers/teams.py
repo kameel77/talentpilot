@@ -172,12 +172,13 @@ def update_team(
         )
     
     # Update fields
-    if data.name is not None:
-        team.name = data.name
-    if data.description is not None:
-        team.description = data.description
-    if data.manager_id is not None:
-        team.manager_id = data.manager_id
+    update_data = data.model_dump(exclude_unset=True)
+    if "name" in update_data:
+        team.name = update_data["name"]
+    if "description" in update_data:
+        team.description = update_data["description"]
+    if "manager_id" in update_data:
+        team.manager_id = update_data["manager_id"]
     
     db.commit()
     db.refresh(team)

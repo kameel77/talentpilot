@@ -5,12 +5,14 @@ import { useParams, useRouter } from "next/navigation";
 import { api } from "@/lib/api";
 
 import MatrixDashboard from "@/components/dashboard/MatrixDashboard";
-import TalentBadge from "@/components/dashboard/TalentBadge";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { UserPlus, Trash2, ChevronDown, Check, Crown, Edit2, Upload, Search, FileText, X, Loader2 } from "lucide-react";
+import { GALLUP_TALENTS } from "@/data/gallupTalents";
+import { cn } from "@/lib/utils";
+
 
 interface MemberResult {
     id: string | number;
@@ -178,8 +180,8 @@ export default function TeamDetailPage() {
 
     const toggleLeader = async (member: TeamMember) => {
         try {
-            const newManagerId = member.is_leader ? null : member.id;
-            await api.teams.update(teamId, { manager_id: newManagerId as number | null });
+            const newManagerId = member.is_leader ? null : parseInt(member.id as string, 10);
+            await api.teams.update(teamId, { manager_id: newManagerId });
             await loadTeamData();
         } catch (err) {
             console.error(err);
@@ -381,11 +383,15 @@ export default function TeamDetailPage() {
                                                     onChange={(e) => handleTalentChange(idx, parseInt(e.target.value))}
                                                 >
                                                     <option value={0}>-- Wybierz talent --</option>
-                                                    {allTalents.map(t => (
-                                                        <option key={t.id} value={t.id} disabled={selectedTalents.includes(t.id) && selectedTalents[idx] !== t.id}>
-                                                            {t.translation?.name || t.code}
-                                                        </option>
-                                                    ))}
+                                                    {allTalents.map(t => {
+                                                        const localTalent = GALLUP_TALENTS.find(gt => gt.id === t.code || gt.name === t.code || gt.namePl === t.code);
+                                                        const translatedName = localTalent?.namePl || t.translation?.name || t.code;
+                                                        return (
+                                                            <option key={t.id} value={t.id} disabled={selectedTalents.includes(t.id) && selectedTalents[idx] !== t.id}>
+                                                                {translatedName}
+                                                            </option>
+                                                        );
+                                                    })}
                                                 </select>
                                             </div>
                                         ))}
@@ -495,18 +501,32 @@ export default function TeamDetailPage() {
                                             <td className="py-4 px-6">
                                                 <div className="flex flex-wrap gap-1.5 max-w-md">
                                                     {top5.length > 0 ? top5.map((t) => {
-                                                        const talentInfo = allTalents.find(at => at.code === t.talent || at.translation?.name === t.talent);
-                                                        const translatedName = talentInfo?.translation?.name || t.talent;
-                                                        const translatedDesc = talentInfo?.translation?.description || undefined;
+                                                        const localTalentInfo = GALLUP_TALENTS.find(gt => gt.id === t.talent || gt.name === t.talent || gt.namePl === t.talent);
+                                                        const translatedName = localTalentInfo?.namePl || t.talent;
+                                                        const translatedDesc = localTalentInfo?.descriptionPl || undefined;
 
                                                         return (
-                                                            <TalentBadge
+                                                            <div
                                                                 key={t.talent}
-                                                                name={`${t.rank}. ${translatedName}`}
-                                                                domain={t.domain}
-                                                                description={translatedDesc}
-                                                                hideDomainLabel
-                                                            />
+                                                                className={cn(
+                                                                    "relative inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium border transition-colors hover:[&>.talent-tooltip]:opacity-100",
+                                                                    `domain-${t.domain}`
+                                                                )}
+                                                            >
+                                                                <span
+                                                                    className="w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold text-white shadow-sm"
+                                                                    style={{ backgroundColor: `var(--color-domain-${t.domain})` }}
+                                                                >
+                                                                    {t.rank}
+                                                                </span>
+                                                                {translatedName}
+                                                                
+                                                                {translatedDesc && (
+                                                                    <div className="talent-tooltip pointer-events-none absolute bottom-full left-1/2 mb-2 w-64 -translate-x-1/2 rounded-lg bg-slate-900 px-3 py-2 text-xs text-slate-100 opacity-0 shadow-lg transition-opacity z-50 whitespace-normal text-center">
+                                                                        {translatedDesc}
+                                                                    </div>
+                                                                )}
+                                                            </div>
                                                         );
                                                     }) : (
                                                         <span className="text-sm text-slate-400 italic">Brak wprowadzonych talentów</span>

@@ -46,7 +46,7 @@ export default function TalentBadge({
     return (
         <motion.div
             whileHover={{ y: -2 }}
-            className="group relative inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-semibold text-slate-700 shadow-sm"
+            className="group/badge relative inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-semibold text-slate-700 shadow-sm"
         >
             <span
                 className="h-2 w-2 rounded-full"
@@ -60,7 +60,7 @@ export default function TalentBadge({
                 </span>
             )}
             {description && (
-                <span className="pointer-events-none absolute -top-12 left-1/2 w-56 -translate-x-1/2 rounded-lg bg-slate-900 px-3 py-2 text-[11px] text-slate-100 opacity-0 shadow-lg transition-opacity group-hover:opacity-100">
+                <span className="pointer-events-none absolute -top-12 left-1/2 w-56 -translate-x-1/2 rounded-lg bg-slate-900 px-3 py-2 text-[11px] text-slate-100 opacity-0 shadow-lg transition-opacity group-hover/badge:opacity-100 z-50">
                     {description}
                 </span>
             )}
