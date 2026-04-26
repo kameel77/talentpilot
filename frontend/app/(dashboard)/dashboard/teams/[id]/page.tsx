@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { api } from "@/lib/api";
 
@@ -93,7 +93,7 @@ export default function TeamDetailPage() {
     const [membersSearch, setMembersSearch] = useState('');
     
     // PDF Import State
-    const pdfImportRef = React.useRef<HTMLInputElement>(null);
+    const pdfImportRef = useRef<HTMLInputElement>(null);
     const triggerPdfImport = () => pdfImportRef.current?.click();
     type PdfImportStatus = 'pending' | 'processing' | 'success' | 'error';
     type PdfImportItem = { fileName: string; name: string | null; status: PdfImportStatus; error?: string };
