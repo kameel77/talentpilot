@@ -151,7 +151,7 @@ def update_team(
     team_id: int,
     data: TeamUpdate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_role(["admin", "manager"])),
+    current_user: User = Depends(require_role(["admin", "manager", "coach"])),
     active_org_id: int = Depends(get_current_active_org_id)
 ):
     """
