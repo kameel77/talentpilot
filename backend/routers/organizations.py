@@ -58,6 +58,16 @@ def create_organization(
         tax_id=data.tax_id,
     )
     db.add(organization)
+    db.flush()  # get organization.id before commit
+
+    # Auto-grant access to the creator (coach) so they can view the org
+    if current_user.role == UserRole.COACH:
+        access = OrganizationAccess(
+            user_id=current_user.id,
+            organization_id=organization.id,
+        )
+        db.add(access)
+
     db.commit()
     db.refresh(organization)
 

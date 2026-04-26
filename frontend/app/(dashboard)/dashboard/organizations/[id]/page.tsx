@@ -4,8 +4,17 @@ import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import { api, type Team } from "@/lib/api";
-import { Building, Users, MapPin, FileText, Calendar, ArrowLeft } from "lucide-react";
+import { Building, Users, MapPin, FileText, Calendar, ArrowLeft, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogHeader,
+    DialogTitle,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 
 interface Organization {
     id: number;
@@ -25,6 +34,12 @@ export default function OrganizationDetailsPage() {
     const [teams, setTeams] = useState<Team[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState("");
+
+    // New team dialog state
+    const [showNewTeam, setShowNewTeam] = useState(false);
+    const [newTeamName, setNewTeamName] = useState("");
+    const [newTeamDesc, setNewTeamDesc] = useState("");
+    const [creating, setCreating] = useState(false);
 
     useEffect(() => {
         const loadData = async () => {
@@ -52,6 +67,26 @@ export default function OrganizationDetailsPage() {
         }
     }, [id]);
 
+    const handleCreateTeam = async () => {
+        if (!newTeamName.trim()) return;
+        try {
+            setCreating(true);
+            const team = await api.teams.create({
+                name: newTeamName.trim(),
+                description: newTeamDesc.trim() || undefined,
+                organization_id: id,
+            });
+            setTeams(prev => [...prev, team]);
+            setNewTeamName("");
+            setNewTeamDesc("");
+            setShowNewTeam(false);
+        } catch (err) {
+            console.error("Failed to create team:", err);
+        } finally {
+            setCreating(false);
+        }
+    };
+
     if (loading) {
         return (
             <div className="flex h-[400px] items-center justify-center">
@@ -76,7 +111,6 @@ export default function OrganizationDetailsPage() {
             </div>
         );
     }
-
     return (
         <div className="space-y-8 max-w-5xl mx-auto">
             {/* Header Section */}
@@ -164,6 +198,12 @@ export default function OrganizationDetailsPage() {
                             <Users className="h-6 w-6 text-blue-600" />
                             Zespoły w organizacji
                         </h2>
+                        {teams.length > 0 && (
+                            <Button size="sm" className="gap-1.5" onClick={() => setShowNewTeam(true)}>
+                                <Plus className="h-4 w-4" />
+                                Dodaj zespół
+                            </Button>
+                        )}
                     </div>
 
                     {teams.length === 0 ? (
@@ -171,13 +211,14 @@ export default function OrganizationDetailsPage() {
                             <Users className="mx-auto h-8 w-8 text-slate-400 mb-3" />
                             <h3 className="text-sm font-medium text-slate-900">Brak zespołów</h3>
                             <p className="mt-1 text-sm text-slate-500">
-                                W tej organizacji nie ma jeszcze żadnych zespołów. Przejdź do zakładki Zespoły, aby je utworzyć.
+                                W tej organizacji nie ma jeszcze żadnych zespołów. Dodaj pierwszy zespół.
                             </p>
-                            <Link href="/dashboard/teams" className="mt-4 inline-block">
-                                <Button variant="outline" size="sm">
-                                    Przejdź do zespołów
+                            <div className="mt-4">
+                                <Button size="sm" className="gap-1.5" onClick={() => setShowNewTeam(true)}>
+                                    <Plus className="h-4 w-4" />
+                                    Dodaj zespół
                                 </Button>
-                            </Link>
+                            </div>
                         </div>
                     ) : (
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -205,6 +246,48 @@ export default function OrganizationDetailsPage() {
                     )}
                 </div>
             </div>
+
+            {/* Create Team Dialog — rendered once */}
+            <Dialog open={showNewTeam} onOpenChange={setShowNewTeam}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>Nowy zespół</DialogTitle>
+                        <DialogDescription>
+                            Utwórz nowy zespół w organizacji <strong>{org.name}</strong>.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <div className="space-y-4 pt-2">
+                        <div className="space-y-2">
+                            <Label htmlFor="team-name">Nazwa zespołu *</Label>
+                            <Input
+                                id="team-name"
+                                placeholder="np. Zespół Sprzedaży"
+                                value={newTeamName}
+                                onChange={e => setNewTeamName(e.target.value)}
+                                onKeyDown={e => e.key === "Enter" && handleCreateTeam()}
+                            />
+                        </div>
+                        <div className="space-y-2">
+                            <Label htmlFor="team-desc">Opis (opcjonalnie)</Label>
+                            <Input
+                                id="team-desc"
+                                placeholder="Krótki opis zespołu"
+                                value={newTeamDesc}
+                                onChange={e => setNewTeamDesc(e.target.value)}
+                            />
+                        </div>
+                        <div className="flex justify-end gap-2 pt-2">
+                            <Button variant="outline" onClick={() => setShowNewTeam(false)}>
+                                Anuluj
+                            </Button>
+                            <Button onClick={handleCreateTeam} disabled={!newTeamName.trim() || creating}>
+                                {creating ? "Tworzenie…" : "Utwórz zespół"}
+                            </Button>
+                        </div>
+                    </div>
+                </DialogContent>
+            </Dialog>
         </div>
     );
 }
+
