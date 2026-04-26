@@ -127,10 +127,28 @@ def update_organization(
     organization_id: int,
     data: OrganizationUpdate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_role(["manager"])),
+    current_user: User = Depends(require_role(["admin", "manager", "coach"])),
 ):
-    """Update organization details. Manager-only and limited to their own organization."""
-    if current_user.organization_id != organization_id:
+    """Update organization details. Admin, manager (own org), or coach (accessible orgs)."""
+    has_access = False
+
+    if current_user.role == UserRole.ADMIN:
+        has_access = True
+    elif current_user.role == UserRole.COACH:
+        if current_user.organization_id == organization_id:
+            has_access = True
+        else:
+            access = db.query(OrganizationAccess).filter(
+                OrganizationAccess.user_id == current_user.id,
+                OrganizationAccess.organization_id == organization_id
+            ).first()
+            if access:
+                has_access = True
+    elif current_user.role == UserRole.MANAGER:
+        if current_user.organization_id == organization_id:
+            has_access = True
+
+    if not has_access:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Access denied to this organization"

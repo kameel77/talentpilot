@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import { api, type Team } from "@/lib/api";
-import { Building, Users, MapPin, FileText, Calendar, ArrowLeft, Plus } from "lucide-react";
+import { Building, Users, MapPin, FileText, Calendar, ArrowLeft, Plus, Pencil, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
     Dialog,
@@ -40,6 +40,16 @@ export default function OrganizationDetailsPage() {
     const [newTeamName, setNewTeamName] = useState("");
     const [newTeamDesc, setNewTeamDesc] = useState("");
     const [creating, setCreating] = useState(false);
+
+    // Edit organization dialog state
+    const [showEditOrg, setShowEditOrg] = useState(false);
+    const [editName, setEditName] = useState("");
+    const [editStreet, setEditStreet] = useState("");
+    const [editPostalCode, setEditPostalCode] = useState("");
+    const [editCity, setEditCity] = useState("");
+    const [editTaxId, setEditTaxId] = useState("");
+    const [saving, setSaving] = useState(false);
+    const [saveSuccess, setSaveSuccess] = useState(false);
 
     useEffect(() => {
         const loadData = async () => {
@@ -87,6 +97,41 @@ export default function OrganizationDetailsPage() {
         }
     };
 
+    const openEditDialog = () => {
+        if (!org) return;
+        setEditName(org.name);
+        setEditStreet(org.street || "");
+        setEditPostalCode(org.postal_code || "");
+        setEditCity(org.city || "");
+        setEditTaxId(org.tax_id || "");
+        setSaveSuccess(false);
+        setShowEditOrg(true);
+    };
+
+    const handleSaveOrg = async () => {
+        if (!editName.trim()) return;
+        try {
+            setSaving(true);
+            const updated = await api.organizations.update(id, {
+                name: editName.trim(),
+                street: editStreet.trim() || undefined,
+                postal_code: editPostalCode.trim() || undefined,
+                city: editCity.trim() || undefined,
+                tax_id: editTaxId.trim() || undefined,
+            });
+            setOrg(updated as Organization);
+            setSaveSuccess(true);
+            setTimeout(() => {
+                setShowEditOrg(false);
+                setSaveSuccess(false);
+            }, 800);
+        } catch (err) {
+            console.error("Failed to update organization:", err);
+        } finally {
+            setSaving(false);
+        }
+    };
+
     if (loading) {
         return (
             <div className="flex h-[400px] items-center justify-center">
@@ -111,6 +156,7 @@ export default function OrganizationDetailsPage() {
             </div>
         );
     }
+
     return (
         <div className="space-y-8 max-w-5xl mx-auto">
             {/* Header Section */}
@@ -132,7 +178,7 @@ export default function OrganizationDetailsPage() {
                             <h1 className="text-3xl font-bold font-heading text-slate-900 tracking-tight">
                                 {org.name}
                             </h1>
-                            <div className="mt-2 flex items-center gap-4 text-sm text-slate-500">
+                            <div className="mt-2 flex flex-wrap items-center gap-4 text-sm text-slate-500">
                                 {org.city && (
                                     <div className="flex items-center gap-1.5">
                                         <MapPin className="h-4 w-4" />
@@ -159,10 +205,21 @@ export default function OrganizationDetailsPage() {
                 {/* Left column: Organization Details */}
                 <div className="lg:col-span-1 space-y-6">
                     <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm">
-                        <h2 className="text-lg font-bold text-slate-900 mb-4 flex items-center gap-2">
-                            <FileText className="h-5 w-5 text-slate-400" />
-                            Dane firmy
-                        </h2>
+                        <div className="flex items-center justify-between mb-4">
+                            <h2 className="text-lg font-bold text-slate-900 flex items-center gap-2">
+                                <FileText className="h-5 w-5 text-slate-400" />
+                                Dane firmy
+                            </h2>
+                            <Button
+                                variant="ghost"
+                                size="sm"
+                                className="gap-1.5 text-slate-500 hover:text-slate-900"
+                                onClick={openEditDialog}
+                            >
+                                <Pencil className="h-3.5 w-3.5" />
+                                Edytuj
+                            </Button>
+                        </div>
                         
                         <div className="space-y-4">
                             <div>
@@ -170,23 +227,26 @@ export default function OrganizationDetailsPage() {
                                 <p className="text-base text-slate-900">{org.name}</p>
                             </div>
                             
-                            {org.tax_id && (
-                                <div>
-                                    <p className="text-sm font-medium text-slate-500">NIP</p>
-                                    <p className="text-base text-slate-900">{org.tax_id}</p>
-                                </div>
-                            )}
+                            <div>
+                                <p className="text-sm font-medium text-slate-500">NIP</p>
+                                <p className="text-base text-slate-900">
+                                    {org.tax_id || <span className="text-slate-400 italic">Nie podano</span>}
+                                </p>
+                            </div>
 
-                            {(org.street || org.postal_code || org.city) && (
-                                <div>
-                                    <p className="text-sm font-medium text-slate-500">Adres</p>
+                            <div>
+                                <p className="text-sm font-medium text-slate-500">Adres</p>
+                                {(org.street || org.postal_code || org.city) ? (
                                     <p className="text-base text-slate-900">
                                         {org.street && <span className="block">{org.street}</span>}
-                                        {org.postal_code && <span>{org.postal_code} </span>}
-                                        {org.city && <span>{org.city}</span>}
+                                        {(org.postal_code || org.city) && (
+                                            <span>{org.postal_code} {org.city}</span>
+                                        )}
                                     </p>
-                                </div>
-                            )}
+                                ) : (
+                                    <p className="text-base text-slate-400 italic">Nie podano</p>
+                                )}
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -247,7 +307,7 @@ export default function OrganizationDetailsPage() {
                 </div>
             </div>
 
-            {/* Create Team Dialog — rendered once */}
+            {/* Create Team Dialog */}
             <Dialog open={showNewTeam} onOpenChange={setShowNewTeam}>
                 <DialogContent>
                     <DialogHeader>
@@ -287,7 +347,85 @@ export default function OrganizationDetailsPage() {
                     </div>
                 </DialogContent>
             </Dialog>
+
+            {/* Edit Organization Dialog */}
+            <Dialog open={showEditOrg} onOpenChange={setShowEditOrg}>
+                <DialogContent className="sm:max-w-lg">
+                    <DialogHeader>
+                        <DialogTitle>Edytuj dane firmy</DialogTitle>
+                        <DialogDescription>
+                            Zaktualizuj informacje o organizacji.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <div className="space-y-4 pt-2">
+                        <div className="space-y-2">
+                            <Label htmlFor="edit-name">Nazwa firmy *</Label>
+                            <Input
+                                id="edit-name"
+                                placeholder="Nazwa organizacji"
+                                value={editName}
+                                onChange={e => setEditName(e.target.value)}
+                            />
+                        </div>
+                        <div className="space-y-2">
+                            <Label htmlFor="edit-tax-id">NIP</Label>
+                            <Input
+                                id="edit-tax-id"
+                                placeholder="np. 7017011122"
+                                value={editTaxId}
+                                onChange={e => setEditTaxId(e.target.value)}
+                            />
+                        </div>
+                        <div className="space-y-2">
+                            <Label htmlFor="edit-street">Ulica</Label>
+                            <Input
+                                id="edit-street"
+                                placeholder="np. ul. Główna 10"
+                                value={editStreet}
+                                onChange={e => setEditStreet(e.target.value)}
+                            />
+                        </div>
+                        <div className="grid grid-cols-3 gap-3">
+                            <div className="space-y-2">
+                                <Label htmlFor="edit-postal">Kod pocztowy</Label>
+                                <Input
+                                    id="edit-postal"
+                                    placeholder="00-000"
+                                    value={editPostalCode}
+                                    onChange={e => setEditPostalCode(e.target.value)}
+                                />
+                            </div>
+                            <div className="col-span-2 space-y-2">
+                                <Label htmlFor="edit-city">Miasto</Label>
+                                <Input
+                                    id="edit-city"
+                                    placeholder="np. Warszawa"
+                                    value={editCity}
+                                    onChange={e => setEditCity(e.target.value)}
+                                />
+                            </div>
+                        </div>
+                        <div className="flex justify-end gap-2 pt-2">
+                            <Button variant="outline" onClick={() => setShowEditOrg(false)}>
+                                Anuluj
+                            </Button>
+                            <Button
+                                onClick={handleSaveOrg}
+                                disabled={!editName.trim() || saving}
+                                className={saveSuccess ? "bg-emerald-600 hover:bg-emerald-600" : ""}
+                            >
+                                {saveSuccess ? (
+                                    <><Check className="h-4 w-4 mr-1.5" /> Zapisano</>
+                                ) : saving ? (
+                                    "Zapisywanie…"
+                                ) : (
+                                    "Zapisz zmiany"
+                                )}
+                            </Button>
+                        </div>
+                    </div>
+                </DialogContent>
+            </Dialog>
         </div>
     );
 }
-
