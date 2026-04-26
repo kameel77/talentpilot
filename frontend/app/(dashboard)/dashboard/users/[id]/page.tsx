@@ -14,6 +14,12 @@ import {
     ThumbsUp,
     Trophy,
     Zap,
+    Pencil,
+    Check,
+    X,
+    Sparkles,
+    Loader2,
+    Save,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -197,6 +203,18 @@ export default function UserProfilePage() {
     const [currentUserTalents, setCurrentUserTalents] = useState<UserTalent[]>([]);
     const [talentViewMode, setTalentViewMode] = useState<"top5" | "top15" | "all">("top15");
     const [loading, setLoading] = useState(true);
+    const [canEdit, setCanEdit] = useState(false);
+
+    // Editing state for each section
+    const [editingSection, setEditingSection] = useState<string | null>(null);
+    const [editValues, setEditValues] = useState({
+        superpowers: '',
+        motivators: '',
+        blockers: '',
+        feedback_style: '',
+    });
+    const [saving, setSaving] = useState(false);
+    const [generating, setGenerating] = useState(false);
 
     useEffect(() => {
         const loadUserData = async () => {
@@ -213,6 +231,14 @@ export default function UserProfilePage() {
                         rank: ut.rank,
                     }))
                 );
+
+                // Check if current user can edit this profile
+                const currentUserData = tokenManager.getUser();
+                if (currentUserData) {
+                    const role = currentUserData.role;
+                    const isSelf = currentUserData.id === userId;
+                    setCanEdit(isSelf || role === 'admin' || role === 'coach' || role === 'manager');
+                }
             } catch (err) {
                 console.error("Failed to load user data", err);
             } finally {
@@ -278,43 +304,58 @@ export default function UserProfilePage() {
 
     const hasTalents = memberTalents.length > 0;
 
-    const dominantDomain = useMemo(() => {
-        if (!hasTalents) return null;
-        const top5 = memberTalents.filter((t) => t.rank <= 5);
-        const domainCounts = top5.reduce((acc, userTalent) => {
-            const talent = talentLookup.get(userTalent.talentId);
-            if (talent) {
-                acc[talent.domain] = (acc[talent.domain] || 0) + 1;
-            }
-            return acc;
-        }, {} as Record<GallupDomain, number>);
-
-        const entries = Object.entries(domainCounts) as [GallupDomain, number][];
-        if (entries.length === 0) return null;
-        return entries.sort((a, b) => b[1] - a[1])[0][0];
-    }, [hasTalents, memberTalents, talentLookup]);
-
-    const quickTips = useMemo(() => {
-        if (!user || currentUserTalents.length === 0 || memberTalents.length === 0) return [];
-        const viewerTalents = [...currentUserTalents].sort((a, b) => a.rank - b.rank);
-        const memberTop = [...memberTalents].sort((a, b) => a.rank - b.rank);
-
-        return Array.from({ length: Math.min(4, viewerTalents.length, memberTop.length) }).map((_, index) => {
-            const viewer = viewerTalents[index % viewerTalents.length];
-            const member = memberTop[index % memberTop.length];
-            const viewerTalent = currentUserLookup.get(viewer.talentId)?.namePl || viewer.talentId;
-            const memberTalent = talentLookup.get(member.talentId)?.namePl || member.talentId;
-            const memberDomain = talentLookup.get(member.talentId)?.domain || "executing";
-            const template = quickTipTemplates[index % quickTipTemplates.length];
-            const icon = quickTipIcons[memberDomain] || Target;
-
-            return {
-                icon,
-                tip: template(viewerTalent, memberTalent, user.full_name),
-                domain: memberDomain,
-            };
+    const startEditing = (section: string) => {
+        if (!user) return;
+        setEditValues({
+            superpowers: user.superpowers || '',
+            motivators: user.motivators || '',
+            blockers: user.blockers || '',
+            feedback_style: user.feedback_style || '',
         });
-    }, [currentUserLookup, currentUserTalents, memberTalents, talentLookup, user]);
+        setEditingSection(section);
+    };
+
+    const cancelEditing = () => {
+        setEditingSection(null);
+    };
+
+    const saveSection = async (section: string) => {
+        if (!user) return;
+        setSaving(true);
+        try {
+            const updateData: Record<string, string> = {};
+            updateData[section] = editValues[section as keyof typeof editValues];
+            const updatedUser = await api.users.update(userId, updateData);
+            setUser(updatedUser as unknown as UserProfile);
+            setEditingSection(null);
+        } catch (err) {
+            console.error('Failed to save section', err);
+            alert('Błąd podczas zapisywania. Sprawdź uprawnienia.');
+        } finally {
+            setSaving(false);
+        }
+    };
+
+    const generateWithAI = async () => {
+        if (!user) return;
+        setGenerating(true);
+        try {
+            const generated = await api.users.generateManual(userId);
+            const updatedUser = await api.users.update(userId, {
+                superpowers: generated.superpowers,
+                motivators: generated.motivators,
+                blockers: generated.blockers,
+                feedback_style: generated.feedback_style,
+            });
+            setUser(updatedUser as unknown as UserProfile);
+            setEditingSection(null);
+        } catch (err) {
+            console.error('AI generation failed', err);
+            alert('Nie udało się wygenerować danych z AI.');
+        } finally {
+            setGenerating(false);
+        }
+    };
 
     if (loading) {
         return <div className="text-gray-600">Loading profile...</div>;
@@ -328,6 +369,94 @@ export default function UserProfilePage() {
     const motivators = parseBulletList(user.motivators);
     const blockers = parseBulletList(user.blockers);
 
+    const dominantDomain = (() => {
+        if (!hasTalents) return null;
+        const top5 = memberTalents.filter((t) => t.rank <= 5);
+        const domainCounts = top5.reduce((acc, userTalent) => {
+            const talent = talentLookup.get(userTalent.talentId);
+            if (talent) {
+                acc[talent.domain] = (acc[talent.domain] || 0) + 1;
+            }
+            return acc;
+        }, {} as Record<GallupDomain, number>);
+        const entries = Object.entries(domainCounts) as [GallupDomain, number][];
+        if (entries.length === 0) return null;
+        return entries.sort((a, b) => b[1] - a[1])[0][0];
+    })();
+
+    const quickTips = (() => {
+        if (!user || currentUserTalents.length === 0 || memberTalents.length === 0) return [];
+        const viewerTalents = [...currentUserTalents].sort((a, b) => a.rank - b.rank);
+        const memberTop = [...memberTalents].sort((a, b) => a.rank - b.rank);
+        return Array.from({ length: Math.min(4, viewerTalents.length, memberTop.length) }).map((_, index) => {
+            const viewer = viewerTalents[index % viewerTalents.length];
+            const member = memberTop[index % memberTop.length];
+            const viewerTalent = currentUserLookup.get(viewer.talentId)?.namePl || viewer.talentId;
+            const memberTalent = talentLookup.get(member.talentId)?.namePl || member.talentId;
+            const memberDomain = talentLookup.get(member.talentId)?.domain || "executing";
+            const template = quickTipTemplates[index % quickTipTemplates.length];
+            const icon = quickTipIcons[memberDomain] || Target;
+            return { icon, tip: template(viewerTalent, memberTalent, user.full_name), domain: memberDomain };
+        });
+    })();
+
+    const renderEditableSection = (
+        sectionKey: string,
+        title: string,
+        items: string[],
+        emptyText: string,
+        icon: React.ReactNode,
+        bgClass: string,
+        dotColor: string
+    ) => {
+        const isEditing = editingSection === sectionKey;
+        return (
+            <Card className={cn("p-6 border-slate-200/60 shadow-sm", bgClass)}>
+                <div className="flex items-center justify-between mb-4">
+                    <div className="flex items-center gap-3">
+                        {icon}
+                        <h2 className="text-title">{title}</h2>
+                    </div>
+                    {canEdit && !isEditing && (
+                        <Button variant="ghost" size="sm" onClick={() => startEditing(sectionKey)} className="text-slate-400 hover:text-slate-600">
+                            <Pencil className="h-4 w-4" />
+                        </Button>
+                    )}
+                </div>
+                {isEditing ? (
+                    <div className="space-y-3">
+                        <textarea
+                            className="w-full min-h-[120px] rounded-lg border border-slate-200 p-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 resize-y bg-white"
+                            value={editValues[sectionKey as keyof typeof editValues]}
+                            onChange={(e) => setEditValues(prev => ({ ...prev, [sectionKey]: e.target.value }))}
+                            placeholder={`Wpisz ${title.toLowerCase()}...`}
+                        />
+                        <div className="flex items-center gap-2 justify-end">
+                            <Button variant="ghost" size="sm" onClick={cancelEditing} disabled={saving}>
+                                <X className="h-4 w-4 mr-1" /> Anuluj
+                            </Button>
+                            <Button size="sm" onClick={() => saveSection(sectionKey)} disabled={saving}>
+                                {saving ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <Save className="h-4 w-4 mr-1" />}
+                                Zapisz
+                            </Button>
+                        </div>
+                    </div>
+                ) : items.length > 0 ? (
+                    <ul className="space-y-2">
+                        {items.map((item, i) => (
+                            <li key={i} className="flex items-start gap-2 text-sm">
+                                <span className={cn("mt-1.5 h-1.5 w-1.5 rounded-full shrink-0", dotColor)} />
+                                {item}
+                            </li>
+                        ))}
+                    </ul>
+                ) : (
+                    <p className="text-sm text-muted-foreground">{emptyText}</p>
+                )}
+            </Card>
+        );
+    };
+
     return (
         <div className="mx-auto max-w-5xl space-y-6">
             <div className="flex items-center justify-between">
@@ -335,9 +464,17 @@ export default function UserProfilePage() {
                     <h1 className="text-headline">{user.full_name}</h1>
                     <p className="text-body">{user.email}</p>
                 </div>
-                <Button variant="outline" asChild>
-                    <Link href="/dashboard/users">Wróć do zespołu</Link>
-                </Button>
+                <div className="flex items-center gap-2">
+                    {canEdit && hasTalents && (
+                        <Button variant="outline" onClick={generateWithAI} disabled={generating}>
+                            {generating ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Sparkles className="h-4 w-4 mr-2" />}
+                            {generating ? 'Generuję...' : 'Generuj z AI'}
+                        </Button>
+                    )}
+                    <Button variant="outline" asChild>
+                        <Link href="/dashboard/users">Wróć do zespołu</Link>
+                    </Button>
+                </div>
             </div>
 
             {!hasTalents ? (
@@ -383,82 +520,47 @@ export default function UserProfilePage() {
                             <TalentListView talents={memberTalents} viewMode={talentViewMode} talentLookup={talentLookup} />
                         </Card>
 
-                        <Card className="p-6 bg-emerald-50/20 dark:bg-emerald-950/20 border-slate-200/60 shadow-sm">
-                            <div className="flex items-center gap-3 mb-4">
-                                <div className="rounded-xl bg-emerald-500/10 p-2.5 text-emerald-600 dark:text-emerald-400">
-                                    <ThumbsUp className="h-5 w-5" />
-                                </div>
-                                <h2 className="text-title">Mocne strony</h2>
-                            </div>
-                            {strengths.length > 0 ? (
-                                <ul className="space-y-2">
-                                    {strengths.map((strength, i) => (
-                                        <li key={i} className="flex items-start gap-2 text-sm">
-                                            <span className="mt-1.5 h-1.5 w-1.5 rounded-full bg-emerald-500 shrink-0" />
-                                            {strength}
-                                        </li>
-                                    ))}
-                                </ul>
-                            ) : (
-                                <p className="text-sm text-muted-foreground">Brak informacji o mocnych stronach.</p>
-                            )}
-                        </Card>
+                        {renderEditableSection(
+                            'superpowers',
+                            'Mocne strony',
+                            strengths,
+                            'Brak informacji o mocnych stronach.',
+                            <div className="rounded-xl bg-emerald-500/10 p-2.5 text-emerald-600 dark:text-emerald-400"><ThumbsUp className="h-5 w-5" /></div>,
+                            'bg-emerald-50/20 dark:bg-emerald-950/20',
+                            'bg-emerald-500'
+                        )}
 
                         <div className="grid gap-6 md:grid-cols-2">
-                            <Card className="p-6 bg-amber-50/20 dark:bg-amber-950/20 border-slate-200/60 shadow-sm">
-                                <div className="flex items-center gap-3 mb-4">
-                                    <div className="rounded-xl bg-amber-500/10 p-2.5 text-amber-600 dark:text-amber-400">
-                                        <TriangleAlert className="h-5 w-5" />
-                                    </div>
-                                    <h2 className="text-title">Motywatory</h2>
-                                </div>
-                                {motivators.length > 0 ? (
-                                    <ul className="space-y-2">
-                                        {motivators.map((motivator, i) => (
-                                            <li key={i} className="flex items-start gap-2 text-sm">
-                                                <span className="mt-1.5 h-1.5 w-1.5 rounded-full bg-amber-500 shrink-0" />
-                                                {motivator}
-                                            </li>
-                                        ))}
-                                    </ul>
-                                ) : (
-                                    <p className="text-sm text-muted-foreground">Brak informacji o motywatorach.</p>
-                                )}
-                            </Card>
+                            {renderEditableSection(
+                                'motivators',
+                                'Motywatory',
+                                motivators,
+                                'Brak informacji o motywatorach.',
+                                <div className="rounded-xl bg-amber-500/10 p-2.5 text-amber-600 dark:text-amber-400"><TriangleAlert className="h-5 w-5" /></div>,
+                                'bg-amber-50/20 dark:bg-amber-950/20',
+                                'bg-amber-500'
+                            )}
 
-                            <Card className="p-6 bg-rose-50/20 dark:bg-rose-950/20 border-slate-200/60 shadow-sm">
-                                <div className="flex items-center gap-3 mb-4">
-                                    <div className="rounded-xl bg-rose-500/10 p-2.5 text-rose-600 dark:text-rose-400">
-                                        <Ban className="h-5 w-5" />
-                                    </div>
-                                    <h2 className="text-title">Blokady</h2>
-                                </div>
-                                {blockers.length > 0 ? (
-                                    <ul className="space-y-2">
-                                        {blockers.map((blocker, i) => (
-                                            <li key={i} className="flex items-start gap-2 text-sm">
-                                                <span className="mt-1.5 h-1.5 w-1.5 rounded-full bg-rose-500 shrink-0" />
-                                                {blocker}
-                                            </li>
-                                        ))}
-                                    </ul>
-                                ) : (
-                                    <p className="text-sm text-muted-foreground">Brak informacji o blokadach.</p>
-                                )}
-                            </Card>
+                            {renderEditableSection(
+                                'blockers',
+                                'Blokady',
+                                blockers,
+                                'Brak informacji o blokadach.',
+                                <div className="rounded-xl bg-rose-500/10 p-2.5 text-rose-600 dark:text-rose-400"><Ban className="h-5 w-5" /></div>,
+                                'bg-rose-50/20 dark:bg-rose-950/20',
+                                'bg-rose-500'
+                            )}
                         </div>
 
-                        <Card className="p-6 border-slate-200/60 shadow-sm">
-                            <div className="flex items-center gap-3 mb-4">
-                                <div className="rounded-xl bg-primary/10 p-2.5 text-primary">
-                                    <MessageCircle className="h-5 w-5" />
-                                </div>
-                                <h2 className="text-title">Jak dawać mi feedback</h2>
-                            </div>
-                            <p className="text-sm text-muted-foreground leading-relaxed">
-                                {user.feedback_style || "Brak informacji o preferowanym feedbacku."}
-                            </p>
-                        </Card>
+                        {renderEditableSection(
+                            'feedback_style',
+                            'Jak dawać mi feedback',
+                            user.feedback_style ? [user.feedback_style] : [],
+                            'Brak informacji o preferowanym feedbacku.',
+                            <div className="rounded-xl bg-primary/10 p-2.5 text-primary"><MessageCircle className="h-5 w-5" /></div>,
+                            '',
+                            'bg-primary'
+                        )}
                     </div>
 
                     <div className="space-y-6">

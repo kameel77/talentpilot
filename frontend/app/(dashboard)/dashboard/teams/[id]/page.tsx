@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback, useRef } from "react";
 import { useParams, useRouter } from "next/navigation";
+import Link from "next/link";
 import { api } from "@/lib/api";
 
 import MatrixDashboard from "@/components/dashboard/MatrixDashboard";
@@ -485,12 +486,12 @@ export default function TeamDetailPage() {
                                     return (
                                         <tr key={member.id} className="hover:bg-slate-50/80 transition-colors group">
                                             <td className="py-4 px-6">
-                                                <div className="flex items-center gap-3">
+                                                <Link href={`/dashboard/users/${member.id}`} className="flex items-center gap-3 group/link">
                                                     <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white font-medium shadow-sm shrink-0">
                                                         {member.name.charAt(0).toUpperCase()}
                                                     </div>
                                                     <div>
-                                                        <div className="font-medium text-slate-900 flex items-center gap-2">
+                                                        <div className="font-medium text-slate-900 group-hover/link:text-blue-600 transition-colors flex items-center gap-2">
                                                             {member.name}
                                                             {member.is_leader && (
                                                                 <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-amber-100 text-amber-600" title="Lider zespołu">
@@ -500,7 +501,7 @@ export default function TeamDetailPage() {
                                                         </div>
                                                         <div className="text-sm text-slate-500">{member.email || "Brak adresu email"}</div>
                                                     </div>
-                                                </div>
+                                                </Link>
                                             </td>
                                             <td className="py-4 px-6">
                                                 <span className="text-sm text-slate-700 bg-slate-100 px-2.5 py-1 rounded-md inline-block">

@@ -137,8 +137,8 @@ def update_user(
             detail="Access denied to this user"
         )
     
-    # Users can only edit their own profile, admins can edit anyone
-    if current_user.role != UserRole.ADMIN and user.id != current_user.id:
+    # Users can only edit their own profile; admins and coaches can edit anyone in the org
+    if current_user.role not in (UserRole.ADMIN, UserRole.COACH) and user.id != current_user.id:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="You can only edit your own profile"
@@ -212,7 +212,7 @@ def generate_user_manual(
     using LLM based on the user's top Gallup talents.
     Returns generated text — does NOT save automatically.
     """
-    if current_user.id != user_id and current_user.role != UserRole.ADMIN:
+    if current_user.id != user_id and current_user.role not in (UserRole.ADMIN, UserRole.COACH):
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied")
 
     from services.assistant_service import get_openrouter_client, get_user_talents
