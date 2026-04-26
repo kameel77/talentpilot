@@ -709,6 +709,7 @@ class PresentationMember(BaseModel):
     name: str
     email: Optional[str] = None
     role: Optional[str] = None
+    is_leader: bool = False
     results: List[PresentationTalentResult]
 
 

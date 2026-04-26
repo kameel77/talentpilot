@@ -31,7 +31,7 @@ interface MatrixDashboardProps {
 export default function MatrixDashboard({ members }: MatrixDashboardProps) {
     const [activeTab, setActiveTab] = useState<'matrix' | 'domains'>('matrix');
     const [matrixSearch, setMatrixSearch] = useState('');
-    const [showTop10Domains, setShowTop10Domains] = useState(true);
+    const [showTop15Domains, setShowTop15Domains] = useState(true);
 
     const membersWithResults = members.filter(m => m.results.length > 0);
 
@@ -58,7 +58,7 @@ export default function MatrixDashboard({ members }: MatrixDashboardProps) {
         strategic_thinking: getTalentsByDomain('strategic_thinking').map(t => t.code),
     };
 
-    const teamTopN = teamRanks.filter(tr => tr.teamRank <= (showTop10Domains ? 10 : 5));
+    const teamTopN = teamRanks.filter(tr => tr.teamRank <= (showTop15Domains ? 15 : 5));
     const domainCounts: Record<GallupDomain, number> = {
         executing: 0, influencing: 0, relationship_building: 0, strategic_thinking: 0,
     };
@@ -84,10 +84,10 @@ export default function MatrixDashboard({ members }: MatrixDashboardProps) {
         color: getDomainStyle(ds.domain),
     }));
 
-    const talentTop10Counts: Record<string, number> = {};
+    const talentTop15Counts: Record<string, number> = {};
     membersWithResults.forEach(m => {
-        m.results.filter(r => r.rank <= 10).forEach(r => {
-            talentTop10Counts[r.talent] = (talentTop10Counts[r.talent] || 0) + 1;
+        m.results.filter(r => r.rank <= 15).forEach(r => {
+            talentTop15Counts[r.talent] = (talentTop15Counts[r.talent] || 0) + 1;
         });
     });
 
@@ -175,10 +175,10 @@ export default function MatrixDashboard({ members }: MatrixDashboardProps) {
 
                                                     const bg = isMissing ? 'transparent'
                                                         : rank >= 30 ? '#f1f5f9'
-                                                        : getDomainStyle(talent.domain, rank <= 5 ? 100 : rank <= 10 ? 75 : 20);
+                                                        : getDomainStyle(talent.domain, rank <= 5 ? 100 : rank <= 15 ? 75 : 20);
                                                     const textColor = isMissing ? '#cbd5e1'
                                                         : rank >= 30 ? '#94a3b8'
-                                                        : rank <= 10 ? '#fff' : '#0f172a';
+                                                        : rank <= 15 ? '#fff' : '#0f172a';
 
                                                     return (
                                                         <td key={talent.code} className="px-1 py-2 text-center border-r border-slate-100 last:border-r-0">
@@ -208,10 +208,10 @@ export default function MatrixDashboard({ members }: MatrixDashboardProps) {
 
                                                 const bg = rank >= 30
                                                     ? '#f1f5f9'
-                                                    : getDomainStyle(talent.domain, rank <= 5 ? 100 : rank <= 10 ? 75 : 20);
+                                                    : getDomainStyle(talent.domain, rank <= 5 ? 100 : rank <= 15 ? 75 : 20);
                                                 const textColor = rank >= 30
                                                     ? '#94a3b8'
-                                                    : rank <= 10 ? '#fff' : '#0f172a';
+                                                    : rank <= 15 ? '#fff' : '#0f172a';
 
                                                 return (
                                                     <td key={talent.code} className="px-1 py-2 text-center border-r border-slate-100 last:border-r-0">
@@ -230,10 +230,10 @@ export default function MatrixDashboard({ members }: MatrixDashboardProps) {
                                     {/* Summary Row */}
                                     <tr className="bg-white">
                                         <td className="sticky left-0 bg-white z-10 px-4 py-3 font-semibold text-xs text-slate-500 uppercase tracking-wider border-r border-slate-200 shadow-[1px_0_0_0_#e2e8f0]">
-                                            W Top 10
+                                            W Top 15
                                         </td>
                                         {GALLUP_TALENTS.map(talent => {
-                                            const count = talentTop10Counts[talent.code] || 0;
+                                            const count = talentTop15Counts[talent.code] || 0;
                                             return (
                                                 <td key={talent.code} className="px-1 py-2 text-center border-r border-slate-100 last:border-r-0">
                                                     <div className="mx-auto flex items-center justify-center w-8 h-8 rounded-md text-xs font-bold" style={{
@@ -258,20 +258,20 @@ export default function MatrixDashboard({ members }: MatrixDashboardProps) {
                     <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 flex flex-col">
                         <div className="flex justify-between items-center mb-6">
                             <h3 className="text-lg font-semibold text-slate-900">
-                                Reprezentacja w {showTop10Domains ? 'Top 10' : 'Top 5'}
+                                Reprezentacja w {showTop15Domains ? 'Top 15' : 'Top 5'}
                             </h3>
                             <div className="flex bg-slate-100 p-1 rounded-lg">
                                 <button
-                                    onClick={() => setShowTop10Domains(false)}
-                                    className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${!showTop10Domains ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-600 hover:text-slate-900'}`}
+                                    onClick={() => setShowTop15Domains(false)}
+                                    className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${!showTop15Domains ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-600 hover:text-slate-900'}`}
                                 >
                                     Top 5
                                 </button>
                                 <button
-                                    onClick={() => setShowTop10Domains(true)}
-                                    className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${showTop10Domains ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-600 hover:text-slate-900'}`}
+                                    onClick={() => setShowTop15Domains(true)}
+                                    className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${showTop15Domains ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-600 hover:text-slate-900'}`}
                                 >
-                                    Top 10
+                                    Top 15
                                 </button>
                             </div>
                         </div>

@@ -448,6 +448,15 @@ export const api = {
             return response.data;
         },
 
+        update: async (id: number, data: {
+            name?: string;
+            description?: string;
+            manager_id?: number | null;
+        }): Promise<Team> => {
+            const response = await apiClient.put<Team>(`/api/teams/${id}`, data);
+            return response.data;
+        },
+
         generateMatrix: async (id: number): Promise<{ url: string; message: string }> => {
             const response = await apiClient.post(`/api/teams/${id}/generate-matrix`);
             return response.data;

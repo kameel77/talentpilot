@@ -261,6 +261,7 @@ def get_team_matrix(
             name=member.full_name,
             email=member.email,
             role=member.role.value if hasattr(member.role, "value") else member.role,
+            is_leader=(team.manager_id == member.id),
             results=results
         ))
 
