@@ -1,6 +1,8 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  serverExternalPackages: [],
+  allowedDevOrigins: ["app.talentpilot.io", "localhost:3000"],
   async redirects() {
     return [
       {
