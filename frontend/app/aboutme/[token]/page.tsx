@@ -15,6 +15,8 @@ import {
   Users,
   BarChart3,
   Brain,
+  Mail,
+  Phone,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -32,6 +34,8 @@ interface PublicProfile {
   full_name: string;
   job_title: string | null;
   job_title_en: string | null;
+  email: string | null;
+  phone: string | null;
   avatar_url: string | null;
   linkedin_url: string | null;
   talents: TalentItem[] | null;
@@ -257,16 +261,39 @@ export default function WizytowkaPage() {
                   <p className="text-sm text-slate-500 mt-0.5">{displayJobTitle}</p>
                 )}
 
-                {profile.linkedin_url && (
-                  <a
-                    href={profile.linkedin_url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="mt-3 inline-flex items-center gap-1.5 text-xs font-medium text-slate-600 hover:text-indigo-600 transition"
-                  >
-                    <Linkedin className="h-3.5 w-3.5 text-[#0A66C2]" />
-                    LinkedIn
-                  </a>
+                {/* Contact details */}
+                {(profile.email || profile.phone || profile.linkedin_url) && (
+                  <div className="mt-3 space-y-1.5">
+                    {profile.email && (
+                      <a
+                        href={`mailto:${profile.email}`}
+                        className="flex items-center gap-1.5 text-xs font-medium text-slate-600 hover:text-indigo-600 transition"
+                      >
+                        <Mail className="h-3.5 w-3.5 text-slate-400" />
+                        {profile.email}
+                      </a>
+                    )}
+                    {profile.phone && (
+                      <a
+                        href={`tel:${profile.phone}`}
+                        className="flex items-center gap-1.5 text-xs font-medium text-slate-600 hover:text-indigo-600 transition"
+                      >
+                        <Phone className="h-3.5 w-3.5 text-slate-400" />
+                        {profile.phone}
+                      </a>
+                    )}
+                    {profile.linkedin_url && (
+                      <a
+                        href={profile.linkedin_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center gap-1.5 text-xs font-medium text-slate-600 hover:text-indigo-600 transition"
+                      >
+                        <Linkedin className="h-3.5 w-3.5 text-[#0A66C2]" />
+                        LinkedIn
+                      </a>
+                    )}
+                  </div>
                 )}
               </div>
             </div>

@@ -161,6 +161,10 @@ def update_user(
         user.linkedin_url = data.linkedin_url
     if data.avatar_url is not None:
         user.avatar_url = data.avatar_url
+    if data.job_title is not None:
+        user.job_title = data.job_title
+    if data.job_title_en is not None:
+        user.job_title_en = data.job_title_en
     if data.superpowers is not None:
         user.superpowers = data.superpowers
     if data.motivators is not None:
@@ -169,6 +173,14 @@ def update_user(
         user.blockers = data.blockers
     if data.feedback_style is not None:
         user.feedback_style = data.feedback_style
+    if data.superpowers_en is not None:
+        user.superpowers_en = data.superpowers_en
+    if data.motivators_en is not None:
+        user.motivators_en = data.motivators_en
+    if data.blockers_en is not None:
+        user.blockers_en = data.blockers_en
+    if data.feedback_style_en is not None:
+        user.feedback_style_en = data.feedback_style_en
     if data.public_profile_settings is not None:
         user.public_profile_settings = data.public_profile_settings
     if data.public_slug is not None:

@@ -116,6 +116,9 @@ def get_public_profile(slug_or_token: str, db: Session = Depends(get_db)):
     return PublicProfileResponse(
         full_name=user.full_name,
         job_title=user.job_title,
+        job_title_en=user.job_title_en,
+        email=user.email if s.get("show_email", True) else None,
+        phone=user.phone if s.get("show_phone", True) else None,
         avatar_url=user.avatar_url if s.get("show_photo", True) else None,
         linkedin_url=user.linkedin_url,
         talents=talents,

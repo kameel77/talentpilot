@@ -649,6 +649,8 @@ class PublicProfileResponse(BaseModel):
     full_name: str
     job_title: Optional[str] = None
     job_title_en: Optional[str] = None
+    email: Optional[str] = None
+    phone: Optional[str] = None
     avatar_url: Optional[str] = None
     linkedin_url: Optional[str] = None
     talents: Optional[List[PublicTalentItem]] = None

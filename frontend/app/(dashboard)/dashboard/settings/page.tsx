@@ -119,6 +119,8 @@ export default function SettingsPage() {
 
   // Privacy settings for wizytówka
   const [sharePhoto, setSharePhoto] = useState(true);
+  const [shareEmail, setShareEmail] = useState(true);
+  const [sharePhone, setSharePhone] = useState(true);
   const [shareTalents, setShareTalents] = useState(true);
   const [talentsCount, setTalentsCount] = useState<5 | 15>(5);
   const [shareSuperpowers, setShareSuperpowers] = useState(true);
@@ -158,6 +160,8 @@ export default function SettingsPage() {
       if ((u as UserType & { public_profile_settings?: Record<string, boolean | number> }).public_profile_settings) {
         const s = (u as UserType & { public_profile_settings?: Record<string, boolean | number> }).public_profile_settings!;
         setSharePhoto(s.show_photo ?? true);
+        setShareEmail(s.show_email ?? true);
+        setSharePhone(s.show_phone ?? true);
         setShareTalents(s.show_talents ?? true);
         setTalentsCount(s.talents_count === 15 ? 15 : 5);
         setShareSuperpowers(s.show_superpowers ?? true);
@@ -338,6 +342,8 @@ export default function SettingsPage() {
     try {
       const settings = {
         show_photo: sharePhoto,
+        show_email: shareEmail,
+        show_phone: sharePhone,
         show_talents: shareTalents,
         talents_count: talentsCount,
         show_superpowers: shareSuperpowers,
@@ -969,6 +975,16 @@ export default function SettingsPage() {
               <div className="flex items-center justify-between py-1">
                 <span className="text-sm text-slate-700">Zdjęcie profilowe</span>
                 <Switch checked={sharePhoto} onCheckedChange={setSharePhoto} />
+              </div>
+              
+              <div className="flex items-center justify-between py-1">
+                <span className="text-sm text-slate-700">Adres email</span>
+                <Switch checked={shareEmail} onCheckedChange={setShareEmail} />
+              </div>
+              
+              <div className="flex items-center justify-between py-1">
+                <span className="text-sm text-slate-700">Numer telefonu</span>
+                <Switch checked={sharePhone} onCheckedChange={setSharePhone} />
               </div>
               
               <div className="flex items-center justify-between py-1">
