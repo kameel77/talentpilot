@@ -159,15 +159,15 @@ export default function SettingsPage() {
       // Load privacy settings from public_profile_settings
       if ((u as UserType & { public_profile_settings?: Record<string, boolean | number> }).public_profile_settings) {
         const s = (u as UserType & { public_profile_settings?: Record<string, boolean | number> }).public_profile_settings!;
-        setSharePhoto(s.show_photo ?? true);
-        setShareEmail(s.show_email ?? true);
-        setSharePhone(s.show_phone ?? true);
-        setShareTalents(s.show_talents ?? true);
+        setSharePhoto(Boolean(s.show_photo ?? true));
+        setShareEmail(Boolean(s.show_email ?? true));
+        setSharePhone(Boolean(s.show_phone ?? true));
+        setShareTalents(Boolean(s.show_talents ?? true));
         setTalentsCount(s.talents_count === 15 ? 15 : 5);
-        setShareSuperpowers(s.show_superpowers ?? true);
-        setShareMotivators(s.show_motivators ?? true);
-        setShareBlockers(s.show_blockers ?? false);
-        setShareFeedback(s.show_feedback_style ?? true);
+        setShareSuperpowers(Boolean(s.show_superpowers ?? true));
+        setShareMotivators(Boolean(s.show_motivators ?? true));
+        setShareBlockers(Boolean(s.show_blockers ?? false));
+        setShareFeedback(Boolean(s.show_feedback_style ?? true));
       }
     });
 

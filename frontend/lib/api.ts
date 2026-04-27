@@ -67,7 +67,7 @@ export interface UserUpdateData {
     motivators?: string;
     blockers?: string;
     feedback_style?: string;
-    public_profile_settings?: Record<string, boolean>;
+    public_profile_settings?: Record<string, boolean | number>;
     public_slug?: string;
     job_title?: string;
     job_title_en?: string;

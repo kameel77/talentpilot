@@ -19,6 +19,7 @@ import {
   Phone,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { GALLUP_TALENTS, DOMAIN_CSS_KEY, GallupDomain } from "@/lib/gallup-data";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
@@ -48,13 +49,6 @@ interface PublicProfile {
   blockers_en: string | null;
   feedback_style_en: string | null;
 }
-
-const DOMAIN_STYLE: Record<string, { badge: string; ring: string; dot: string }> = {
-  executing:             { badge: "bg-amber-100   text-amber-800   border border-amber-200",   ring: "ring-amber-400",   dot: "bg-amber-400"   },
-  influencing:           { badge: "bg-purple-100  text-purple-800  border border-purple-200",  ring: "ring-purple-400",  dot: "bg-purple-400"  },
-  relationship_building: { badge: "bg-emerald-100 text-emerald-800 border border-emerald-200", ring: "ring-emerald-400", dot: "bg-emerald-400" },
-  strategic_thinking:    { badge: "bg-sky-100     text-sky-800     border border-sky-200",     ring: "ring-sky-400",     dot: "bg-sky-400"     },
-};
 
 const DOMAIN_LABEL: Record<string, { pl: string; en: string }> = {
   executing:             { pl: "Realizowanie", en: "Executing" },
@@ -118,14 +112,6 @@ const T = {
   }
 };
 
-// Rank number pill colour (matches domain)
-const RANK_BG: Record<string, string> = {
-  executing:             "bg-amber-500",
-  influencing:           "bg-purple-500",
-  relationship_building: "bg-emerald-500",
-  strategic_thinking:    "bg-sky-500",
-};
-
 export default function WizytowkaPage() {
   const params = useParams();
   const token = params?.token as string;
@@ -184,7 +170,8 @@ export default function WizytowkaPage() {
 
   // Count talents per domain (all visible)
   const domainCount = profile.talents?.reduce((acc, t) => {
-    acc[t.domain] = (acc[t.domain] ?? 0) + 1;
+    const canonicalDomain = GALLUP_TALENTS.find(x => x.code === t.code)?.domain || "executing";
+    acc[canonicalDomain] = (acc[canonicalDomain] ?? 0) + 1;
     return acc;
   }, {} as Record<string, number>) ?? {};
 
@@ -263,23 +250,25 @@ export default function WizytowkaPage() {
 
                 {/* Contact details */}
                 {(profile.email || profile.phone || profile.linkedin_url) && (
-                  <div className="mt-3 space-y-1.5">
+                  <div className="mt-3 space-y-1.5 overflow-hidden">
                     {profile.email && (
                       <a
                         href={`mailto:${profile.email}`}
+                        title={profile.email}
                         className="flex items-center gap-1.5 text-xs font-medium text-slate-600 hover:text-indigo-600 transition"
                       >
-                        <Mail className="h-3.5 w-3.5 text-slate-400" />
-                        {profile.email}
+                        <Mail className="h-3.5 w-3.5 text-slate-400 shrink-0" />
+                        <span className="truncate">{profile.email}</span>
                       </a>
                     )}
                     {profile.phone && (
                       <a
                         href={`tel:${profile.phone}`}
+                        title={profile.phone}
                         className="flex items-center gap-1.5 text-xs font-medium text-slate-600 hover:text-indigo-600 transition"
                       >
-                        <Phone className="h-3.5 w-3.5 text-slate-400" />
-                        {profile.phone}
+                        <Phone className="h-3.5 w-3.5 text-slate-400 shrink-0" />
+                        <span className="truncate">{profile.phone}</span>
                       </a>
                     )}
                     {profile.linkedin_url && (
@@ -287,10 +276,11 @@ export default function WizytowkaPage() {
                         href={profile.linkedin_url}
                         target="_blank"
                         rel="noopener noreferrer"
+                        title={profile.linkedin_url}
                         className="flex items-center gap-1.5 text-xs font-medium text-slate-600 hover:text-indigo-600 transition"
                       >
-                        <Linkedin className="h-3.5 w-3.5 text-[#0A66C2]" />
-                        LinkedIn
+                        <Linkedin className="h-3.5 w-3.5 text-[#0A66C2] shrink-0" />
+                        <span className="truncate">LinkedIn</span>
                       </a>
                     )}
                   </div>
@@ -306,39 +296,48 @@ export default function WizytowkaPage() {
                   <h2 className="font-semibold text-slate-800 text-sm">{t.topTalents(profile.talents.length)}</h2>
                 </div>
 
-                <div className="space-y-1.5">
-                  {profile.talents.map((tItem) => (
+                <div className="space-y-2">
+                  {profile.talents.map((tItem) => {
+                    const canonicalDomain = GALLUP_TALENTS.find(x => x.code === tItem.code)?.domain || "executing";
+                    const cssKey = DOMAIN_CSS_KEY[canonicalDomain as GallupDomain] || "executing";
+                    return (
                     <div key={tItem.rank} className="flex items-center gap-2.5 px-2.5 py-2 rounded-xl bg-slate-50">
                       <span
-                        className={cn(
-                          "h-6 w-6 rounded-full flex items-center justify-center text-[11px] font-bold text-white shrink-0",
-                          RANK_BG[tItem.domain] ?? "bg-indigo-500"
-                        )}
+                        className="h-6 w-6 rounded-full flex items-center justify-center text-[11px] font-bold text-white shadow-sm shrink-0"
+                        style={{ backgroundColor: `var(--color-domain-${cssKey})` }}
                       >
                         {tItem.rank}
                       </span>
-                      <span className="flex-1 text-sm font-medium text-slate-800">
+                      <span className="flex-1 text-sm font-medium text-slate-800 leading-tight">
                         {lang === "en" ? (tItem.name_en || tItem.name_pl) : tItem.name_pl}
                       </span>
-                      <span className={cn("text-[11px] px-2 py-0.5 rounded-full font-medium", DOMAIN_STYLE[tItem.domain]?.badge ?? "bg-slate-100 text-slate-600")}>
-                        {DOMAIN_LABEL[tItem.domain]?.[lang] ?? tItem.domain}
+                      <span className={cn(
+                        "text-[10px] sm:text-[11px] px-2 py-0.5 rounded-full font-medium border shrink-0 whitespace-nowrap",
+                        `domain-${cssKey}`
+                      )}>
+                        {DOMAIN_LABEL[canonicalDomain]?.[lang] ?? canonicalDomain}
                       </span>
                     </div>
-                  ))}
+                  )})}
                 </div>
 
                 {/* Domain distribution */}
                 {Object.keys(domainCount).length > 0 && (
-                  <div className="mt-4 pt-4 border-t border-slate-100 grid grid-cols-2 gap-x-4 gap-y-2">
-                    {Object.entries(domainCount).map(([domain, count]) => (
+                  <div className="mt-4 pt-4 border-t border-slate-100 flex flex-wrap gap-x-4 gap-y-2">
+                    {Object.entries(domainCount).map(([domain, count]) => {
+                      const cssKey = DOMAIN_CSS_KEY[domain as GallupDomain] || "executing";
+                      return (
                       <div key={domain} className="flex items-center gap-1.5">
-                        <span className={cn("h-1.5 w-1.5 rounded-full shrink-0", DOMAIN_STYLE[domain]?.dot ?? "bg-slate-400")} />
+                        <span 
+                          className="h-2 w-2 rounded-full shrink-0"
+                          style={{ backgroundColor: `var(--color-domain-${cssKey})` }}
+                        />
                         <span className="text-xs text-slate-500 truncate">
                           {DOMAIN_LABEL[domain]?.[lang] ?? domain}
                           <span className="font-semibold text-slate-700 ml-1">×{count}</span>
                         </span>
                       </div>
-                    ))}
+                    )})}
                   </div>
                 )}
               </div>
@@ -498,7 +497,7 @@ function ManualCard({
         <div className={cn("rounded-lg p-1.5 shrink-0", iconClass)}>{icon}</div>
         <h3 className="font-semibold text-slate-800 text-sm">{title}</h3>
       </div>
-      <p className="text-slate-600 text-sm leading-relaxed whitespace-pre-line">{text}</p>
+      <p className="text-slate-600 text-sm leading-relaxed whitespace-pre-line break-words">{text}</p>
     </div>
   );
 }
