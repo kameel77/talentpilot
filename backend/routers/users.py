@@ -308,16 +308,42 @@ def translate_user_profile(
 ):
     """
     Translate user's profile fields to English using LLM.
+    Includes CliftonStrengths talent name glossary so the LLM
+    uses official English names (e.g. Bliskość → Relator, not Closeness).
     Returns translated text — does NOT save automatically.
     """
-    from services.assistant_service import get_openrouter_client
+    from services.assistant_service import get_openrouter_client, get_user_talents
     from services.settings_service import get_setting
     import json
 
+    # Build PL→EN talent name glossary from the user's actual talents
+    talents_pl = get_user_talents(db, current_user.id, language="pl")
+    talents_en = get_user_talents(db, current_user.id, language="en")
+    # Create rank-keyed lookup for EN names
+    en_by_rank = {t["rank"]: t["name"] for t in talents_en}
+    glossary_lines = []
+    for t in talents_pl:
+        en_name = en_by_rank.get(t["rank"], "")
+        if en_name:
+            glossary_lines.append(f'  "{t["name"]}" → "{en_name}"')
+
+    glossary_block = ""
+    if glossary_lines:
+        glossary_block = (
+            "\n\nCRITICAL — CliftonStrengths Talent Name Glossary:\n"
+            "When the Polish text mentions any of the following talent names, "
+            "you MUST use the official English name from this glossary. "
+            "Do NOT translate talent names literally.\n"
+            + "\n".join(glossary_lines)
+        )
+
     system_content = (
-        "You are an expert translator specializing in professional business profiles. "
+        "You are an expert translator specializing in professional business profiles "
+        "and Gallup CliftonStrengths methodology. "
         "Translate the following Polish text to English, maintaining a professional SaaS tone. "
+        "Keep the first-person singular voice (e.g. 'My natural strength is...'). "
         "Respond ONLY with a valid JSON object, without comments, without markdown blocks."
+        + glossary_block
     )
 
     fields_to_translate = {
