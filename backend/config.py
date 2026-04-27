@@ -52,7 +52,8 @@ class Settings(BaseSettings):
     @property
     def cors_origins_list(self) -> List[str]:
         """Parse CORS origins string into list."""
-        return [origin.strip().strip('"').strip("'") for origin in self.cors_origins.split(",")]
+        clean_origins = self.cors_origins.strip().strip('"').strip("'")
+        return [origin.strip().rstrip("/") for origin in clean_origins.split(",") if origin.strip()]
 
 
 # Global settings instance
