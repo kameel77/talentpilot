@@ -80,6 +80,10 @@ class UserUpdate(BaseModel):
     motivators: Optional[str] = None
     blockers: Optional[str] = None
     feedback_style: Optional[str] = None
+    superpowers_en: Optional[str] = None
+    motivators_en: Optional[str] = None
+    blockers_en: Optional[str] = None
+    feedback_style_en: Optional[str] = None
     public_profile_settings: Optional[dict] = None
     public_slug: Optional[str] = Field(
         default=None,
@@ -123,6 +127,10 @@ class UserDetailResponse(UserResponse):
     motivators: Optional[str] = None
     blockers: Optional[str] = None
     feedback_style: Optional[str] = None
+    superpowers_en: Optional[str] = None
+    motivators_en: Optional[str] = None
+    blockers_en: Optional[str] = None
+    feedback_style_en: Optional[str] = None
     public_profile_settings: Optional[dict] = None
 
 
@@ -644,6 +652,10 @@ class PublicProfileResponse(BaseModel):
     motivators: Optional[str] = None
     blockers: Optional[str] = None
     feedback_style: Optional[str] = None
+    superpowers_en: Optional[str] = None
+    motivators_en: Optional[str] = None
+    blockers_en: Optional[str] = None
+    feedback_style_en: Optional[str] = None
 
 
 # -------- External Provision --------

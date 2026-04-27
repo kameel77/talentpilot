@@ -38,6 +38,10 @@ interface PublicProfile {
   motivators: string | null;
   blockers: string | null;
   feedback_style: string | null;
+  superpowers_en: string | null;
+  motivators_en: string | null;
+  blockers_en: string | null;
+  feedback_style_en: string | null;
 }
 
 const DOMAIN_STYLE: Record<string, { badge: string; ring: string; dot: string }> = {
@@ -47,11 +51,66 @@ const DOMAIN_STYLE: Record<string, { badge: string; ring: string; dot: string }>
   strategic_thinking:    { badge: "bg-sky-100     text-sky-800     border border-sky-200",     ring: "ring-sky-400",     dot: "bg-sky-400"     },
 };
 
-const DOMAIN_LABEL: Record<string, string> = {
-  executing:             "Realizowanie",
-  influencing:           "Wpływ",
-  relationship_building: "Relacje",
-  strategic_thinking:    "Strategia",
+const DOMAIN_LABEL: Record<string, { pl: string; en: string }> = {
+  executing:             { pl: "Realizowanie", en: "Executing" },
+  influencing:           { pl: "Wpływ", en: "Influencing" },
+  relationship_building: { pl: "Relacje", en: "Relationship Building" },
+  strategic_thinking:    { pl: "Strategia", en: "Strategic Thinking" },
+};
+
+const T = {
+  pl: {
+    notFound: "Nie znaleziono wizytówki",
+    notFoundDesc: "Ten link jest nieaktywny lub wygasł.",
+    backTo: "Wróć do TalentPilot →",
+    bizCard: "Wizytówka talentów",
+    topTalents: (n: number) => `Top ${n} talentów Gallup`,
+    manualTitle: "Instrukcja obsługi",
+    superpowers: "Moje mocne strony",
+    motivators: "Motywatory",
+    blockers: "Blokady",
+    feedback: "Jak mi dawać feedback",
+    emptyManual: "Właściciel profilu nie uzupełnił jeszcze instrukcji obsługi.",
+    ctaBadge: "Odkryj swoje talenty",
+    ctaTitle1: "A jakie są ",
+    ctaTitle2: "Twoje",
+    ctaTitle3: " mocne strony?",
+    ctaDesc: "TalentPilot pomaga odkryć naturalne talenty i przekuć je w lepszą współpracę z zespołem. Stwórz swoją własną wizytówkę — tak jak ta.",
+    ctaButton: "Sprawdź TalentPilot",
+    benefit1Title: "Poznaj swój profil talentów",
+    benefit1Desc: "Odkryj co robisz naturalnie najlepiej i jak to wykorzystać w pracy.",
+    benefit2Title: "Współpracuj lepiej z zespołem",
+    benefit2Desc: "Stwórz wizytówkę i pomóż innym zrozumieć jak z Tobą pracować.",
+    benefit3Title: "Porównaj talenty 1:1",
+    benefit3Desc: "AI pokaże synergie z innymi i wskaże jak je efektywnie wykorzystać.",
+    footerText: "TalentPilot — Manager Copilot oparty na CliftonStrengths",
+  },
+  en: {
+    notFound: "Profile not found",
+    notFoundDesc: "This link is inactive or has expired.",
+    backTo: "Back to TalentPilot →",
+    bizCard: "Talent Profile",
+    topTalents: (n: number) => `Top ${n} CliftonStrengths`,
+    manualTitle: "User Manual",
+    superpowers: "My Superpowers",
+    motivators: "Motivators",
+    blockers: "Blockers",
+    feedback: "How to give me feedback",
+    emptyManual: "The profile owner hasn't filled out their user manual yet.",
+    ctaBadge: "Discover your talents",
+    ctaTitle1: "What are ",
+    ctaTitle2: "your",
+    ctaTitle3: " superpowers?",
+    ctaDesc: "TalentPilot helps you discover natural talents and turn them into better teamwork. Create your own profile — just like this one.",
+    ctaButton: "Check out TalentPilot",
+    benefit1Title: "Know your talent profile",
+    benefit1Desc: "Discover what you naturally do best and how to use it at work.",
+    benefit2Title: "Work better with your team",
+    benefit2Desc: "Create a profile and help others understand how to work with you.",
+    benefit3Title: "Compare talents 1:1",
+    benefit3Desc: "AI will show synergies with others and how to use them effectively.",
+    footerText: "TalentPilot — Manager Copilot based on CliftonStrengths",
+  }
 };
 
 // Rank number pill colour (matches domain)
@@ -68,6 +127,7 @@ export default function WizytowkaPage() {
   const [profile, setProfile] = useState<PublicProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
+  const [lang, setLang] = useState<"pl" | "en">("pl");
 
   useEffect(() => {
     if (!token) return;
@@ -92,20 +152,29 @@ export default function WizytowkaPage() {
 
   /* ── 404 ── */
   if (notFound || !profile) {
+    const t = T[lang];
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-slate-50 gap-4 px-4 text-center">
         <div className="text-6xl">🔍</div>
-        <h1 className="text-xl font-bold text-slate-800">Nie znaleziono wizytówki</h1>
-        <p className="text-slate-500 text-sm">Ten link jest nieaktywny lub wygasł.</p>
+        <h1 className="text-xl font-bold text-slate-800">{t.notFound}</h1>
+        <p className="text-slate-500 text-sm">{t.notFoundDesc}</p>
         <a href="https://talentpilot.io" className="text-sm text-indigo-600 hover:underline font-medium">
-          Wróć do TalentPilot →
+          {t.backTo}
         </a>
       </div>
     );
   }
 
+  const t = T[lang];
   const initials = profile.full_name.split(" ").map((n) => n[0]).join("").toUpperCase().slice(0, 2);
-  const hasManual = profile.superpowers || profile.motivators || profile.blockers || profile.feedback_style;
+  const hasManual = 
+    (profile.superpowers || profile.motivators || profile.blockers || profile.feedback_style) ||
+    (profile.superpowers_en || profile.motivators_en || profile.blockers_en || profile.feedback_style_en);
+
+  const displaySuperpowers = lang === "en" ? (profile.superpowers_en || profile.superpowers) : profile.superpowers;
+  const displayMotivators = lang === "en" ? (profile.motivators_en || profile.motivators) : profile.motivators;
+  const displayBlockers = lang === "en" ? (profile.blockers_en || profile.blockers) : profile.blockers;
+  const displayFeedback = lang === "en" ? (profile.feedback_style_en || profile.feedback_style) : profile.feedback_style;
 
   // Count talents per domain (all visible)
   const domainCount = profile.talents?.reduce((acc, t) => {
@@ -128,7 +197,29 @@ export default function WizytowkaPage() {
             <div className="h-6 w-6 bg-indigo-600 rounded flex items-center justify-center text-white font-bold text-[10px]">TP</div>
             <span className="font-semibold text-slate-700 text-sm">TalentPilot</span>
           </a>
-          <span className="text-xs text-slate-400">Wizytówka talentów</span>
+          <div className="flex items-center gap-3">
+            <span className="text-xs text-slate-400 hidden sm:inline-block">{t.bizCard}</span>
+            <div className="flex bg-slate-100 p-0.5 rounded-lg border border-slate-200">
+              <button
+                onClick={() => setLang("pl")}
+                className={cn(
+                  "px-2 py-0.5 text-[10px] font-bold rounded-md transition-all uppercase tracking-wider",
+                  lang === "pl" ? "bg-white text-indigo-600 shadow-sm" : "text-slate-400 hover:text-slate-600"
+                )}
+              >
+                PL
+              </button>
+              <button
+                onClick={() => setLang("en")}
+                className={cn(
+                  "px-2 py-0.5 text-[10px] font-bold rounded-md transition-all uppercase tracking-wider",
+                  lang === "en" ? "bg-white text-indigo-600 shadow-sm" : "text-slate-400 hover:text-slate-600"
+                )}
+              >
+                EN
+              </button>
+            </div>
+          </div>
         </div>
       </header>
 
@@ -183,23 +274,25 @@ export default function WizytowkaPage() {
               <div className="rounded-2xl bg-white border border-slate-200 shadow-sm p-5">
                 <div className="flex items-center gap-2 mb-4">
                   <Sparkles className="h-4 w-4 text-indigo-500" />
-                  <h2 className="font-semibold text-slate-800 text-sm">Top {profile.talents.length} talentów Gallup</h2>
+                  <h2 className="font-semibold text-slate-800 text-sm">{t.topTalents(profile.talents.length)}</h2>
                 </div>
 
                 <div className="space-y-1.5">
-                  {profile.talents.map((t) => (
-                    <div key={t.rank} className="flex items-center gap-2.5 px-2.5 py-2 rounded-xl bg-slate-50">
+                  {profile.talents.map((tItem) => (
+                    <div key={tItem.rank} className="flex items-center gap-2.5 px-2.5 py-2 rounded-xl bg-slate-50">
                       <span
                         className={cn(
                           "h-6 w-6 rounded-full flex items-center justify-center text-[11px] font-bold text-white shrink-0",
-                          RANK_BG[t.domain] ?? "bg-indigo-500"
+                          RANK_BG[tItem.domain] ?? "bg-indigo-500"
                         )}
                       >
-                        {t.rank}
+                        {tItem.rank}
                       </span>
-                      <span className="flex-1 text-sm font-medium text-slate-800">{t.name_pl}</span>
-                      <span className={cn("text-[11px] px-2 py-0.5 rounded-full font-medium", DOMAIN_STYLE[t.domain]?.badge ?? "bg-slate-100 text-slate-600")}>
-                        {DOMAIN_LABEL[t.domain] ?? t.domain}
+                      <span className="flex-1 text-sm font-medium text-slate-800">
+                        {lang === "en" ? (tItem.name_en || tItem.name_pl) : tItem.name_pl}
+                      </span>
+                      <span className={cn("text-[11px] px-2 py-0.5 rounded-full font-medium", DOMAIN_STYLE[tItem.domain]?.badge ?? "bg-slate-100 text-slate-600")}>
+                        {DOMAIN_LABEL[tItem.domain]?.[lang] ?? tItem.domain}
                       </span>
                     </div>
                   ))}
@@ -212,7 +305,7 @@ export default function WizytowkaPage() {
                       <div key={domain} className="flex items-center gap-1.5">
                         <span className={cn("h-1.5 w-1.5 rounded-full shrink-0", DOMAIN_STYLE[domain]?.dot ?? "bg-slate-400")} />
                         <span className="text-xs text-slate-500 truncate">
-                          {DOMAIN_LABEL[domain] ?? domain}
+                          {DOMAIN_LABEL[domain]?.[lang] ?? domain}
                           <span className="font-semibold text-slate-700 ml-1">×{count}</span>
                         </span>
                       </div>
@@ -232,50 +325,50 @@ export default function WizytowkaPage() {
                 <div className="flex items-center gap-3">
                   <div className="h-px flex-1 bg-slate-300" />
                   <span className="text-[11px] font-bold uppercase tracking-widest text-slate-400 whitespace-nowrap">
-                    Instrukcja obsługi
+                    {t.manualTitle}
                   </span>
                   <div className="h-px flex-1 bg-slate-300" />
                 </div>
 
                 {/* Superpowers — full width */}
-                {profile.superpowers && (
+                {displaySuperpowers && (
                   <ManualCard
                     icon={<Zap className="h-4 w-4" />}
                     iconClass="bg-amber-50 text-amber-600"
-                    title="Moje mocne strony"
-                    text={profile.superpowers}
+                    title={t.superpowers}
+                    text={displaySuperpowers}
                   />
                 )}
 
                 {/* Motivators + Blockers — side by side */}
-                {(profile.motivators || profile.blockers) && (
+                {(displayMotivators || displayBlockers) && (
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    {profile.motivators && (
+                    {displayMotivators && (
                       <ManualCard
                         icon={<Smile className="h-4 w-4" />}
                         iconClass="bg-emerald-50 text-emerald-600"
-                        title="Motywatory"
-                        text={profile.motivators}
+                        title={t.motivators}
+                        text={displayMotivators}
                       />
                     )}
-                    {profile.blockers && (
+                    {displayBlockers && (
                       <ManualCard
                         icon={<Shield className="h-4 w-4" />}
                         iconClass="bg-rose-50 text-rose-600"
-                        title="Blokady"
-                        text={profile.blockers}
+                        title={t.blockers}
+                        text={displayBlockers}
                       />
                     )}
                   </div>
                 )}
 
                 {/* Feedback style — full width */}
-                {profile.feedback_style && (
+                {displayFeedback && (
                   <ManualCard
                     icon={<MessageSquare className="h-4 w-4" />}
                     iconClass="bg-blue-50 text-blue-600"
-                    title="Jak mi dawać feedback"
-                    text={profile.feedback_style}
+                    title={t.feedback}
+                    text={displayFeedback}
                   />
                 )}
               </>
@@ -283,7 +376,7 @@ export default function WizytowkaPage() {
               /* Empty state for right column */
               <div className="rounded-2xl bg-white border border-slate-200 shadow-sm p-8 text-center">
                 <MessageSquare className="h-8 w-8 text-slate-200 mx-auto mb-3" />
-                <p className="text-sm text-slate-400">Właściciel profilu nie uzupełnił jeszcze instrukcji obsługi.</p>
+                <p className="text-sm text-slate-400">{t.emptyManual}</p>
               </div>
             )}
           </div>
@@ -298,13 +391,13 @@ export default function WizytowkaPage() {
               <div className="text-white space-y-4">
                 <div className="inline-flex items-center gap-1.5 bg-white/15 rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-wide">
                   <Sparkles className="h-3 w-3" />
-                  Odkryj swoje talenty
+                  {t.ctaBadge}
                 </div>
                 <h3 className="text-2xl font-bold leading-snug">
-                  A jakie są <span className="text-indigo-200">Twoje</span> mocne strony?
+                  {t.ctaTitle1}<span className="text-indigo-200">{t.ctaTitle2}</span>{t.ctaTitle3}
                 </h3>
                 <p className="text-indigo-100 text-sm leading-relaxed">
-                  TalentPilot pomaga odkryć naturalne talenty i przekuć je w lepszą współpracę z zespołem. Stwórz swoją własną wizytówkę — tak jak ta.
+                  {t.ctaDesc}
                 </p>
                 <a
                   href="https://talentpilot.io"
@@ -312,7 +405,7 @@ export default function WizytowkaPage() {
                   rel="noopener noreferrer"
                   className="inline-flex items-center gap-2 bg-white text-indigo-700 font-semibold text-sm px-5 py-2.5 rounded-xl hover:bg-indigo-50 transition shadow-sm"
                 >
-                  Sprawdź TalentPilot
+                  {t.ctaButton}
                   <ArrowRight className="h-4 w-4" />
                 </a>
               </div>
@@ -320,9 +413,9 @@ export default function WizytowkaPage() {
               {/* Benefits */}
               <div className="space-y-3">
                 {[
-                  { icon: <Brain className="h-4 w-4" />, title: "Poznaj swój profil talentów", desc: "Odkryj co robisz naturalnie najlepiej i jak to wykorzystać w pracy." },
-                  { icon: <Users className="h-4 w-4" />, title: "Współpracuj lepiej z zespołem", desc: "Stwórz wizytówkę i pomóż innym zrozumieć jak z Tobą pracować." },
-                  { icon: <BarChart3 className="h-4 w-4" />, title: "Porównaj talenty 1:1", desc: "AI pokaże synergie z innymi i wskaże jak je efektywnie wykorzystać." },
+                  { icon: <Brain className="h-4 w-4" />, title: t.benefit1Title, desc: t.benefit1Desc },
+                  { icon: <Users className="h-4 w-4" />, title: t.benefit2Title, desc: t.benefit2Desc },
+                  { icon: <BarChart3 className="h-4 w-4" />, title: t.benefit3Title, desc: t.benefit3Desc },
                 ].map((b, i) => (
                   <div key={i} className="flex gap-3 bg-white/10 rounded-xl p-3">
                     <div className="text-indigo-200 mt-0.5 shrink-0">{b.icon}</div>
@@ -340,7 +433,7 @@ export default function WizytowkaPage() {
           <div className="bg-white border-t border-slate-200 px-6 py-3 flex items-center justify-between">
             <div className="flex items-center gap-2">
               <div className="h-5 w-5 bg-indigo-600 rounded flex items-center justify-center text-white font-bold text-[9px]">TP</div>
-              <span className="text-xs text-slate-500">TalentPilot — Manager Copilot oparty na CliftonStrengths</span>
+              <span className="text-xs text-slate-500">{t.footerText}</span>
             </div>
             <a
               href="https://talentpilot.io"

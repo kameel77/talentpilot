@@ -100,6 +100,11 @@ class User(Base):
     motivators = Column(Text, nullable=True)   # "Wyzwalacze"
     blockers = Column(Text, nullable=True)     # "Blokady"
     feedback_style = Column(Text, nullable=True)  # "Jak mi dawać feedback"
+    
+    superpowers_en = Column(Text, nullable=True)
+    motivators_en = Column(Text, nullable=True)
+    blockers_en = Column(Text, nullable=True)
+    feedback_style_en = Column(Text, nullable=True)
 
     # Public profile (wizytówka)
     public_token = Column(String(64), unique=True, nullable=True, index=True)

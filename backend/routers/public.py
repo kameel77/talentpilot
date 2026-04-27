@@ -123,6 +123,10 @@ def get_public_profile(slug_or_token: str, db: Session = Depends(get_db)):
         motivators=user.motivators if s.get("show_motivators", True) else None,
         blockers=user.blockers if s.get("show_blockers", False) else None,
         feedback_style=user.feedback_style if s.get("show_feedback_style", True) else None,
+        superpowers_en=user.superpowers_en if s.get("show_superpowers", True) else None,
+        motivators_en=user.motivators_en if s.get("show_motivators", True) else None,
+        blockers_en=user.blockers_en if s.get("show_blockers", False) else None,
+        feedback_style_en=user.feedback_style_en if s.get("show_feedback_style", True) else None,
     )
 
 

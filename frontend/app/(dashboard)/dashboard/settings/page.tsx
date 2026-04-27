@@ -91,10 +91,17 @@ export default function SettingsPage() {
   const [newOrgMsg, setNewOrgMsg] = useState<{ type: "success" | "error"; text: string } | null>(null);
 
   // User Manual
+  const [manualLang, setManualLang] = useState<"pl" | "en">("pl");
   const [superpowers, setSuperpowers] = useState("");
   const [motivators, setMotivators] = useState("");
   const [blockers, setBlockers] = useState("");
   const [feedbackStyle, setFeedbackStyle] = useState("");
+  
+  const [superpowersEn, setSuperpowersEn] = useState("");
+  const [motivatorsEn, setMotivatorsEn] = useState("");
+  const [blockersEn, setBlockersEn] = useState("");
+  const [feedbackStyleEn, setFeedbackStyleEn] = useState("");
+
   const [manualSaving, setManualSaving] = useState(false);
   const [manualMsg, setManualMsg] = useState<{ type: "success" | "error"; text: string } | null>(null);
 
@@ -130,11 +137,16 @@ export default function SettingsPage() {
       tokenManager.setUser(u);
       setPublicSlug(u.public_slug ?? "");
       // User Manual fields
-      const ud = u as typeof u & { superpowers?: string; motivators?: string; blockers?: string; feedback_style?: string };
+      const ud = u as typeof u & { superpowers?: string; motivators?: string; blockers?: string; feedback_style?: string; superpowers_en?: string; motivators_en?: string; blockers_en?: string; feedback_style_en?: string; };
       setSuperpowers(ud.superpowers ?? "");
       setMotivators(ud.motivators ?? "");
       setBlockers(ud.blockers ?? "");
       setFeedbackStyle(ud.feedback_style ?? "");
+
+      setSuperpowersEn(ud.superpowers_en ?? "");
+      setMotivatorsEn(ud.motivators_en ?? "");
+      setBlockersEn(ud.blockers_en ?? "");
+      setFeedbackStyleEn(ud.feedback_style_en ?? "");
 
       // Load privacy settings from public_profile_settings
       if ((u as UserType & { public_profile_settings?: any }).public_profile_settings) {
@@ -346,6 +358,10 @@ export default function SettingsPage() {
         motivators: motivators || undefined,
         blockers: blockers || undefined,
         feedback_style: feedbackStyle || undefined,
+        superpowers_en: superpowersEn || undefined,
+        motivators_en: motivatorsEn || undefined,
+        blockers_en: blockersEn || undefined,
+        feedback_style_en: feedbackStyleEn || undefined,
       });
       tokenManager.setUser(updated);
       setCurrentUser(updated);
@@ -740,23 +756,62 @@ export default function SettingsPage() {
         title="Instrukcja obsługi"
         description="Powiedz innym jak z Tobą współpracować — widoczne na wizytówce"
       >
+        <div className="flex items-center gap-2 mb-4 bg-slate-100 p-1 w-fit rounded-lg border border-slate-200">
+          <button
+            onClick={() => setManualLang("pl")}
+            className={cn(
+              "px-3 py-1.5 text-xs font-medium rounded-md transition-all",
+              manualLang === "pl" ? "bg-white text-indigo-600 shadow-sm" : "text-slate-500 hover:text-slate-700"
+            )}
+          >
+            Polski
+          </button>
+          <button
+            onClick={() => setManualLang("en")}
+            className={cn(
+              "px-3 py-1.5 text-xs font-medium rounded-md transition-all",
+              manualLang === "en" ? "bg-white text-indigo-600 shadow-sm" : "text-slate-500 hover:text-slate-700"
+            )}
+          >
+            English
+          </button>
+        </div>
         <div className="grid gap-5 sm:grid-cols-2">
-          {[
-            { label: "Moje mocne strony", placeholder: "Co naturalnie wnosisz do zespołu? Jakie masz supermoce?", value: superpowers, set: setSuperpowers },
-            { label: "Wyzwalacze i motywatory", placeholder: "Co daje Ci energię? Co sprawia że działasz z pełną mocą?", value: motivators, set: setMotivators },
-            { label: "Blokady i ograniczenia", placeholder: "Co Cię spowalnia lub drażni? Na co uważać?", value: blockers, set: setBlockers },
-            { label: "Jak mi dawać feedback", placeholder: "Jak chcesz otrzymywać informację zwrotną?", value: feedbackStyle, set: setFeedbackStyle },
-          ].map(({ label, placeholder, value, set }) => (
-            <div key={label} className="space-y-2">
-              <Label className="text-sm font-medium text-slate-700">{label}</Label>
-              <textarea
-                className="w-full min-h-[100px] rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-700 placeholder:text-slate-400 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary resize-none"
-                placeholder={placeholder}
-                value={value}
-                onChange={(e) => set(e.target.value)}
-              />
-            </div>
-          ))}
+          {manualLang === "pl" ? (
+            [
+              { label: "Moje mocne strony", placeholder: "Co naturalnie wnosisz do zespołu? Jakie masz supermoce?", value: superpowers, set: setSuperpowers },
+              { label: "Wyzwalacze i motywatory", placeholder: "Co daje Ci energię? Co sprawia że działasz z pełną mocą?", value: motivators, set: setMotivators },
+              { label: "Blokady i ograniczenia", placeholder: "Co Cię spowalnia lub drażni? Na co uważać?", value: blockers, set: setBlockers },
+              { label: "Jak mi dawać feedback", placeholder: "Jak chcesz otrzymywać informację zwrotną?", value: feedbackStyle, set: setFeedbackStyle },
+            ].map(({ label, placeholder, value, set }) => (
+              <div key={label} className="space-y-2">
+                <Label className="text-sm font-medium text-slate-700">{label}</Label>
+                <textarea
+                  className="w-full min-h-[100px] rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-700 placeholder:text-slate-400 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary resize-none"
+                  placeholder={placeholder}
+                  value={value}
+                  onChange={(e) => set(e.target.value)}
+                />
+              </div>
+            ))
+          ) : (
+            [
+              { label: "Moje mocne strony (EN)", placeholder: "What do you naturally bring to the team?", value: superpowersEn, set: setSuperpowersEn },
+              { label: "Wyzwalacze i motywatory (EN)", placeholder: "What gives you energy?", value: motivatorsEn, set: setMotivatorsEn },
+              { label: "Blokady i ograniczenia (EN)", placeholder: "What slows you down?", value: blockersEn, set: setBlockersEn },
+              { label: "Jak mi dawać feedback (EN)", placeholder: "How do you prefer to receive feedback?", value: feedbackStyleEn, set: setFeedbackStyleEn },
+            ].map(({ label, placeholder, value, set }) => (
+              <div key={label} className="space-y-2">
+                <Label className="text-sm font-medium text-slate-700">{label}</Label>
+                <textarea
+                  className="w-full min-h-[100px] rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-700 placeholder:text-slate-400 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary resize-none"
+                  placeholder={placeholder}
+                  value={value}
+                  onChange={(e) => set(e.target.value)}
+                />
+              </div>
+            ))
+          )}
         </div>
         {manualMsg && (
           <p className={cn("text-sm mt-2", manualMsg.type === "success" ? "text-green-600" : "text-destructive")}>
