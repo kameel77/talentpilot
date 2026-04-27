@@ -11,7 +11,7 @@ echo "--- Checking migration state ---"
 # re-stamp to dd87278924a7 so that i4d5e6f7g8h9 and j5e6f7g8h9i0 actually run.
 python -c "
 import os, sys
-from sqlalchemy import create_engine, text, inspect
+from sqlalchemy import create_engine, text
 
 db_url = os.environ.get('DATABASE_URL')
 if not db_url:
@@ -19,29 +19,49 @@ if not db_url:
     sys.exit(0)
 
 engine = create_engine(db_url)
-with engine.connect() as conn:
-    inspector = inspect(engine)
-    if 'users' not in inspector.get_table_names():
-        print('Users table does not exist yet, skipping fix')
-        sys.exit(0)
 
-    columns = [c['name'] for c in inspector.get_columns('users')]
-    if 'job_title_en' not in columns:
-        print('!!! job_title_en column missing — checking alembic_version...')
-        if 'alembic_version' in inspector.get_table_names():
-            result = conn.execute(text('SELECT version_num FROM alembic_version'))
-            row = result.fetchone()
-            if row:
-                current = row[0]
-                print(f'    Current alembic version: {current}')
-                # If alembic is past dd87278924a7 but columns are missing, re-stamp
-                if current in ('i4d5e6f7g8h9', 'j5e6f7g8h9i0'):
-                    print('    Re-stamping to dd87278924a7 so EN migrations re-run...')
-                    conn.execute(text(\"UPDATE alembic_version SET version_num = 'dd87278924a7'\"))
-                    conn.commit()
-                    print('    Done. Alembic upgrade head will now apply EN field migrations.')
+# Use raw DBAPI connection for maximum reliability
+raw_conn = engine.raw_connection()
+try:
+    cursor = raw_conn.cursor()
+    
+    # Check if users table has job_title_en column
+    cursor.execute(\"\"\"
+        SELECT column_name 
+        FROM information_schema.columns 
+        WHERE table_name = 'users' AND column_name = 'job_title_en'
+    \"\"\")
+    has_column = cursor.fetchone() is not None
+    
+    if has_column:
+        print('job_title_en column exists -- migration state OK')
     else:
-        print('job_title_en column exists — migration state OK')
+        print('!!! job_title_en column MISSING from users table')
+        
+        # Check current alembic version
+        cursor.execute('SELECT version_num FROM alembic_version')
+        row = cursor.fetchone()
+        if row:
+            current = row[0]
+            print(f'    Current alembic version: {current}')
+            
+            # Re-stamp to the last version that actually applied
+            print('    Re-stamping alembic to dd87278924a7...')
+            cursor.execute(\"UPDATE alembic_version SET version_num = 'dd87278924a7'\")
+            raw_conn.commit()
+            print('    Done. alembic upgrade head should now apply EN migrations.')
+        else:
+            print('    No alembic_version row found')
+except Exception as e:
+    print(f'Migration state check error: {e}')
+    try:
+        raw_conn.rollback()
+    except:
+        pass
+finally:
+    raw_conn.close()
+
+engine.dispose()
 " || echo "Migration state check script failed, continuing..."
 
 echo ""
