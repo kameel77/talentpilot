@@ -34,14 +34,33 @@ def upgrade() -> None:
         op.create_unique_constraint('uq_organization_access', 'organization_access', ['user_id', 'organization_id'])
     except Exception:
         pass
-    op.alter_column('password_reset_tokens', 'created_at',
-               existing_type=postgresql.TIMESTAMP(timezone=True),
-               nullable=True,
-               existing_server_default=sa.text('now()'))
-    op.drop_constraint(op.f('password_reset_tokens_user_id_fkey'), 'password_reset_tokens', type_='foreignkey')
-    op.create_foreign_key(None, 'password_reset_tokens', 'users', ['user_id'], ['id'], ondelete='CASCADE')
-    op.add_column('teams', sa.Column('presentation_token', sa.String(length=64), nullable=True))
-    op.create_index(op.f('ix_teams_presentation_token'), 'teams', ['presentation_token'], unique=True)
+    try:
+        op.alter_column('password_reset_tokens', 'created_at',
+                   existing_type=postgresql.TIMESTAMP(timezone=True),
+                   nullable=True,
+                   existing_server_default=sa.text('now()'))
+    except Exception:
+        pass
+
+    try:
+        # Some dialects or setups might fail on drop_constraint if it doesn't exist
+        op.drop_constraint(op.f('password_reset_tokens_user_id_fkey'), 'password_reset_tokens', type_='foreignkey')
+    except Exception:
+        pass
+        
+    try:
+        op.create_foreign_key(None, 'password_reset_tokens', 'users', ['user_id'], ['id'], ondelete='CASCADE')
+    except Exception:
+        pass
+
+    if 'teams' in inspector.get_table_names():
+        teams_cols = [c['name'] for c in inspector.get_columns('teams')]
+        if 'presentation_token' not in teams_cols:
+            op.add_column('teams', sa.Column('presentation_token', sa.String(length=64), nullable=True))
+            try:
+                op.create_index(op.f('ix_teams_presentation_token'), 'teams', ['presentation_token'], unique=True)
+            except Exception:
+                pass
     # ### end Alembic commands ###
 
 
