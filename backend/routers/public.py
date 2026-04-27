@@ -85,11 +85,12 @@ def get_public_profile(slug_or_token: str, db: Session = Depends(get_db)):
     # Build talents list if enabled
     talents = None
     if s.get("show_talents", True):
+        talents_count = s.get("talents_count", 5)
         user_talents = (
             db.query(UserTalent)
             .filter(UserTalent.user_id == user.id)
             .order_by(UserTalent.rank)
-            .limit(5)
+            .limit(talents_count)
             .all()
         )
         talents = []

@@ -183,11 +183,11 @@ export default function WizytowkaPage() {
               <div className="rounded-2xl bg-white border border-slate-200 shadow-sm p-5">
                 <div className="flex items-center gap-2 mb-4">
                   <Sparkles className="h-4 w-4 text-indigo-500" />
-                  <h2 className="font-semibold text-slate-800 text-sm">Top 5 talentów Gallup</h2>
+                  <h2 className="font-semibold text-slate-800 text-sm">Top {profile.talents.length} talentów Gallup</h2>
                 </div>
 
                 <div className="space-y-1.5">
-                  {profile.talents.slice(0, 5).map((t) => (
+                  {profile.talents.map((t) => (
                     <div key={t.rank} className="flex items-center gap-2.5 px-2.5 py-2 rounded-xl bg-slate-50">
                       <span
                         className={cn(

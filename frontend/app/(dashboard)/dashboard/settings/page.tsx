@@ -107,6 +107,7 @@ export default function SettingsPage() {
   // Privacy settings for wizytówka
   const [sharePhoto, setSharePhoto] = useState(true);
   const [shareTalents, setShareTalents] = useState(true);
+  const [talentsCount, setTalentsCount] = useState<5 | 15>(5);
   const [shareSuperpowers, setShareSuperpowers] = useState(true);
   const [shareMotivators, setShareMotivators] = useState(true);
   const [shareBlockers, setShareBlockers] = useState(false);
@@ -136,10 +137,11 @@ export default function SettingsPage() {
       setFeedbackStyle(ud.feedback_style ?? "");
 
       // Load privacy settings from public_profile_settings
-      if ((u as UserType & { public_profile_settings?: Record<string, boolean> }).public_profile_settings) {
-        const s = (u as UserType & { public_profile_settings?: Record<string, boolean> }).public_profile_settings!;
+      if ((u as UserType & { public_profile_settings?: any }).public_profile_settings) {
+        const s = (u as UserType & { public_profile_settings?: any }).public_profile_settings!;
         setSharePhoto(s.show_photo ?? true);
         setShareTalents(s.show_talents ?? true);
+        setTalentsCount(s.talents_count === 15 ? 15 : 5);
         setShareSuperpowers(s.show_superpowers ?? true);
         setShareMotivators(s.show_motivators ?? true);
         setShareBlockers(s.show_blockers ?? false);
@@ -315,6 +317,7 @@ export default function SettingsPage() {
       const settings = {
         show_photo: sharePhoto,
         show_talents: shareTalents,
+        talents_count: talentsCount,
         show_superpowers: shareSuperpowers,
         show_motivators: shareMotivators,
         show_blockers: shareBlockers,
@@ -837,19 +840,66 @@ export default function SettingsPage() {
             {/* Privacy toggles */}
             <div className="space-y-3">
               <p className="text-sm font-medium text-slate-700">Co jest widoczne na wizytówce?</p>
-              {[
-                { label: "Zdjęcie profilowe", value: sharePhoto, set: setSharePhoto },
-                { label: "Talenty Gallup", value: shareTalents, set: setShareTalents },
-                { label: "Mocne strony (supermoce)", value: shareSuperpowers, set: setShareSuperpowers },
-                { label: "Wyzwalacze i motywatory", value: shareMotivators, set: setShareMotivators },
-                { label: "Blokady i ograniczenia", value: shareBlockers, set: setShareBlockers },
-                { label: "Jak mi dawać feedback", value: shareFeedback, set: setShareFeedback },
-              ].map(({ label, value, set }) => (
-                <div key={label} className="flex items-center justify-between py-1">
-                  <span className="text-sm text-slate-700">{label}</span>
-                  <Switch checked={value} onCheckedChange={set} />
+              
+              <div className="flex items-center justify-between py-1">
+                <span className="text-sm text-slate-700">Zdjęcie profilowe</span>
+                <Switch checked={sharePhoto} onCheckedChange={setSharePhoto} />
+              </div>
+              
+              <div className="flex items-center justify-between py-1">
+                <span className="text-sm text-slate-700">Talenty Gallup</span>
+                <Switch checked={shareTalents} onCheckedChange={setShareTalents} />
+              </div>
+              
+              {shareTalents && (
+                <div className="flex items-center gap-2 pl-4 py-1 border-l-2 border-slate-100 ml-1">
+                  <span className="text-xs text-slate-500 mr-2">Wyświetlaj:</span>
+                  <div className="flex bg-slate-100 p-0.5 rounded-lg border border-slate-200">
+                    <button
+                      onClick={() => setTalentsCount(5)}
+                      className={cn(
+                        "px-3 py-1 text-xs font-medium rounded-md transition-all",
+                        talentsCount === 5 
+                          ? "bg-white text-indigo-600 shadow-sm" 
+                          : "text-slate-500 hover:text-slate-700"
+                      )}
+                    >
+                      Top 5
+                    </button>
+                    <button
+                      onClick={() => setTalentsCount(15)}
+                      className={cn(
+                        "px-3 py-1 text-xs font-medium rounded-md transition-all",
+                        talentsCount === 15 
+                          ? "bg-white text-indigo-600 shadow-sm" 
+                          : "text-slate-500 hover:text-slate-700"
+                      )}
+                    >
+                      Top 15
+                    </button>
+                  </div>
                 </div>
-              ))}
+              )}
+
+              <div className="flex items-center justify-between py-1">
+                <span className="text-sm text-slate-700">Mocne strony (supermoce)</span>
+                <Switch checked={shareSuperpowers} onCheckedChange={setShareSuperpowers} />
+              </div>
+              
+              <div className="flex items-center justify-between py-1">
+                <span className="text-sm text-slate-700">Wyzwalacze i motywatory</span>
+                <Switch checked={shareMotivators} onCheckedChange={setShareMotivators} />
+              </div>
+              
+              <div className="flex items-center justify-between py-1">
+                <span className="text-sm text-slate-700">Blokady i ograniczenia</span>
+                <Switch checked={shareBlockers} onCheckedChange={setShareBlockers} />
+              </div>
+              
+              <div className="flex items-center justify-between py-1">
+                <span className="text-sm text-slate-700">Jak mi dawać feedback</span>
+                <Switch checked={shareFeedback} onCheckedChange={setShareFeedback} />
+              </div>
             </div>
             {privacyMsg && (
               <p className={cn("text-sm", privacyMsg.type === "success" ? "text-green-600" : "text-destructive")}>
