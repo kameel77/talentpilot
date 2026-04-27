@@ -84,6 +84,7 @@ class User(Base):
     hashed_password = Column(String(255), nullable=False)
     full_name = Column(String(255), nullable=False)
     job_title = Column(String(255), nullable=True)
+    job_title_en = Column(String(255), nullable=True)
     role = Column(SQLEnum(UserRole), nullable=False, default=UserRole.USER)
     is_active = Column(Boolean, default=True)
     is_ghost = Column(Boolean, default=False)

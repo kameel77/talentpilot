@@ -289,6 +289,72 @@ Wygeneruj DOKŁADNIE 4 sekcje w formacie JSON:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"AI generation failed: {str(e)}")
 
 
+@router.post("/me/translate-profile", response_model=dict)
+def translate_user_profile(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """
+    Translate user's profile fields to English using LLM.
+    Returns translated text — does NOT save automatically.
+    """
+    from services.assistant_service import get_openrouter_client
+    from services.settings_service import get_setting
+    import json
+
+    system_content = (
+        "You are an expert translator specializing in professional business profiles. "
+        "Translate the following Polish text to English, maintaining a professional SaaS tone. "
+        "Respond ONLY with a valid JSON object, without comments, without markdown blocks."
+    )
+
+    fields_to_translate = {
+        "job_title": current_user.job_title or "",
+        "superpowers": current_user.superpowers or "",
+        "motivators": current_user.motivators or "",
+        "blockers": current_user.blockers or "",
+        "feedback_style": current_user.feedback_style or ""
+    }
+
+    user_content = f"""Please translate the following fields from Polish to English.
+If a field is empty, leave it empty.
+
+{json.dumps(fields_to_translate, ensure_ascii=False, indent=2)}
+
+Return exactly 5 fields in JSON:
+{{
+  "job_title_en": "translated...",
+  "superpowers_en": "translated...",
+  "motivators_en": "translated...",
+  "blockers_en": "translated...",
+  "feedback_style_en": "translated..."
+}}"""
+
+    try:
+        model = get_setting(db, "openrouter_model") or "openai/gpt-4o-mini"
+        client = get_openrouter_client()
+        response = client.chat.completions.create(
+            model=model,
+            messages=[
+                {"role": "system", "content": system_content},
+                {"role": "user", "content": user_content},
+            ],
+            temperature=0.3,
+            max_tokens=1500,
+            response_format={"type": "json_object"},
+        )
+        result = json.loads(response.choices[0].message.content)
+        return {
+            "job_title_en": result.get("job_title_en", ""),
+            "superpowers_en": result.get("superpowers_en", ""),
+            "motivators_en": result.get("motivators_en", ""),
+            "blockers_en": result.get("blockers_en", ""),
+            "feedback_style_en": result.get("feedback_style_en", ""),
+        }
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Translation failed: {str(e)}")
+
+
 @router.post("/me/change-password", status_code=status.HTTP_204_NO_CONTENT)
 def change_password(
     data: PasswordChangeRequest,

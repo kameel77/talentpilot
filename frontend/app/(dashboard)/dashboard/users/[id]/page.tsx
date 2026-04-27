@@ -15,7 +15,7 @@ import {
     Trophy,
     Zap,
     Pencil,
-    Check,
+
     X,
     Sparkles,
     Loader2,

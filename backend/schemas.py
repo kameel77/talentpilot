@@ -71,6 +71,8 @@ class UserCreate(BaseModel):
 
 class UserUpdate(BaseModel):
     full_name: Optional[str] = Field(default=None, min_length=1, max_length=255)
+    job_title: Optional[str] = Field(default=None, max_length=255)
+    job_title_en: Optional[str] = Field(default=None, max_length=255)
     email: Optional[EmailStr] = None
     phone: Optional[str] = Field(default=None, max_length=50)
     linkedin_url: Optional[str] = Field(default=None, max_length=500)
@@ -104,6 +106,7 @@ class UserResponse(BaseModel):
     email: str
     full_name: str
     job_title: Optional[str] = None
+    job_title_en: Optional[str] = None
     role: UserRole
     is_active: bool
     is_ghost: bool
@@ -645,6 +648,7 @@ class PublicProfileResponse(BaseModel):
     """Public business card — only fields permitted by owner's privacy settings."""
     full_name: str
     job_title: Optional[str] = None
+    job_title_en: Optional[str] = None
     avatar_url: Optional[str] = None
     linkedin_url: Optional[str] = None
     talents: Optional[List[PublicTalentItem]] = None

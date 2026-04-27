@@ -61,6 +61,8 @@ export default function SettingsPage() {
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
   const [linkedin, setLinkedin] = useState("");
+  const [jobTitle, setJobTitle] = useState("");
+  const [jobTitleEn, setJobTitleEn] = useState("");
   const [profileSaving, setProfileSaving] = useState(false);
   const [profileMsg, setProfileMsg] = useState<{ type: "success" | "error"; text: string } | null>(null);
 
@@ -104,6 +106,10 @@ export default function SettingsPage() {
 
   const [manualSaving, setManualSaving] = useState(false);
   const [manualMsg, setManualMsg] = useState<{ type: "success" | "error"; text: string } | null>(null);
+
+  // AI Translation
+  const [isTranslating, setIsTranslating] = useState(false);
+  const [translateMsg, setTranslateMsg] = useState<{ type: "success" | "error"; text: string } | null>(null);
 
   // Wizytówka copy + slug
   const [linkCopied, setLinkCopied] = useState(false);
@@ -149,8 +155,8 @@ export default function SettingsPage() {
       setFeedbackStyleEn(ud.feedback_style_en ?? "");
 
       // Load privacy settings from public_profile_settings
-      if ((u as UserType & { public_profile_settings?: any }).public_profile_settings) {
-        const s = (u as UserType & { public_profile_settings?: any }).public_profile_settings!;
+      if ((u as UserType & { public_profile_settings?: Record<string, boolean | number> }).public_profile_settings) {
+        const s = (u as UserType & { public_profile_settings?: Record<string, boolean | number> }).public_profile_settings!;
         setSharePhoto(s.show_photo ?? true);
         setShareTalents(s.show_talents ?? true);
         setTalentsCount(s.talents_count === 15 ? 15 : 5);
@@ -179,6 +185,8 @@ export default function SettingsPage() {
     setEmail(u.email);
     setPhone(u.phone ?? "");
     setLinkedin(u.linkedin_url ?? "");
+    setJobTitle(u.job_title ?? "");
+    setJobTitleEn(u.job_title_en ?? "");
   }
 
   const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -232,6 +240,8 @@ export default function SettingsPage() {
         email,
         phone: phone || undefined,
         linkedin_url: linkedin || undefined,
+        job_title: jobTitle || undefined,
+        job_title_en: jobTitleEn || undefined,
       });
       tokenManager.setUser(updated);
       setCurrentUser(updated);
@@ -370,6 +380,26 @@ export default function SettingsPage() {
       setManualMsg({ type: "error", text: "Błąd zapisu." });
     } finally {
       setManualSaving(false);
+    }
+  };
+
+  const handleTranslateProfile = async () => {
+    setIsTranslating(true);
+    setTranslateMsg(null);
+    try {
+      const translation = await api.users.translateProfile();
+      setJobTitleEn(translation.job_title_en || "");
+      setSuperpowersEn(translation.superpowers_en || "");
+      setMotivatorsEn(translation.motivators_en || "");
+      setBlockersEn(translation.blockers_en || "");
+      setFeedbackStyleEn(translation.feedback_style_en || "");
+      
+      setManualLang("en"); // Switch to EN to show the translated text
+      setTranslateMsg({ type: "success", text: "Tłumaczenie AI wygenerowane. Zapisz profil by zachować." });
+    } catch {
+      setTranslateMsg({ type: "error", text: "Błąd podczas tłumaczenia." });
+    } finally {
+      setIsTranslating(false);
     }
   };
 
@@ -525,6 +555,26 @@ export default function SettingsPage() {
                   value={linkedin}
                   onChange={(e) => setLinkedin(e.target.value)}
                   placeholder="linkedin.com/in/…"
+                />
+              </div>
+            </div>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="space-y-2">
+                <Label htmlFor="job-title">Stanowisko (PL)</Label>
+                <Input
+                  id="job-title"
+                  value={jobTitle}
+                  onChange={(e) => setJobTitle(e.target.value)}
+                  placeholder="np. Senior Developer"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="job-title-en">Stanowisko (EN)</Label>
+                <Input
+                  id="job-title-en"
+                  value={jobTitleEn}
+                  onChange={(e) => setJobTitleEn(e.target.value)}
+                  placeholder="e.g. Senior Developer"
                 />
               </div>
             </div>
@@ -776,6 +826,26 @@ export default function SettingsPage() {
             English
           </button>
         </div>
+        <div className="flex items-center justify-between mb-4">
+          <p className="text-sm text-slate-500">
+            Wypełnij instrukcję w obu językach lub użyj AI, aby przetłumaczyć polską wersję.
+          </p>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleTranslateProfile}
+            disabled={isTranslating}
+            className="text-indigo-600 border-indigo-200 hover:bg-indigo-50"
+          >
+            <Sparkles className="h-4 w-4 mr-2" />
+            {isTranslating ? "Tłumaczenie..." : "Tłumacz z AI"}
+          </Button>
+        </div>
+        {translateMsg && (
+          <div className={cn("p-3 rounded-lg mb-4 text-sm", translateMsg.type === "success" ? "bg-green-50 text-green-700" : "bg-red-50 text-red-700")}>
+            {translateMsg.text}
+          </div>
+        )}
         <div className="grid gap-5 sm:grid-cols-2">
           {manualLang === "pl" ? (
             [

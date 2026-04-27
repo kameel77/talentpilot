@@ -14,6 +14,7 @@ export interface User {
     email: string;
     full_name: string;
     job_title?: string;
+    job_title_en?: string;
     role: 'admin' | 'manager' | 'coach' | 'user';
     is_active: boolean;
     is_ghost: boolean;
@@ -68,6 +69,12 @@ export interface UserUpdateData {
     feedback_style?: string;
     public_profile_settings?: Record<string, boolean>;
     public_slug?: string;
+    job_title?: string;
+    job_title_en?: string;
+    superpowers_en?: string;
+    motivators_en?: string;
+    blockers_en?: string;
+    feedback_style_en?: string;
 }
 
 export interface LoginCredentials {
@@ -207,6 +214,10 @@ export interface UserDetailResponse extends User {
     motivators?: string;
     blockers?: string;
     feedback_style?: string;
+    superpowers_en?: string;
+    motivators_en?: string;
+    blockers_en?: string;
+    feedback_style_en?: string;
 }
 
 export interface UserTalentResponse {
@@ -509,6 +520,11 @@ export const api = {
 
         generateManual: async (userId: number): Promise<{ superpowers: string; motivators: string; blockers: string; feedback_style: string }> => {
             const response = await apiClient.post(`/api/users/${userId}/generate-manual`);
+            return response.data;
+        },
+
+        translateProfile: async (): Promise<{ job_title_en: string; superpowers_en: string; motivators_en: string; blockers_en: string; feedback_style_en: string }> => {
+            const response = await apiClient.post('/api/users/me/translate-profile');
             return response.data;
         },
     },

@@ -31,6 +31,7 @@ interface TalentItem {
 interface PublicProfile {
   full_name: string;
   job_title: string | null;
+  job_title_en: string | null;
   avatar_url: string | null;
   linkedin_url: string | null;
   talents: TalentItem[] | null;
@@ -175,6 +176,7 @@ export default function WizytowkaPage() {
   const displayMotivators = lang === "en" ? (profile.motivators_en || profile.motivators) : profile.motivators;
   const displayBlockers = lang === "en" ? (profile.blockers_en || profile.blockers) : profile.blockers;
   const displayFeedback = lang === "en" ? (profile.feedback_style_en || profile.feedback_style) : profile.feedback_style;
+  const displayJobTitle = lang === "en" ? (profile.job_title_en || profile.job_title) : profile.job_title;
 
   // Count talents per domain (all visible)
   const domainCount = profile.talents?.reduce((acc, t) => {
@@ -251,8 +253,8 @@ export default function WizytowkaPage() {
                 </div>
 
                 <h1 className="mt-2.5 text-lg font-bold text-slate-900 leading-tight">{profile.full_name}</h1>
-                {profile.job_title && (
-                  <p className="text-sm text-slate-500 mt-0.5">{profile.job_title}</p>
+                {displayJobTitle && (
+                  <p className="text-sm text-slate-500 mt-0.5">{displayJobTitle}</p>
                 )}
 
                 {profile.linkedin_url && (
