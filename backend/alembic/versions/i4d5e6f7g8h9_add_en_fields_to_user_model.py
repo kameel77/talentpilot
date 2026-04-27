@@ -19,10 +19,20 @@ depends_on: Union[str, Sequence[str], None] = None
 
 
 def upgrade() -> None:
-    op.add_column('users', sa.Column('superpowers_en', sa.Text(), nullable=True))
-    op.add_column('users', sa.Column('motivators_en', sa.Text(), nullable=True))
-    op.add_column('users', sa.Column('blockers_en', sa.Text(), nullable=True))
-    op.add_column('users', sa.Column('feedback_style_en', sa.Text(), nullable=True))
+    bind = op.get_bind()
+    from sqlalchemy import inspect
+    inspector = inspect(bind)
+    
+    if 'users' in inspector.get_table_names():
+        columns = [c['name'] for c in inspector.get_columns('users')]
+        if 'superpowers_en' not in columns:
+            op.add_column('users', sa.Column('superpowers_en', sa.Text(), nullable=True))
+        if 'motivators_en' not in columns:
+            op.add_column('users', sa.Column('motivators_en', sa.Text(), nullable=True))
+        if 'blockers_en' not in columns:
+            op.add_column('users', sa.Column('blockers_en', sa.Text(), nullable=True))
+        if 'feedback_style_en' not in columns:
+            op.add_column('users', sa.Column('feedback_style_en', sa.Text(), nullable=True))
 
 
 def downgrade() -> None:

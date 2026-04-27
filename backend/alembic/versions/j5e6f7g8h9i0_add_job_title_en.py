@@ -19,7 +19,14 @@ depends_on: Union[str, Sequence[str], None] = None
 
 
 def upgrade() -> None:
-    op.add_column('users', sa.Column('job_title_en', sa.String(length=255), nullable=True))
+    bind = op.get_bind()
+    from sqlalchemy import inspect
+    inspector = inspect(bind)
+    
+    if 'users' in inspector.get_table_names():
+        columns = [c['name'] for c in inspector.get_columns('users')]
+        if 'job_title_en' not in columns:
+            op.add_column('users', sa.Column('job_title_en', sa.String(length=255), nullable=True))
 
 
 def downgrade() -> None:
