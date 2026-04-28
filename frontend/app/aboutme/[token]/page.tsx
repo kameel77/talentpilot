@@ -226,38 +226,38 @@ export default function WizytowkaPage() {
             {/* Profile card */}
             <div className="rounded-2xl bg-white border border-slate-200 shadow-sm overflow-hidden">
               {/* Cover */}
-              <div className="h-20 bg-gradient-to-r from-indigo-600 via-indigo-500 to-blue-500" />
+              <div className="h-28 bg-gradient-to-r from-indigo-600 via-indigo-500 to-blue-500 relative" />
 
               {/* Avatar + info */}
-              <div className="px-5 pt-0 pb-5 -mt-9">
+              <div className="px-5 sm:px-6 pt-0 pb-6 -mt-12 relative z-10 flex flex-col items-center sm:items-start text-center sm:text-left">
                 <div
                   className={cn(
-                    "h-16 w-16 rounded-xl overflow-hidden bg-indigo-600 flex items-center justify-center",
-                    "border-[3px] border-white shadow-md"
+                    "h-24 w-24 rounded-full overflow-hidden bg-indigo-600 flex items-center justify-center",
+                    "border-4 border-white shadow-md shrink-0 relative"
                   )}
                 >
                   {profile.avatar_url ? (
-                    <img src={profile.avatar_url} alt="" className="h-full w-full object-cover" />
+                    <img src={profile.avatar_url} alt="" className="h-full w-full object-cover object-center" />
                   ) : (
-                    <span className="text-white font-bold text-xl">{initials}</span>
+                    <span className="text-white font-bold text-2xl">{initials}</span>
                   )}
                 </div>
 
-                <h1 className="mt-2.5 text-lg font-bold text-slate-900 leading-tight">{profile.full_name}</h1>
+                <h1 className="mt-3 text-2xl font-bold text-slate-900 leading-tight">{profile.full_name}</h1>
                 {displayJobTitle && (
-                  <p className="text-sm text-slate-500 mt-0.5">{displayJobTitle}</p>
+                  <p className="text-[14px] font-medium text-slate-500 mt-1">{displayJobTitle}</p>
                 )}
 
                 {/* Contact details */}
                 {(profile.email || profile.phone || profile.linkedin_url) && (
-                  <div className="mt-3 space-y-1.5 overflow-hidden">
+                  <div className="mt-5 space-y-2.5 w-full">
                     {profile.email && (
                       <a
                         href={`mailto:${profile.email}`}
                         title={profile.email}
-                        className="flex items-center gap-1.5 text-xs font-medium text-slate-600 hover:text-indigo-600 transition"
+                        className="flex items-center justify-center sm:justify-start gap-3 text-[14px] font-medium text-slate-600 hover:text-indigo-600 transition bg-slate-50 hover:bg-indigo-50 rounded-xl p-3 border border-slate-100"
                       >
-                        <Mail className="h-3.5 w-3.5 text-slate-400 shrink-0" />
+                        <Mail className="h-4 w-4 text-slate-400 shrink-0" />
                         <span className="truncate">{profile.email}</span>
                       </a>
                     )}
@@ -265,9 +265,9 @@ export default function WizytowkaPage() {
                       <a
                         href={`tel:${profile.phone}`}
                         title={profile.phone}
-                        className="flex items-center gap-1.5 text-xs font-medium text-slate-600 hover:text-indigo-600 transition"
+                        className="flex items-center justify-center sm:justify-start gap-3 text-[14px] font-medium text-slate-600 hover:text-indigo-600 transition bg-slate-50 hover:bg-indigo-50 rounded-xl p-3 border border-slate-100"
                       >
-                        <Phone className="h-3.5 w-3.5 text-slate-400 shrink-0" />
+                        <Phone className="h-4 w-4 text-slate-400 shrink-0" />
                         <span className="truncate">{profile.phone}</span>
                       </a>
                     )}
@@ -277,9 +277,9 @@ export default function WizytowkaPage() {
                         target="_blank"
                         rel="noopener noreferrer"
                         title={profile.linkedin_url}
-                        className="flex items-center gap-1.5 text-xs font-medium text-slate-600 hover:text-indigo-600 transition"
+                        className="flex items-center justify-center sm:justify-start gap-3 text-[14px] font-medium text-slate-600 hover:text-[#0A66C2] transition bg-slate-50 hover:bg-[#0A66C2]/10 rounded-xl p-3 border border-slate-100"
                       >
-                        <Linkedin className="h-3.5 w-3.5 text-[#0A66C2] shrink-0" />
+                        <Linkedin className="h-4 w-4 text-[#0A66C2] shrink-0" />
                         <span className="truncate">LinkedIn</span>
                       </a>
                     )}
@@ -301,18 +301,18 @@ export default function WizytowkaPage() {
                     const canonicalDomain = GALLUP_TALENTS.find(x => x.code === tItem.code)?.domain || "executing";
                     const cssKey = DOMAIN_CSS_KEY[canonicalDomain as GallupDomain] || "executing";
                     return (
-                    <div key={tItem.rank} className="flex items-center gap-2.5 px-2.5 py-2 rounded-xl bg-slate-50">
+                    <div key={tItem.rank} className="flex items-center gap-3 px-3 py-2.5 rounded-xl bg-slate-50 border border-slate-100">
                       <span
-                        className="h-6 w-6 rounded-full flex items-center justify-center text-[11px] font-bold text-white shadow-sm shrink-0"
+                        className="h-7 w-7 rounded-full flex items-center justify-center text-xs font-bold text-white shadow-sm shrink-0"
                         style={{ backgroundColor: `var(--color-domain-${cssKey})` }}
                       >
                         {tItem.rank}
                       </span>
-                      <span className="flex-1 text-sm font-medium text-slate-800 leading-tight">
+                      <span className="flex-1 text-[14px] font-semibold text-slate-800 leading-tight truncate">
                         {lang === "en" ? (tItem.name_en || tItem.name_pl) : tItem.name_pl}
                       </span>
                       <span className={cn(
-                        "text-[10px] sm:text-[11px] px-2 py-0.5 rounded-full font-medium border shrink-0 whitespace-nowrap",
+                        "text-[9px] sm:text-[10px] uppercase tracking-wider px-2 py-1 rounded-md font-bold border shrink-0 whitespace-nowrap",
                         `domain-${cssKey}`
                       )}>
                         {DOMAIN_LABEL[canonicalDomain]?.[lang] ?? canonicalDomain}
@@ -411,27 +411,27 @@ export default function WizytowkaPage() {
         </div>
 
         {/* ════════════════ CTA — below grid ════════════════ */}
-        <div className="mt-8 rounded-2xl overflow-hidden shadow-sm">
-          <div className="bg-gradient-to-br from-indigo-700 via-indigo-600 to-blue-600 px-6 py-8 sm:px-8 sm:py-10">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-8 items-center">
+        <div className="mt-8 rounded-2xl overflow-hidden shadow-sm border border-slate-200">
+          <div className="bg-gradient-to-br from-indigo-700 via-indigo-600 to-blue-600 px-6 py-10 sm:px-10 sm:py-12">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-10 items-center">
 
               {/* Copy */}
-              <div className="text-white space-y-4">
+              <div className="text-white space-y-5 text-center md:text-left flex flex-col items-center md:items-start">
                 <div className="inline-flex items-center gap-1.5 bg-white/15 rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-wide">
                   <Sparkles className="h-3 w-3" />
                   {t.ctaBadge}
                 </div>
-                <h3 className="text-2xl font-bold leading-snug">
+                <h3 className="text-3xl sm:text-4xl font-extrabold leading-tight">
                   {t.ctaTitle1}<span className="text-indigo-200">{t.ctaTitle2}</span>{t.ctaTitle3}
                 </h3>
-                <p className="text-indigo-100 text-sm leading-relaxed">
+                <p className="text-indigo-100 text-[15px] leading-relaxed max-w-md mx-auto md:mx-0">
                   {t.ctaDesc}
                 </p>
                 <a
                   href="https://talentpilot.io"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex items-center gap-2 bg-white text-indigo-700 font-semibold text-sm px-5 py-2.5 rounded-xl hover:bg-indigo-50 transition shadow-sm"
+                  className="inline-flex items-center justify-center w-full sm:w-auto gap-2 bg-white text-indigo-700 font-bold text-[15px] px-6 py-3.5 rounded-xl hover:bg-indigo-50 transition shadow-lg mt-2"
                 >
                   {t.ctaButton}
                   <ArrowRight className="h-4 w-4" />
@@ -441,15 +441,15 @@ export default function WizytowkaPage() {
               {/* Benefits */}
               <div className="space-y-3">
                 {[
-                  { icon: <Brain className="h-4 w-4" />, title: t.benefit1Title, desc: t.benefit1Desc },
-                  { icon: <Users className="h-4 w-4" />, title: t.benefit2Title, desc: t.benefit2Desc },
-                  { icon: <BarChart3 className="h-4 w-4" />, title: t.benefit3Title, desc: t.benefit3Desc },
+                  { icon: <Brain className="h-5 w-5" />, title: t.benefit1Title, desc: t.benefit1Desc },
+                  { icon: <Users className="h-5 w-5" />, title: t.benefit2Title, desc: t.benefit2Desc },
+                  { icon: <BarChart3 className="h-5 w-5" />, title: t.benefit3Title, desc: t.benefit3Desc },
                 ].map((b, i) => (
-                  <div key={i} className="flex gap-3 bg-white/10 rounded-xl p-3">
+                  <div key={i} className="flex gap-4 bg-white/10 rounded-2xl p-4 sm:p-5 border border-white/5 backdrop-blur-sm">
                     <div className="text-indigo-200 mt-0.5 shrink-0">{b.icon}</div>
                     <div>
-                      <p className="text-white font-semibold text-xs">{b.title}</p>
-                      <p className="text-indigo-200 text-xs mt-0.5 leading-relaxed">{b.desc}</p>
+                      <p className="text-white font-bold text-[15px] leading-tight">{b.title}</p>
+                      <p className="text-indigo-200 text-[13px] mt-1.5 leading-relaxed">{b.desc}</p>
                     </div>
                   </div>
                 ))}
@@ -458,16 +458,16 @@ export default function WizytowkaPage() {
           </div>
 
           {/* Footer strip */}
-          <div className="bg-white border-t border-slate-200 px-6 py-3 flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <div className="h-5 w-5 bg-indigo-600 rounded flex items-center justify-center text-white font-bold text-[9px]">TP</div>
-              <span className="text-xs text-slate-500">{t.footerText}</span>
+          <div className="bg-slate-50 border-t border-slate-200 px-6 sm:px-8 py-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 text-center sm:text-left">
+            <div className="flex flex-col sm:flex-row items-center gap-3">
+              <div className="h-8 w-8 bg-indigo-600 rounded-xl flex items-center justify-center text-white font-bold text-[11px] shrink-0 shadow-sm">TP</div>
+              <span className="text-[14px] text-slate-500 font-medium">{t.footerText}</span>
             </div>
             <a
               href="https://talentpilot.io"
               target="_blank"
               rel="noopener noreferrer"
-              className="text-xs text-indigo-600 font-semibold hover:underline"
+              className="text-[14px] text-indigo-600 font-bold hover:text-indigo-700 transition shrink-0"
             >
               talentpilot.io →
             </a>
