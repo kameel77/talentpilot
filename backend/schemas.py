@@ -157,7 +157,7 @@ class AdminUserCreate(BaseModel):
 # Invitation Schemas
 class GhostInviteTalent(BaseModel):
     talent_id: int
-    rank: int = Field(..., ge=1, le=5)
+    rank: int = Field(..., ge=1, le=34)
 
 
 class GhostInviteCreate(BaseModel):

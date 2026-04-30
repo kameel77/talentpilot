@@ -208,16 +208,35 @@ export default function TeamDetailPage() {
         setPdfImportItems(items);
         setShowPdfImport(true);
 
+        // Pobierz świeżą listę talentów z API - nie polegaj na allTalents ze stanu,
+        // który może być pusty w momencie wywołania (race condition)
+        let currentTalents = allTalents;
+        if (currentTalents.length === 0) {
+            try {
+                currentTalents = await api.talents.list();
+                setAllTalents(currentTalents);
+            } catch (err) {
+                console.error('Failed to load talents for mapping:', err);
+            }
+        }
+
         for (let i = 0; i < files.length; i++) {
             setPdfImportItems(prev => prev.map((it, idx) => idx === i ? { ...it, status: 'processing' } : it));
             try {
                 const data = await api.gallup.parsePdf(files[i]);
-                const name = `${data.person?.first_name || ''} ${data.person?.last_name || ''}`.trim() || files[i].name.replace('.pdf', '');
+                const name = `${data.first_name || ''} ${data.last_name || ''}`.trim() || files[i].name.replace('.pdf', '');
                 
-                const mappedTalents = (data.talents || []).map((t: { talent: string; rank: number }) => {
-                    const found = allTalents.find(at => at.code === t.talent || at.translation?.name === t.talent);
-                    return { talent_id: found?.id || 0, rank: t.rank };
+                const rankingsData = data.rankings || {};
+                const mappedTalents = Object.entries(rankingsData).map(([talentCode, rank]) => {
+                    const found = currentTalents.find(at => at.code === talentCode || at.translation?.name === talentCode);
+                    return { talent_id: found?.id || 0, rank: rank as number };
                 }).filter((t: { talent_id: number; rank: number }) => t.talent_id > 0);
+
+                console.log(`[PdfImport] Parsed rankings for "${name}":`, rankingsData);
+                console.log(`[PdfImport] Mapped ${mappedTalents.length}/${Object.keys(rankingsData).length} talents`, mappedTalents);
+                if (mappedTalents.length === 0 && Object.keys(rankingsData).length > 0) {
+                    console.warn('[PdfImport] WARNING: All talents failed to map! currentTalents.length =', currentTalents.length);
+                }
 
                 const payload: GhostInvitePayload = {
                     team_id: teamId,

@@ -36,20 +36,26 @@ def _hash_token(token: str) -> str:
 
 
 def _validate_talents(talents: List[GhostInviteTalent], db: Session) -> None:
-    if len(talents) != 5:
+    if len(talents) < 1 or len(talents) > 34:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Must assign exactly 5 talents",
+            detail="Must assign between 1 and 34 talents",
         )
+    # Ranks must be unique positive integers
     ranks = [t.rank for t in talents]
-    if set(ranks) != {1, 2, 3, 4, 5}:
+    if len(set(ranks)) != len(ranks):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Ranks must be 1-5 and unique",
+            detail="Talent ranks must be unique",
+        )
+    if any(r < 1 or r > 34 for r in ranks):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Talent ranks must be between 1 and 34",
         )
     talent_ids = [t.talent_id for t in talents]
     existing = db.query(Talent).filter(Talent.id.in_(talent_ids)).all()
-    if len(existing) != 5:
+    if len(existing) != len(talents):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="One or more talent IDs are invalid",
