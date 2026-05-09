@@ -1,33 +1,6 @@
 services:
-  # PostgreSQL with pgvector extension
-  postgres:
-    image: ankane/pgvector:latest
-    environment:
-      POSTGRES_USER: ${POSTGRES_USER:-talentpilot}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-talentpilot}
-      POSTGRES_DB: ${POSTGRES_DB:-talentpilot}
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-talentpilot}"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-    restart: unless-stopped
-
-  # Redis
-  redis:
-    image: redis:7-alpine
-    volumes:
-      - redis_data:/data
-    healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
-      interval: 10s
-      timeout: 3s
-      retries: 5
-    restart: unless-stopped
-
   # Backend (FastAPI)
+  # PostgreSQL i Redis są teraz osobnymi zasobami Coolify (nie w compose)
   backend:
     build:
       context: ./backend
@@ -41,18 +14,13 @@ services:
       DEBUG: ${DEBUG:-false}
       CORS_ORIGINS: ${CORS_ORIGINS:?CORS_ORIGINS is required}
       FRONTEND_URL: ${FRONTEND_URL:-}
-      REDIS_URL: ${REDIS_URL:-redis://redis:6379/0}
+      REDIS_URL: ${REDIS_URL:?REDIS_URL is required}
       SMTP_SERVER: ${SMTP_SERVER:-smtp.gmail.com}
       SMTP_PORT: ${SMTP_PORT:-587}
       SMTP_USERNAME: ${SMTP_USERNAME:-}
       SMTP_PASSWORD: ${SMTP_PASSWORD:-}
       SMTP_FROM_EMAIL: ${SMTP_FROM_EMAIL:-}
       SMTP_FROM_NAME: ${SMTP_FROM_NAME:-TalentPilot}
-    depends_on:
-      postgres:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
       interval: 10s
@@ -73,7 +41,3 @@ services:
       backend:
         condition: service_healthy
     restart: unless-stopped
-
-volumes:
-  postgres_data:
-  redis_data:
