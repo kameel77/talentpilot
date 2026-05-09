@@ -21,6 +21,9 @@ services:
       SMTP_PASSWORD: ${SMTP_PASSWORD:-}
       SMTP_FROM_EMAIL: ${SMTP_FROM_EMAIL:-}
       SMTP_FROM_NAME: ${SMTP_FROM_NAME:-TalentPilot}
+    networks:
+      - default
+      - coolify
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
       interval: 10s
@@ -41,3 +44,7 @@ services:
       backend:
         condition: service_healthy
     restart: unless-stopped
+
+networks:
+  coolify:
+    external: true
