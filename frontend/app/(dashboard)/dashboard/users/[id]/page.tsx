@@ -21,11 +21,16 @@ import {
     Sparkles,
     Loader2,
     Save,
+    Power,
+    UserCog,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { DOMAIN_LABELS, DOMAIN_CSS_KEY, GALLUP_TALENTS } from "@/lib/gallup-data";
 import { api, tokenManager } from "@/lib/api";
 import { cn } from "@/lib/utils";
@@ -38,6 +43,9 @@ interface UserProfile {
     full_name: string;
     email: string;
     role: string;
+    job_title?: string;
+    is_active?: boolean;
+    is_ghost?: boolean;
     superpowers?: string;
     motivators?: string;
     blockers?: string;
@@ -218,6 +226,12 @@ export default function UserProfilePage() {
     });
     const [saving, setSaving] = useState(false);
     const [generating, setGenerating] = useState(false);
+
+    // Edit profile state
+    const [editProfileOpen, setEditProfileOpen] = useState(false);
+    const [editProfileData, setEditProfileData] = useState({ full_name: '', email: '', job_title: '' });
+    const [editProfileSaving, setEditProfileSaving] = useState(false);
+    const [editProfileError, setEditProfileError] = useState('');
 
     useEffect(() => {
         const loadUserData = async () => {
@@ -495,10 +509,51 @@ export default function UserProfilePage() {
 
             <div className="flex items-center justify-between">
                 <div>
-                    <h1 className="text-headline">{user.full_name}</h1>
+                    <div className="flex items-center gap-3">
+                        <h1 className="text-headline">{user.full_name}</h1>
+                        {user.is_active === false && (
+                            <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-slate-100 text-slate-500 border border-slate-200">INACTIVE</span>
+                        )}
+                    </div>
                     <p className="text-body">{user.email}</p>
+                    {user.job_title && <p className="text-sm text-muted-foreground mt-0.5">{user.job_title}</p>}
                 </div>
                 <div className="flex items-center gap-2">
+                    {canEdit && (
+                        <>
+                            <Button variant="outline" onClick={() => {
+                                setEditProfileData({
+                                    full_name: user.full_name || '',
+                                    email: user.email || '',
+                                    job_title: user.job_title || '',
+                                });
+                                setEditProfileError('');
+                                setEditProfileOpen(true);
+                            }}>
+                                <UserCog className="h-4 w-4 mr-2" />
+                                Edytuj dane
+                            </Button>
+                            <Button
+                                variant="outline"
+                                onClick={async () => {
+                                    try {
+                                        const newStatus = !(user.is_active !== false);
+                                        await api.users.update(userId, { is_active: newStatus });
+                                        setUser(prev => prev ? { ...prev, is_active: newStatus } : prev);
+                                    } catch (err) {
+                                        console.error(err);
+                                    }
+                                }}
+                                className={user.is_active !== false
+                                    ? 'text-amber-600 border-amber-200 hover:bg-amber-50'
+                                    : 'text-emerald-600 border-emerald-200 hover:bg-emerald-50'
+                                }
+                            >
+                                <Power className="h-4 w-4 mr-2" />
+                                {user.is_active !== false ? 'Archiwizuj' : 'Aktywuj'}
+                            </Button>
+                        </>
+                    )}
                     {canEdit && hasTalents && (
                         <>
                             <Button variant="outline" onClick={() => setTalentImportOpen(true)}>
@@ -676,6 +731,65 @@ export default function UserProfilePage() {
                     </div>
                 </div>
             )}
+
+            {/* Edit Profile Dialog */}
+            <Dialog open={editProfileOpen} onOpenChange={(open) => { if (!open) { setEditProfileOpen(false); setEditProfileError(''); } }}>
+                <DialogContent className="max-w-md">
+                    <DialogHeader>
+                        <DialogTitle>Edytuj dane użytkownika</DialogTitle>
+                    </DialogHeader>
+                    <form onSubmit={async (e) => {
+                        e.preventDefault();
+                        setEditProfileSaving(true);
+                        setEditProfileError('');
+                        try {
+                            await api.users.update(userId, {
+                                full_name: editProfileData.full_name,
+                                email: editProfileData.email,
+                                job_title: editProfileData.job_title || undefined,
+                            });
+                            setUser(prev => prev ? {
+                                ...prev,
+                                full_name: editProfileData.full_name,
+                                email: editProfileData.email,
+                                job_title: editProfileData.job_title,
+                            } : prev);
+                            setEditProfileOpen(false);
+                        } catch (err: unknown) {
+                            const axiosErr = err as { response?: { status?: number; data?: { detail?: { message?: string } | string } } };
+                            const detail = axiosErr.response?.data?.detail;
+                            const msg = typeof detail === 'string' ? detail : typeof detail === 'object' && detail?.message ? detail.message : 'Wystąpił błąd podczas zapisu.';
+                            setEditProfileError(msg);
+                        } finally {
+                            setEditProfileSaving(false);
+                        }
+                    }} className="space-y-4">
+                        <div className="space-y-2">
+                            <Label>Imię i nazwisko</Label>
+                            <Input value={editProfileData.full_name} onChange={e => setEditProfileData(prev => ({ ...prev, full_name: e.target.value }))} required />
+                        </div>
+                        <div className="space-y-2">
+                            <Label>Email</Label>
+                            <Input type="email" value={editProfileData.email} onChange={e => setEditProfileData(prev => ({ ...prev, email: e.target.value }))} required />
+                        </div>
+                        <div className="space-y-2">
+                            <Label>Stanowisko</Label>
+                            <Input value={editProfileData.job_title} onChange={e => setEditProfileData(prev => ({ ...prev, job_title: e.target.value }))} placeholder="np. Product Manager" />
+                        </div>
+                        {editProfileError && (
+                            <div className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-2 text-sm text-rose-700">
+                                {editProfileError}
+                            </div>
+                        )}
+                        <div className="flex justify-end gap-3 pt-4">
+                            <Button type="button" variant="outline" onClick={() => { setEditProfileOpen(false); setEditProfileError(''); }}>Anuluj</Button>
+                            <Button type="submit" disabled={editProfileSaving}>
+                                {editProfileSaving ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Zapisuję...</> : 'Zapisz zmiany'}
+                            </Button>
+                        </div>
+                    </form>
+                </DialogContent>
+            </Dialog>
         </div>
     );
 }
