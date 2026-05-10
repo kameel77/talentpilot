@@ -15,7 +15,8 @@ import {
     Trophy,
     Zap,
     Pencil,
-
+    Upload,
+    Edit3,
     X,
     Sparkles,
     Loader2,
@@ -30,6 +31,7 @@ import { api, tokenManager } from "@/lib/api";
 import { cn } from "@/lib/utils";
 import { GallupDomain } from '@/lib/gallup-data';
 import { UserTalent } from '@/types/talent';
+import { TalentImportDialog } from '@/components/talent-import/TalentImportDialog';
 
 interface UserProfile {
     id: number;
@@ -204,6 +206,7 @@ export default function UserProfilePage() {
     const [talentViewMode, setTalentViewMode] = useState<"top5" | "top15" | "all">("top15");
     const [loading, setLoading] = useState(true);
     const [canEdit, setCanEdit] = useState(false);
+    const [talentImportOpen, setTalentImportOpen] = useState(false);
 
     // Editing state for each section
     const [editingSection, setEditingSection] = useState<string | null>(null);
@@ -303,6 +306,27 @@ export default function UserProfilePage() {
     }, []);
 
     const hasTalents = memberTalents.length > 0;
+
+    const handleTalentsSave = async (talents: UserTalent[]) => {
+        try {
+            const rankings: Record<string, number> = {};
+            talents.forEach(t => { rankings[t.talentId] = t.rank; });
+            await api.gallup.saveTalents(userId, rankings, 'pl');
+            setMemberTalents(talents);
+            // Reload full talent data for display
+            const talentsData = await api.talents.getUserTalents(userId);
+            setMemberTalentResponse(talentsData);
+            setMemberTalents(
+                talentsData.map((ut: UserTalentResponse) => ({
+                    talentId: ut.talent.code,
+                    rank: ut.rank,
+                }))
+            );
+        } catch (error) {
+            console.error('Error saving talents:', error);
+            setMemberTalents(talents);
+        }
+    };
 
     const startEditing = (section: string) => {
         if (!user) return;
@@ -459,6 +483,16 @@ export default function UserProfilePage() {
 
     return (
         <div className="mx-auto max-w-5xl space-y-6">
+            {/* Talent Import Dialog */}
+            <TalentImportDialog
+                open={talentImportOpen}
+                onOpenChange={setTalentImportOpen}
+                onSave={handleTalentsSave}
+                initialTalents={memberTalents}
+                memberName={user.full_name}
+                userId={userId}
+            />
+
             <div className="flex items-center justify-between">
                 <div>
                     <h1 className="text-headline">{user.full_name}</h1>
@@ -466,10 +500,16 @@ export default function UserProfilePage() {
                 </div>
                 <div className="flex items-center gap-2">
                     {canEdit && hasTalents && (
-                        <Button variant="outline" onClick={generateWithAI} disabled={generating}>
-                            {generating ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Sparkles className="h-4 w-4 mr-2" />}
-                            {generating ? 'Generuję...' : 'Generuj z AI'}
-                        </Button>
+                        <>
+                            <Button variant="outline" onClick={() => setTalentImportOpen(true)}>
+                                <Edit3 className="h-4 w-4 mr-2" />
+                                Edytuj talenty
+                            </Button>
+                            <Button variant="outline" onClick={generateWithAI} disabled={generating}>
+                                {generating ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Sparkles className="h-4 w-4 mr-2" />}
+                                {generating ? 'Generuję...' : 'Generuj z AI'}
+                            </Button>
+                        </>
                     )}
                     <Button variant="outline" asChild>
                         <Link href="/dashboard/users">Wróć do zespołu</Link>
@@ -479,7 +519,7 @@ export default function UserProfilePage() {
 
             {!hasTalents ? (
                 <Card className="p-8 text-center border-slate-200/60 shadow-sm">
-                    <div className="max-w-md mx-auto space-y-4">
+                    <div className="max-w-md mx-auto space-y-6">
                         <div className="w-20 h-20 rounded-2xl bg-primary/10 flex items-center justify-center mx-auto">
                             <Star className="h-10 w-10 text-primary" />
                         </div>
@@ -489,6 +529,17 @@ export default function UserProfilePage() {
                                 Ten członek zespołu nie ma jeszcze przypisanych talentów Gallupa.
                             </p>
                         </div>
+                        {canEdit && (
+                            <div className="space-y-3">
+                                <Button size="lg" onClick={() => setTalentImportOpen(true)} className="bg-gradient-primary hover:opacity-90 transition-opacity">
+                                    <Upload className="h-5 w-5 mr-2" />
+                                    Importuj talenty
+                                </Button>
+                                <p className="text-xs text-muted-foreground">
+                                    Możesz zaimportować PDF z raportem Gallup lub wprowadzić talenty ręcznie
+                                </p>
+                            </div>
+                        )}
                     </div>
                 </Card>
             ) : (
