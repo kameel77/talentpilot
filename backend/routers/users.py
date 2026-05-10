@@ -5,7 +5,8 @@ from sqlalchemy.orm import Session
 from typing import List, Optional
 
 from database import get_db
-from models import User, UserRole, user_teams
+from models import User, UserRole, user_teams, Team, UserTalent
+from services.email_service import send_team_added_email
 from schemas import UserCreate, UserUpdate, UserResponse, UserDetailResponse, PasswordChangeRequest, AdminRoleUpdate
 from auth import get_current_user, require_role, hash_password, verify_password, get_current_active_org_id, check_org_access
 
@@ -514,3 +515,93 @@ def update_user_role(
     db.refresh(user)
 
     return user
+
+
+from pydantic import BaseModel as _BaseModel
+
+class ReplaceUserRequest(_BaseModel):
+    existing_user_id: int
+
+
+@router.post("/{ghost_id}/replace", status_code=status.HTTP_200_OK)
+def replace_user(
+    ghost_id: int,
+    data: ReplaceUserRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_role(["admin", "coach"])),
+):
+    """Replace a ghost user with an existing user across ALL teams.
+
+    Transfers talents (ghost's are always treated as newer),
+    adds existing user to all ghost's teams, and deletes the ghost.
+    """
+    ghost_user = db.query(User).filter(User.id == ghost_id).first()
+    existing_user = db.query(User).filter(User.id == data.existing_user_id).first()
+
+    if not ghost_user or not existing_user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    # Permission check
+    if not check_org_access(db, current_user, ghost_user.organization_id):
+        raise HTTPException(status_code=403, detail="Access denied")
+
+    # 1. Transfer talents from ghost → existing (overwrite — ghost's are newer)
+    ghost_talents = db.query(UserTalent).filter(UserTalent.user_id == ghost_user.id).all()
+    if ghost_talents:
+        db.query(UserTalent).filter(UserTalent.user_id == existing_user.id).delete()
+        for ut in ghost_talents:
+            ut.user_id = existing_user.id
+        db.flush()
+
+    # 2. Transfer manual fields (only if ghost has data and existing doesn't)
+    for field in ['superpowers', 'motivators', 'blockers', 'feedback_style',
+                  'superpowers_en', 'motivators_en', 'blockers_en', 'feedback_style_en',
+                  'job_title', 'job_title_en']:
+        ghost_val = getattr(ghost_user, field, None)
+        existing_val = getattr(existing_user, field, None)
+        if ghost_val and not existing_val:
+            setattr(existing_user, field, ghost_val)
+
+    # 3. Find all teams ghost belongs to and add existing user
+    ghost_teams = db.query(Team).filter(Team.members.any(User.id == ghost_user.id)).all()
+    team_names = []
+    for team in ghost_teams:
+        if existing_user not in team.members:
+            team.members.append(existing_user)
+        if team.manager_id == ghost_user.id:
+            team.manager_id = existing_user.id
+        if ghost_user in team.members:
+            team.members.remove(ghost_user)
+        team_names.append(team.name)
+
+    # 4. Delete ghost user
+    if ghost_user.is_ghost:
+        db.delete(ghost_user)
+    else:
+        ghost_user.is_active = False
+
+    db.commit()
+
+    # 5. Send email notification
+    try:
+        org_name = ghost_teams[0].organization.name if ghost_teams and ghost_teams[0].organization else "TalentPilot"
+        for team in ghost_teams:
+            send_team_added_email(
+                to_email=existing_user.email,
+                full_name=existing_user.full_name,
+                team_name=team.name,
+                org_name=org_name,
+            )
+    except Exception:
+        pass
+
+    return {
+        "message": "User replaced successfully",
+        "user": {
+            "id": existing_user.id,
+            "full_name": existing_user.full_name,
+            "email": existing_user.email,
+        },
+        "talents_transferred": len(ghost_talents) if ghost_talents else 0,
+        "teams_joined": team_names,
+    }

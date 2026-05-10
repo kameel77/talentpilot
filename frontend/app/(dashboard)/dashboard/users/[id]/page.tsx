@@ -23,12 +23,13 @@ import {
     Save,
     Power,
     UserCog,
+    AlertTriangle,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { DOMAIN_LABELS, DOMAIN_CSS_KEY, GALLUP_TALENTS } from "@/lib/gallup-data";
@@ -232,6 +233,10 @@ export default function UserProfilePage() {
     const [editProfileData, setEditProfileData] = useState({ full_name: '', email: '', job_title: '' });
     const [editProfileSaving, setEditProfileSaving] = useState(false);
     const [editProfileError, setEditProfileError] = useState('');
+    const [conflictData, setConflictData] = useState<{
+        existingUser: { id: number; full_name: string; email: string };
+    } | null>(null);
+    const [replacingUser, setReplacingUser] = useState(false);
 
     useEffect(() => {
         const loadUserData = async () => {
@@ -756,7 +761,16 @@ export default function UserProfilePage() {
                             } : prev);
                             setEditProfileOpen(false);
                         } catch (err: unknown) {
-                            const axiosErr = err as { response?: { status?: number; data?: { detail?: { message?: string } | string } } };
+                            const axiosErr = err as { response?: { status?: number; data?: { detail?: { code?: string; existing_user?: { id: number; full_name: string; email: string }; message?: string } | string } } };
+                            if (axiosErr.response?.status === 409) {
+                                const detail = axiosErr.response.data?.detail;
+                                if (typeof detail === 'object' && detail?.code === 'EMAIL_CONFLICT' && detail.existing_user) {
+                                    setConflictData({ existingUser: detail.existing_user });
+                                    setEditProfileOpen(false);
+                                    setEditProfileSaving(false);
+                                    return;
+                                }
+                            }
                             const detail = axiosErr.response?.data?.detail;
                             const msg = typeof detail === 'string' ? detail : typeof detail === 'object' && detail?.message ? detail.message : 'Wystąpił błąd podczas zapisu.';
                             setEditProfileError(msg);
@@ -788,6 +802,65 @@ export default function UserProfilePage() {
                             </Button>
                         </div>
                     </form>
+                </DialogContent>
+            </Dialog>
+
+            {/* Email Conflict — Replace User Dialog */}
+            <Dialog open={!!conflictData} onOpenChange={(open) => !open && setConflictData(null)}>
+                <DialogContent className="max-w-md">
+                    <DialogHeader>
+                        <DialogTitle className="flex items-center gap-2">
+                            <AlertTriangle className="h-5 w-5 text-amber-500" />
+                            Email jest już zajęty
+                        </DialogTitle>
+                        <DialogDescription>
+                            Podany adres email należy do istniejącego użytkownika w systemie.
+                        </DialogDescription>
+                    </DialogHeader>
+                    {conflictData && (
+                        <div className="space-y-4 mt-2">
+                            <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+                                <div className="flex items-center gap-3">
+                                    <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white font-medium shadow-sm shrink-0">
+                                        {conflictData.existingUser.full_name.charAt(0).toUpperCase()}
+                                    </div>
+                                    <div>
+                                        <p className="font-medium text-slate-900">{conflictData.existingUser.full_name}</p>
+                                        <p className="text-sm text-slate-500">{conflictData.existingUser.email}</p>
+                                    </div>
+                                </div>
+                            </div>
+                            <p className="text-sm text-slate-600">
+                                Czy chcesz <strong>zastąpić obecny profil</strong> istniejącym użytkownikiem?
+                                Talenty zostaną przeniesione, a użytkownik zostanie dodany do wszystkich zespołów.
+                            </p>
+                            <div className="flex justify-end gap-3 pt-2">
+                                <Button variant="outline" onClick={() => setConflictData(null)} disabled={replacingUser}>
+                                    Anuluj
+                                </Button>
+                                <Button onClick={async () => {
+                                    setReplacingUser(true);
+                                    try {
+                                        const result = await api.users.replaceUser(userId, conflictData.existingUser.id);
+                                        setConflictData(null);
+                                        // Redirect to the existing user's profile
+                                        window.location.href = `/dashboard/users/${result.user.id}`;
+                                    } catch (err) {
+                                        console.error(err);
+                                        alert('Błąd podczas zamiany użytkownika.');
+                                    } finally {
+                                        setReplacingUser(false);
+                                    }
+                                }} disabled={replacingUser}>
+                                    {replacingUser ? (
+                                        <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Przenoszenie...</>
+                                    ) : (
+                                        'Zastąp i przenieś'
+                                    )}
+                                </Button>
+                            </div>
+                        </div>
+                    )}
                 </DialogContent>
             </Dialog>
         </div>

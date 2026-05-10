@@ -539,6 +539,13 @@ export const api = {
         delete: async (id: number): Promise<void> => {
             await apiClient.delete(`/api/users/${id}`);
         },
+
+        replaceUser: async (ghostId: number, existingUserId: number) => {
+            const response = await apiClient.post(`/api/users/${ghostId}/replace`, {
+                existing_user_id: existingUserId,
+            });
+            return response.data;
+        },
     },
 
     // Talents
