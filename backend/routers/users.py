@@ -141,7 +141,7 @@ def update_user(
         )
     
     # Check permissions
-    if user.organization_id != active_org_id:
+    if not check_org_access(db, current_user, user.organization_id):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Access denied to this user"
@@ -447,7 +447,7 @@ def delete_user(
         )
     
     # Check organization access
-    if user.organization_id != active_org_id:
+    if not check_org_access(db, current_user, user.organization_id):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Access denied to this user"
