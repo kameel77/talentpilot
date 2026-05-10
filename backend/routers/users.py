@@ -8,7 +8,7 @@ from database import get_db
 from models import User, UserRole, user_teams, Team, UserTalent
 from services.email_service import send_team_added_email
 from schemas import UserCreate, UserUpdate, UserResponse, UserDetailResponse, PasswordChangeRequest, AdminRoleUpdate
-from auth import get_current_user, require_role, hash_password, verify_password, get_current_active_org_id, check_org_access
+from auth import get_current_user, require_role, hash_password, verify_password, get_current_active_org_id, check_org_access, check_user_access
 
 router = APIRouter()
 
@@ -109,8 +109,8 @@ def get_user(
             detail="User not found"
         )
     
-    # Check organization access
-    if not check_org_access(db, current_user, user.organization_id):
+    # Check access — supports cross-org users via shared team membership
+    if not check_user_access(db, current_user, user):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Access denied to this user"
