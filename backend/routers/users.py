@@ -161,8 +161,16 @@ def update_user(
         existing = db.query(User).filter(User.email == data.email, User.id != user.id).first()
         if existing:
             raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Email already in use"
+                status_code=status.HTTP_409_CONFLICT,
+                detail={
+                    "code": "EMAIL_CONFLICT",
+                    "message": "Email already in use",
+                    "existing_user": {
+                        "id": existing.id,
+                        "full_name": existing.full_name,
+                        "email": existing.email,
+                    }
+                }
             )
         user.email = data.email
     if data.phone is not None:

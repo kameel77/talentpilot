@@ -481,6 +481,14 @@ export const api = {
         removeMember: async (teamId: number, userId: number): Promise<void> => {
             await apiClient.delete(`/api/teams/${teamId}/members/${userId}`);
         },
+
+        replaceMember: async (teamId: number, ghostUserId: number, existingUserId: number) => {
+            const response = await apiClient.post(`/api/teams/${teamId}/replace-member`, {
+                ghost_user_id: ghostUserId,
+                existing_user_id: existingUserId,
+            });
+            return response.data;
+        },
     },
 
     // Users

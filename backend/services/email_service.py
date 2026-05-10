@@ -137,3 +137,39 @@ def send_password_reset_email(to_email: str, reset_token: str):
     </html>
     """
     email_service.send_email(to_email, subject, html_content)
+
+
+def send_team_added_email(to_email: str, full_name: str, team_name: str, org_name: str):
+    """
+    Wysyła email z informacją o dodaniu użytkownika do nowego zespołu.
+    """
+    frontend_url = getattr(settings, "frontend_url", "http://localhost:3000").rstrip("/")
+    teams_link = f"{frontend_url}/dashboard/teams"
+
+    subject = f"Zostałeś dodany do zespołu {team_name}"
+    html_content = f"""
+    <html>
+        <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+            <div style="text-align: center; margin-bottom: 20px;">
+                <h2 style="color: #7c3aed;">TalentPilot</h2>
+            </div>
+
+            <p>Witaj, <strong>{full_name}</strong>,</p>
+
+            <p>Zostałeś/aś dodany/a do zespołu <strong>{team_name}</strong> w organizacji <strong>{org_name}</strong> w aplikacji <strong>TalentPilot</strong>.</p>
+
+            <p>Możesz teraz przeglądać profil swojego zespołu i współpracować z innymi członkami.</p>
+
+            <p style="text-align: center; margin: 30px 0;">
+                <a href="{teams_link}" style="background-color: #7c3aed; color: white; padding: 14px 28px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block;">Przejdź do zespołów</a>
+            </p>
+
+            <hr style="border: 0; border-top: 1px solid #eee; margin: 30px 0;" />
+
+            <p style="font-size: 12px; color: #999; text-align: center;">
+                Wiadomość została wygenerowana automatycznie. Prosimy na nią nie odpowiadać.
+            </p>
+        </body>
+    </html>
+    """
+    email_service.send_email(to_email, subject, html_content)
