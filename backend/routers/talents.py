@@ -198,7 +198,7 @@ def get_user_talents(
         )
     
     # Check organization access
-    if user.organization_id != current_user.organization_id:
+    if not check_org_access(db, current_user, user.organization_id):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Access denied to this user"
