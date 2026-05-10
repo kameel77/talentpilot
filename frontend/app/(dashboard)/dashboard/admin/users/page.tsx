@@ -6,8 +6,18 @@ import { Button } from "@/components/ui/button";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Loader2, Users, Shield, Building, Save, UserPlus, Building2 } from "lucide-react";
+import { Loader2, Users, Shield, Building, Save, UserPlus, Building2, Pencil, Trash2, Archive, ArchiveRestore } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter, DialogClose } from "@/components/ui/dialog";
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 type NewUserRole = 'admin' | 'manager' | 'coach' | 'user';
 
@@ -64,6 +74,16 @@ export default function AdminUsersPage() {
     const [newOrg, setNewOrg] = useState<NewOrgForm>(EMPTY_NEW_ORG);
     const [creatingOrg, setCreatingOrg] = useState(false);
     const [orgCreateError, setOrgCreateError] = useState<string | null>(null);
+
+    // Edit-user modal state
+    const [editUser, setEditUser] = useState<User | null>(null);
+    const [editForm, setEditForm] = useState({ full_name: "", email: "", job_title: "" });
+    const [editSaving, setEditSaving] = useState(false);
+    const [editError, setEditError] = useState<string | null>(null);
+
+    // Delete confirmation state
+    const [deleteTarget, setDeleteTarget] = useState<User | null>(null);
+    const [deleting, setDeleting] = useState(false);
 
     useEffect(() => {
         fetchData();
@@ -188,6 +208,57 @@ export default function AdminUsersPage() {
         }
     };
 
+    const openEditModal = (user: User) => {
+        setEditUser(user);
+        setEditForm({ full_name: user.full_name, email: user.email, job_title: user.job_title || "" });
+        setEditError(null);
+    };
+
+    const handleEditUser = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!editUser) return;
+        setEditError(null);
+        try {
+            setEditSaving(true);
+            const updated = await api.admin.updateUser(editUser.id, {
+                full_name: editForm.full_name.trim(),
+                email: editForm.email.trim(),
+                job_title: editForm.job_title.trim() || undefined,
+            });
+            setUsers(users.map(u => u.id === editUser.id ? { ...u, ...updated } : u));
+            setEditUser(null);
+        } catch (error: unknown) {
+            const err = error as { response?: { data?: { detail?: string } } };
+            setEditError(err?.response?.data?.detail || "Nie udało się zaktualizować użytkownika.");
+        } finally {
+            setEditSaving(false);
+        }
+    };
+
+    const handleArchiveUser = async (user: User) => {
+        try {
+            const updated = await api.admin.updateUser(user.id, { is_active: !user.is_active });
+            setUsers(users.map(u => u.id === user.id ? { ...u, ...updated } : u));
+        } catch {
+            alert("Błąd podczas zmiany statusu użytkownika.");
+        }
+    };
+
+    const handleDeleteUser = async () => {
+        if (!deleteTarget) return;
+        try {
+            setDeleting(true);
+            await api.admin.deleteUser(deleteTarget.id);
+            setUsers(users.map(u => u.id === deleteTarget.id ? null : u).filter(Boolean) as User[]);
+            setDeleteTarget(null);
+        } catch (error: unknown) {
+            const err = error as { response?: { data?: { detail?: string } } };
+            alert(err?.response?.data?.detail || "Nie udało się usunąć użytkownika.");
+        } finally {
+            setDeleting(false);
+        }
+    };
+
     if (loading) {
         return (
             <div className="flex flex-col items-center justify-center min-h-[400px] space-y-4">
@@ -270,17 +341,49 @@ export default function AdminUsersPage() {
                                             </select>
                                         </td>
                                         <td className="px-6 py-4 text-right">
-                                            {isCoach && (
-                                                <Button 
-                                                    variant="outline" 
+                                            <div className="flex items-center justify-end gap-1.5">
+                                                <Button
+                                                    variant="ghost"
                                                     size="sm"
-                                                    onClick={() => openOrgModal(user)}
-                                                    className="font-medium text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50 border-indigo-200"
+                                                    onClick={() => openEditModal(user)}
+                                                    className="text-slate-500 hover:text-blue-600 hover:bg-blue-50"
+                                                    title="Edytuj"
                                                 >
-                                                    <Shield className="h-4 w-4 mr-2" />
-                                                    Dostępy
+                                                    <Pencil className="h-4 w-4" />
                                                 </Button>
-                                            )}
+                                                <Button
+                                                    variant="ghost"
+                                                    size="sm"
+                                                    onClick={() => handleArchiveUser(user)}
+                                                    className={user.is_active
+                                                        ? "text-slate-500 hover:text-amber-600 hover:bg-amber-50"
+                                                        : "text-slate-500 hover:text-emerald-600 hover:bg-emerald-50"
+                                                    }
+                                                    title={user.is_active ? "Archiwizuj" : "Aktywuj"}
+                                                >
+                                                    {user.is_active ? <Archive className="h-4 w-4" /> : <ArchiveRestore className="h-4 w-4" />}
+                                                </Button>
+                                                <Button
+                                                    variant="ghost"
+                                                    size="sm"
+                                                    onClick={() => setDeleteTarget(user)}
+                                                    className="text-slate-500 hover:text-rose-600 hover:bg-rose-50"
+                                                    title="Usuń"
+                                                >
+                                                    <Trash2 className="h-4 w-4" />
+                                                </Button>
+                                                {isCoach && (
+                                                    <Button 
+                                                        variant="outline" 
+                                                        size="sm"
+                                                        onClick={() => openOrgModal(user)}
+                                                        className="font-medium text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50 border-indigo-200"
+                                                    >
+                                                        <Shield className="h-4 w-4 mr-2" />
+                                                        Dostępy
+                                                    </Button>
+                                                )}
+                                            </div>
                                         </td>
                                     </tr>
                                 );
@@ -562,6 +665,98 @@ export default function AdminUsersPage() {
                     </form>
                 </DialogContent>
             </Dialog>
+
+            {/* Edit User Modal */}
+            <Dialog open={!!editUser} onOpenChange={(open) => !open && setEditUser(null)}>
+                <DialogContent className="sm:max-w-[480px]">
+                    <DialogHeader>
+                        <DialogTitle className="flex items-center gap-2 text-xl">
+                            <Pencil className="h-5 w-5 text-blue-600" />
+                            Edytuj użytkownika
+                        </DialogTitle>
+                        <DialogDescription>
+                            Zmień dane profilu <strong>{editUser?.full_name}</strong>.
+                        </DialogDescription>
+                    </DialogHeader>
+
+                    <form onSubmit={handleEditUser} className="space-y-4 py-2">
+                        <div className="space-y-2">
+                            <Label htmlFor="edit-user-name">Imię i nazwisko</Label>
+                            <Input
+                                id="edit-user-name"
+                                value={editForm.full_name}
+                                onChange={(e) => setEditForm({ ...editForm, full_name: e.target.value })}
+                                required
+                            />
+                        </div>
+                        <div className="space-y-2">
+                            <Label htmlFor="edit-user-email">Email</Label>
+                            <Input
+                                id="edit-user-email"
+                                type="email"
+                                value={editForm.email}
+                                onChange={(e) => setEditForm({ ...editForm, email: e.target.value })}
+                                required
+                            />
+                        </div>
+                        <div className="space-y-2">
+                            <Label htmlFor="edit-user-job">Stanowisko</Label>
+                            <Input
+                                id="edit-user-job"
+                                value={editForm.job_title}
+                                onChange={(e) => setEditForm({ ...editForm, job_title: e.target.value })}
+                                placeholder="np. Product Manager"
+                            />
+                        </div>
+
+                        {editError && (
+                            <div className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-md px-3 py-2">
+                                {editError}
+                            </div>
+                        )}
+
+                        <DialogFooter className="pt-2">
+                            <DialogClose asChild>
+                                <Button type="button" variant="outline" disabled={editSaving}>Anuluj</Button>
+                            </DialogClose>
+                            <Button type="submit" disabled={editSaving}>
+                                {editSaving ? (
+                                    <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Zapisuję…</>
+                                ) : (
+                                    <><Save className="h-4 w-4 mr-2" />Zapisz zmiany</>
+                                )}
+                            </Button>
+                        </DialogFooter>
+                    </form>
+                </DialogContent>
+            </Dialog>
+
+            {/* Delete User Confirmation */}
+            <AlertDialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>Usunąć użytkownika?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            Czy na pewno chcesz trwale usunąć konto <strong>{deleteTarget?.full_name}</strong> ({deleteTarget?.email})?
+                            Tej operacji nie można cofnąć.
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel disabled={deleting}>Anuluj</AlertDialogCancel>
+                        <AlertDialogAction
+                            onClick={handleDeleteUser}
+                            disabled={deleting}
+                            className="bg-rose-600 hover:bg-rose-700 text-white"
+                        >
+                            {deleting ? (
+                                <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Usuwanie…</>
+                            ) : (
+                                <><Trash2 className="h-4 w-4 mr-2" />Usuń na stałe</>
+                            )}
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
 
         </div>
     );

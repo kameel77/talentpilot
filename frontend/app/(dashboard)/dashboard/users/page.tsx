@@ -9,7 +9,18 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Users, UserPlus, Shield, UserCheck, Power } from "lucide-react";
+import { Users, UserPlus, Shield, UserCheck, Power, Trash2 } from "lucide-react";
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { Loader2 } from "lucide-react";
 
 interface UserSummary {
     id: number;
@@ -53,6 +64,26 @@ export default function UsersPage() {
 
     const currentUser = tokenManager.getUser();
     const isAdmin = currentUser?.role === "admin";
+    const isCoach = currentUser?.role === "coach";
+    const canManage = isAdmin || isCoach;
+
+    // Delete user state
+    const [deleteTarget, setDeleteTarget] = useState<UserSummary | null>(null);
+    const [deleting, setDeleting] = useState(false);
+
+    const handleDeleteUser = async () => {
+        if (!deleteTarget) return;
+        try {
+            setDeleting(true);
+            await api.users.delete(deleteTarget.id);
+            setUsers((prev) => prev.filter((u) => u.id !== deleteTarget.id));
+            setDeleteTarget(null);
+        } catch {
+            setError("Nie udało się usunąć użytkownika.");
+        } finally {
+            setDeleting(false);
+        }
+    };
 
     const loadUsers = async () => {
         try {
@@ -498,34 +529,47 @@ export default function UsersPage() {
                                     </span>
                                 </div>
                                 <div className="flex items-center gap-2">
-                                    {isAdmin && user.id !== currentUser?.id && (
-                                        <button
-                                            onClick={async (e) => {
-                                                e.stopPropagation();
-                                                try {
-                                                    await api.users.update(user.id, { is_active: user.is_active === false });
-                                                    setUsers((prev) =>
-                                                        prev.map((u) =>
-                                                            u.id === user.id
-                                                                ? { ...u, is_active: u.is_active === false }
-                                                                : u
-                                                        )
-                                                    );
-                                                } catch {
-                                                    setError("Failed to update user status");
-                                                }
-                                            }}
-                                            className={cn(
-                                                "inline-flex items-center gap-1 rounded-lg px-2.5 py-1 text-[11px] font-bold uppercase tracking-tight transition-all",
-                                                user.is_active !== false
-                                                    ? "text-rose-600 hover:bg-rose-50 border border-rose-200"
-                                                    : "text-emerald-600 hover:bg-emerald-50 border border-emerald-200"
-                                            )}
-                                            title={user.is_active !== false ? "Deactivate user" : "Activate user"}
-                                        >
-                                            <Power className="h-3 w-3" />
-                                            {user.is_active !== false ? "Deactivate" : "Activate"}
-                                        </button>
+                                    {canManage && user.id !== currentUser?.id && (
+                                        <>
+                                            <button
+                                                onClick={async (e) => {
+                                                    e.stopPropagation();
+                                                    try {
+                                                        await api.users.update(user.id, { is_active: user.is_active === false });
+                                                        setUsers((prev) =>
+                                                            prev.map((u) =>
+                                                                u.id === user.id
+                                                                    ? { ...u, is_active: u.is_active === false }
+                                                                    : u
+                                                            )
+                                                        );
+                                                    } catch {
+                                                        setError("Failed to update user status");
+                                                    }
+                                                }}
+                                                className={cn(
+                                                    "inline-flex items-center gap-1 rounded-lg px-2.5 py-1 text-[11px] font-bold uppercase tracking-tight transition-all",
+                                                    user.is_active !== false
+                                                        ? "text-amber-600 hover:bg-amber-50 border border-amber-200"
+                                                        : "text-emerald-600 hover:bg-emerald-50 border border-emerald-200"
+                                                )}
+                                                title={user.is_active !== false ? "Archiwizuj" : "Aktywuj"}
+                                            >
+                                                <Power className="h-3 w-3" />
+                                                {user.is_active !== false ? "Archiwizuj" : "Aktywuj"}
+                                            </button>
+                                            <button
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    setDeleteTarget(user);
+                                                }}
+                                                className="inline-flex items-center gap-1 rounded-lg px-2.5 py-1 text-[11px] font-bold uppercase tracking-tight text-rose-600 hover:bg-rose-50 border border-rose-200 transition-all"
+                                                title="Usuń"
+                                            >
+                                                <Trash2 className="h-3 w-3" />
+                                                Usuń
+                                            </button>
+                                        </>
                                     )}
                                     <Link
                                         href={`/dashboard/users/${user.id}`}
@@ -542,6 +586,33 @@ export default function UsersPage() {
                     ))}
                 </div>
             )}
+
+            {/* Delete User Confirmation */}
+            <AlertDialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>Usunąć użytkownika?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            Czy na pewno chcesz trwale usunąć konto <strong>{deleteTarget?.full_name}</strong> ({deleteTarget?.email})?
+                            Tej operacji nie można cofnąć.
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel disabled={deleting}>Anuluj</AlertDialogCancel>
+                        <AlertDialogAction
+                            onClick={handleDeleteUser}
+                            disabled={deleting}
+                            className="bg-rose-600 hover:bg-rose-700 text-white"
+                        >
+                            {deleting ? (
+                                <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Usuwanie…</>
+                            ) : (
+                                <><Trash2 className="h-4 w-4 mr-2" />Usuń na stałe</>
+                            )}
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
         </div>
     );
 }

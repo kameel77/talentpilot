@@ -527,6 +527,10 @@ export const api = {
             const response = await apiClient.post('/api/users/me/translate-profile');
             return response.data;
         },
+
+        delete: async (id: number): Promise<void> => {
+            await apiClient.delete(`/api/users/${id}`);
+        },
     },
 
     // Talents
@@ -711,6 +715,13 @@ export const api = {
                 has_access: hasAccess
             });
             return response.data;
+        },
+        updateUser: async (userId: number, data: Partial<UserUpdateData & { is_active?: boolean }>): Promise<User> => {
+            const response = await apiClient.patch<User>(`/api/admin/users/${userId}`, data);
+            return response.data;
+        },
+        deleteUser: async (userId: number): Promise<void> => {
+            await apiClient.delete(`/api/admin/users/${userId}`);
         },
     },
 
