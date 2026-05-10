@@ -201,3 +201,29 @@ def get_current_active_org_id(
         status_code=status.HTTP_403_FORBIDDEN,
         detail="You do not have access to this organization context"
     )
+
+
+def check_org_access(db: Session, user: User, organization_id: int) -> bool:
+    """
+    Check if a user has access to the given organization.
+
+    Returns True if:
+    - User is ADMIN (full access)
+    - organization_id matches user's home organization
+    - User is COACH with OrganizationAccess record for that org
+
+    This is a read-only check — does NOT raise exceptions.
+    """
+    from models import UserRole, OrganizationAccess
+
+    if user.role == UserRole.ADMIN:
+        return True
+    if user.organization_id == organization_id:
+        return True
+    if user.role == UserRole.COACH:
+        access = db.query(OrganizationAccess).filter(
+            OrganizationAccess.user_id == user.id,
+            OrganizationAccess.organization_id == organization_id
+        ).first()
+        return access is not None
+    return False

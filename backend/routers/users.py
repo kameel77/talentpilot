@@ -5,9 +5,9 @@ from sqlalchemy.orm import Session
 from typing import List, Optional
 
 from database import get_db
-from models import User, UserRole
-from schemas import UserCreate, UserUpdate, UserResponse, UserDetailResponse, PasswordChangeRequest
-from auth import get_current_user, require_role, hash_password, verify_password, get_current_active_org_id
+from models import User, UserRole, user_teams
+from schemas import UserCreate, UserUpdate, UserResponse, UserDetailResponse, PasswordChangeRequest, AdminRoleUpdate
+from auth import get_current_user, require_role, hash_password, verify_password, get_current_active_org_id, check_org_access
 
 router = APIRouter()
 
@@ -16,14 +16,14 @@ router = APIRouter()
 def create_user(
     data: UserCreate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_role(["admin", "manager"])),
+    current_user: User = Depends(require_role(["admin", "manager", "coach"])),
     active_org_id: int = Depends(get_current_active_org_id)
 ):
     """
-    Add user to organization (admin or manager).
+    Add user to organization (admin, manager, or coach).
     
-    - User belongs to current user's organization
-    - Only admins can create other admins
+    - User belongs to the active organization context
+    - Only admins can create admin or coach users
     """
     # Check if email already exists
     existing_user = db.query(User).filter(User.email == data.email).first()
@@ -33,11 +33,11 @@ def create_user(
             detail="Email already registered"
         )
     
-    # Only admins can create admin users
-    if data.role == UserRole.ADMIN and current_user.role != UserRole.ADMIN:
+    # Only admins can create admin or coach users
+    if data.role in (UserRole.ADMIN, UserRole.COACH) and current_user.role != UserRole.ADMIN:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Only admins can create admin users"
+            detail="Only admins can create admin or coach users"
         )
     
     user = User(
@@ -59,19 +59,29 @@ def create_user(
 def list_users(
     team_id: Optional[int] = Query(None, description="Filter by team ID"),
     db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
     active_org_id: int = Depends(get_current_active_org_id)
 ):
     """
     List users in organization.
     
     - Optional filter by team
-    - Users see only users in their organization context
+    - USER role: sees only users from teams they belong to
+    - ADMIN/MANAGER/COACH: sees all users in the organization context
     """
     query = db.query(User).filter(User.organization_id == active_org_id)
     
+    # USER role: restrict to teammates only
+    if current_user.role == UserRole.USER and team_id is None:
+        my_team_ids = db.query(user_teams.c.team_id).filter(
+            user_teams.c.user_id == current_user.id
+        )
+        teammate_ids = db.query(user_teams.c.user_id).filter(
+            user_teams.c.team_id.in_(my_team_ids)
+        )
+        query = query.filter(User.id.in_(teammate_ids))
+    
     if team_id is not None:
-        # Filter by team
-        from models import user_teams
         query = query.join(user_teams).filter(user_teams.c.team_id == team_id)
     
     users = query.all()
@@ -137,8 +147,8 @@ def update_user(
             detail="Access denied to this user"
         )
     
-    # Users can only edit their own profile; admins and coaches can edit anyone in the org
-    if current_user.role not in (UserRole.ADMIN, UserRole.COACH) and user.id != current_user.id:
+    # Users can only edit their own profile; admins, coaches, and managers can edit anyone in the org
+    if current_user.role not in (UserRole.ADMIN, UserRole.COACH, UserRole.MANAGER) and user.id != current_user.id:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="You can only edit your own profile"
@@ -414,7 +424,7 @@ def change_password(
 def delete_user(
     user_id: int,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_role(["admin", "coach"])),
+    current_user: User = Depends(require_role(["admin", "coach", "manager"])),
     active_org_id: int = Depends(get_current_active_org_id)
 ):
     """
@@ -446,3 +456,53 @@ def delete_user(
     db.commit()
     
     return None
+
+
+@router.patch("/{user_id}/role", response_model=UserDetailResponse)
+def update_user_role(
+    user_id: int,
+    payload: AdminRoleUpdate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_role(["admin", "coach"])),
+    active_org_id: int = Depends(get_current_active_org_id),
+):
+    """
+    Update user role.
+
+    - Admin: can set any role
+    - Coach: can only set USER or MANAGER roles (within accessible orgs)
+    """
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="User not found",
+        )
+
+    # Check organization access
+    if not check_org_access(db, current_user, user.organization_id):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Access denied to this user",
+        )
+
+    # Coach can only set USER or MANAGER roles
+    if current_user.role == UserRole.COACH:
+        if payload.role not in (UserRole.USER, UserRole.MANAGER):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Coach can only set USER or MANAGER roles",
+            )
+
+    # Prevent changing own role
+    if user.id == current_user.id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Cannot change your own role",
+        )
+
+    user.role = payload.role
+    db.commit()
+    db.refresh(user)
+
+    return user

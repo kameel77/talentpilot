@@ -12,7 +12,7 @@ from schemas import (
     UserTalentResponse,
     DomainDistribution
 )
-from auth import get_current_user, require_role
+from auth import get_current_user, require_role, check_org_access
 
 router = APIRouter()
 
@@ -91,11 +91,11 @@ def assign_talents_to_user(
     user_id: int,
     talents: List[UserTalentCreate],
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_role(["admin", "manager"])),
+    current_user: User = Depends(require_role(["admin", "manager", "coach"])),
     language: str = Query("en", min_length=2, max_length=10),
 ):
     """
-    Assign Top 5 talents to user (admin or manager).
+    Assign Top 5 talents to user (admin, manager, or coach).
     
     - Replaces existing talents
     - Validates rank (1-5)
@@ -109,8 +109,8 @@ def assign_talents_to_user(
             detail="User not found"
         )
     
-    # Check organization access
-    if user.organization_id != current_user.organization_id:
+    # Check organization access (supports cross-org for coaches)
+    if not check_org_access(db, current_user, user.organization_id):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Access denied to this user"
