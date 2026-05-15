@@ -1,4 +1,5 @@
 """Application configuration using Pydantic Settings."""
+from pydantic import field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from typing import List
 
@@ -49,6 +50,20 @@ class Settings(BaseSettings):
         extra="ignore"
     )
     
+    @field_validator("cors_origins")
+    @classmethod
+    def _validate_cors_origins(cls, raw: str) -> str:
+        cleaned = raw.strip().strip('"').strip("'")
+        if not cleaned:
+            raise ValueError("CORS_ORIGINS must not be empty")
+        origins = [o.strip().rstrip("/") for o in cleaned.split(",") if o.strip()]
+        for origin in origins:
+            if not (origin.startswith("http://") or origin.startswith("https://")):
+                raise ValueError(
+                    f"CORS_ORIGINS entry '{origin}' must start with http:// or https://"
+                )
+        return cleaned
+
     @property
     def cors_origins_list(self) -> List[str]:
         """Parse CORS origins string into list."""
