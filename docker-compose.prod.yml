@@ -29,8 +29,13 @@ services:
     # cannot decide which IP to route to, so the api.talentpilot.io router silently
     # fails to register. Pin proxy traffic to the 'coolify' network where the
     # coolify-proxy container also lives.
+    # Override Coolify's generated certresolver=letsencrypt for the api router.
+    # We serve a Cloudflare Origin Certificate (15-year, *.talentpilot.io) from
+    # /traefik/dynamic/talentpilot-tls.yaml. Empty certresolver makes Traefik
+    # skip ACME and use the static cert matched by SNI.
     labels:
       - traefik.docker.network=coolify
+      - "traefik.http.routers.https-0-${COOLIFY_RESOURCE_UUID}-backend.tls.certresolver="
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
       interval: 10s
@@ -47,6 +52,9 @@ services:
       dockerfile: Dockerfile
     environment:
       NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:?NEXT_PUBLIC_API_URL is required}
+    # Same as backend: use Cloudflare Origin Certificate via dynamic config, skip ACME.
+    labels:
+      - "traefik.http.routers.https-0-${COOLIFY_RESOURCE_UUID}-frontend.tls.certresolver="
     depends_on:
       backend:
         condition: service_healthy
