@@ -24,6 +24,13 @@ services:
     networks:
       - default
       - coolify
+    # Backend joins two networks: 'default' (per-stack, with frontend) and 'coolify'
+    # (shared, for standalone Postgres/Redis resources). Without this label Traefik
+    # cannot decide which IP to route to, so the api.talentpilot.io router silently
+    # fails to register. Pin proxy traffic to the 'coolify' network where the
+    # coolify-proxy container also lives.
+    labels:
+      - traefik.docker.network=coolify
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
       interval: 10s
