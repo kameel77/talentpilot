@@ -33,9 +33,12 @@ services:
     # We serve a Cloudflare Origin Certificate (15-year, *.talentpilot.io) from
     # /traefik/dynamic/talentpilot-tls.yaml. Empty certresolver makes Traefik
     # skip ACME and use the static cert matched by SNI.
+    # The UUID below is the Coolify resource UUID for this application — stable
+    # for the life of the resource. Coolify does not expand env vars inside
+    # compose-time labels, so it must be literal.
     labels:
       - traefik.docker.network=coolify
-      - "traefik.http.routers.https-0-${COOLIFY_RESOURCE_UUID}-backend.tls.certresolver="
+      - "traefik.http.routers.https-0-vkppfv54xt5zvdli2pwqcv5d-backend.tls.certresolver="
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
       interval: 10s
@@ -54,7 +57,7 @@ services:
       NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:?NEXT_PUBLIC_API_URL is required}
     # Same as backend: use Cloudflare Origin Certificate via dynamic config, skip ACME.
     labels:
-      - "traefik.http.routers.https-0-${COOLIFY_RESOURCE_UUID}-frontend.tls.certresolver="
+      - "traefik.http.routers.https-0-vkppfv54xt5zvdli2pwqcv5d-frontend.tls.certresolver="
     depends_on:
       backend:
         condition: service_healthy
