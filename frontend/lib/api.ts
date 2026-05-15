@@ -481,6 +481,14 @@ export const api = {
         removeMember: async (teamId: number, userId: number): Promise<void> => {
             await apiClient.delete(`/api/teams/${teamId}/members/${userId}`);
         },
+
+        replaceMember: async (teamId: number, ghostUserId: number, existingUserId: number) => {
+            const response = await apiClient.post(`/api/teams/${teamId}/replace-member`, {
+                ghost_user_id: ghostUserId,
+                existing_user_id: existingUserId,
+            });
+            return response.data;
+        },
     },
 
     // Users
@@ -525,6 +533,17 @@ export const api = {
 
         translateProfile: async (): Promise<{ job_title_en: string; superpowers_en: string; motivators_en: string; blockers_en: string; feedback_style_en: string }> => {
             const response = await apiClient.post('/api/users/me/translate-profile');
+            return response.data;
+        },
+
+        delete: async (id: number): Promise<void> => {
+            await apiClient.delete(`/api/users/${id}`);
+        },
+
+        replaceUser: async (ghostId: number, existingUserId: number) => {
+            const response = await apiClient.post(`/api/users/${ghostId}/replace`, {
+                existing_user_id: existingUserId,
+            });
             return response.data;
         },
     },
@@ -711,6 +730,13 @@ export const api = {
                 has_access: hasAccess
             });
             return response.data;
+        },
+        updateUser: async (userId: number, data: Partial<UserUpdateData & { is_active?: boolean }>): Promise<User> => {
+            const response = await apiClient.patch<User>(`/api/admin/users/${userId}`, data);
+            return response.data;
+        },
+        deleteUser: async (userId: number): Promise<void> => {
+            await apiClient.delete(`/api/admin/users/${userId}`);
         },
     },
 

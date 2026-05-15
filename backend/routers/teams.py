@@ -4,7 +4,8 @@ from sqlalchemy.orm import Session
 from typing import List
 
 from database import get_db
-from models import User, Team, UserRole, OrganizationAccess, Organization
+from models import User, Team, UserRole, OrganizationAccess, Organization, UserTalent
+from services.email_service import send_team_added_email
 from schemas import (
     TeamCreate, 
     TeamUpdate, 
@@ -48,6 +49,10 @@ def _serialize_team(team: Team) -> dict:
 class GenerateMatrixResponse(BaseModel):
     url: str
     message: str
+
+class ReplaceMemberRequest(BaseModel):
+    ghost_user_id: int
+    existing_user_id: int
 
 router = APIRouter()
 
@@ -416,3 +421,98 @@ def remove_team_member(
         team.members.remove(user)
         db.commit()
 
+
+
+@router.post("/{team_id}/replace-member", status_code=status.HTTP_200_OK)
+def replace_member(
+    team_id: int,
+    data: ReplaceMemberRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_role(["admin", "coach"])),
+):
+    """Replace a ghost user with an existing user in a team.
+    
+    Transfers talents from the ghost to the existing user (if existing has none),
+    adds the existing user to the team, removes/archives the ghost, and sends
+    an email notification to the existing user.
+    """
+    # 1. Validate team access
+    team = db.query(Team).filter(Team.id == team_id).first()
+    if not team:
+        raise HTTPException(status_code=404, detail="Team not found")
+    
+    accessible = _accessible_org_ids(db, current_user)
+    if team.organization_id not in accessible:
+        raise HTTPException(status_code=403, detail="Access denied to this team")
+
+    # 2. Validate users
+    ghost_user = db.query(User).filter(User.id == data.ghost_user_id).first()
+    existing_user = db.query(User).filter(User.id == data.existing_user_id).first()
+    
+    if not ghost_user or not existing_user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    if ghost_user not in team.members:
+        raise HTTPException(status_code=400, detail="Ghost user is not a member of this team")
+
+    # 3. Transfer talents from ghost → existing (overwrite)
+    ghost_talents = db.query(UserTalent).filter(UserTalent.user_id == ghost_user.id).all()
+    if ghost_talents:
+        # Remove existing user's current talents
+        db.query(UserTalent).filter(UserTalent.user_id == existing_user.id).delete()
+        # Re-assign ghost's talents to existing user
+        for ut in ghost_talents:
+            ut.user_id = existing_user.id
+        db.flush()
+
+    # 4. Transfer manual fields if existing user doesn't have them
+    for field in ['superpowers', 'motivators', 'blockers', 'feedback_style',
+                  'superpowers_en', 'motivators_en', 'blockers_en', 'feedback_style_en',
+                  'job_title', 'job_title_en']:
+        ghost_val = getattr(ghost_user, field, None)
+        existing_val = getattr(existing_user, field, None)
+        if ghost_val and not existing_val:
+            setattr(existing_user, field, ghost_val)
+
+    # 5. Add existing user to team (if not already)
+    if existing_user not in team.members:
+        team.members.append(existing_user)
+
+    # 6. If ghost was team manager, transfer to existing
+    if team.manager_id == ghost_user.id:
+        team.manager_id = existing_user.id
+
+    # 7. Remove ghost from team and archive
+    if ghost_user in team.members:
+        team.members.remove(ghost_user)
+    
+    if ghost_user.is_ghost:
+        # Permanently delete ghost users
+        db.delete(ghost_user)
+    else:
+        # Archive real users
+        ghost_user.is_active = False
+
+    db.commit()
+
+    # 8. Send email notification (non-blocking)
+    try:
+        org_name = team.organization.name if team.organization else "TalentPilot"
+        send_team_added_email(
+            to_email=existing_user.email,
+            full_name=existing_user.full_name,
+            team_name=team.name,
+            org_name=org_name,
+        )
+    except Exception:
+        pass  # Don't block API response on email failure
+
+    return {
+        "message": "Member replaced successfully",
+        "user": {
+            "id": existing_user.id,
+            "full_name": existing_user.full_name,
+            "email": existing_user.email,
+        },
+        "talents_transferred": len(ghost_talents) if ghost_talents else 0,
+    }

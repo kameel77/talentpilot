@@ -7,7 +7,7 @@ from typing import List
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
-from auth import hash_password, require_role, create_access_token
+from auth import hash_password, require_role, create_access_token, check_org_access
 from database import get_db
 from models import (
     InvitationStatus,
@@ -82,7 +82,7 @@ def _assign_talents(
 def create_ghost_invite(
     data: GhostInviteCreate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_role(["admin", "manager"])),
+    current_user: User = Depends(require_role(["admin", "manager", "coach"])),
 ):
     team = db.query(Team).filter(Team.id == data.team_id).first()
     if not team:
@@ -90,14 +90,14 @@ def create_ghost_invite(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Team not found",
         )
-    if team.organization_id != current_user.organization_id:
+    if not check_org_access(db, current_user, team.organization_id):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Access denied to this team",
         )
 
     existing_user = db.query(User).filter(User.email == data.email).first()
-    if existing_user and existing_user.organization_id != current_user.organization_id:
+    if existing_user and existing_user.organization_id != team.organization_id:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="User belongs to a different organization",
@@ -115,7 +115,7 @@ def create_ghost_invite(
             role=UserRole.USER,
             is_active=False,
             is_ghost=True,
-            organization_id=current_user.organization_id,
+            organization_id=team.organization_id,
         )
         db.add(user)
         db.flush()

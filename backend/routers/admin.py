@@ -122,6 +122,60 @@ def update_user_role(
     return user
 
 
+@router.patch("/users/{user_id}", response_model=UserResponse)
+def update_user_profile(
+    user_id: int,
+    payload: dict,
+    db: Session = Depends(get_db),
+    current_user=Depends(require_role(["admin"])),
+):
+    """Update user profile fields (Superadmin only).
+
+    Accepts: full_name, email, is_active, job_title.
+    """
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    allowed_fields = {"full_name", "email", "is_active", "job_title"}
+    for key, value in payload.items():
+        if key in allowed_fields:
+            setattr(user, key, value)
+
+    db.commit()
+    db.refresh(user)
+
+    if user.role.value == "coach":
+        accesses = db.query(OrganizationAccess).filter(OrganizationAccess.user_id == user.id).all()
+        user.organizations_access = [acc.organization_id for acc in accesses]
+    else:
+        user.organizations_access = []
+
+    return user
+
+
+@router.delete("/users/{user_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_user(
+    user_id: int,
+    db: Session = Depends(get_db),
+    current_user=Depends(require_role(["admin"])),
+):
+    """Delete a user permanently (Superadmin only)."""
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    if user.id == current_user.id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Cannot delete your own account",
+        )
+
+    db.delete(user)
+    db.commit()
+    return None
+
+
 @router.get("/organizations", response_model=list[OrganizationResponse])
 def list_all_organizations(
     db: Session = Depends(get_db),

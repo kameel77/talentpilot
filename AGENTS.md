@@ -209,3 +209,159 @@ Po każdej iteracji agent zwraca:
 - Jakie komendy uruchomił i wyniki
 - Co dalej (kolejne 1–3 kroki)
 - Ryzyka/regresje do sprawdzenia
+
+---
+
+## 12) Infrastruktura i środowiska
+
+### Architektura ogólna
+
+Aplikacja jest wdrożona na dwóch serwerach Hetzner, zarządzanych przez Coolify. Każde środowisko ma osobną instancję PostgreSQL (z pgvector), Redis i aplikację docker-compose (backend + frontend).
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│  DEV (izzy-hetzner / 37.27.193.161)                         │
+│  Coolify: https://cool.izzycars.pl                          │
+│  MCP: coolify-staging                                       │
+│  SSH: ssh izzy-dev                                          │
+│                                                             │
+│  ┌──────────┐  ┌──────────┐  ┌──────────────────────────┐  │
+│  │ PostgreSQL│  │  Redis   │  │  Aplikacja (branch: dev) │  │
+│  │ pgvector  │  │          │  │  FE: dev.talentpilot.io  │  │
+│  │           │  │          │  │  BE: sslip.io (internal) │  │
+│  └──────────┘  └──────────┘  └──────────────────────────┘  │
+└─────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────┐
+│  PROD (hetzner-priv / 204.168.226.1)                        │
+│  Coolify: http://204.168.226.1:8000                         │
+│  MCP: coolify (coolify-finarena)                            │
+│  SSH: ssh hetzner-priv                                      │
+│                                                             │
+│  ┌──────────┐  ┌──────────┐  ┌──────────────────────────┐  │
+│  │ PostgreSQL│  │  Redis   │  │  Aplikacja (branch: main)│  │
+│  │ pgvector  │  │          │  │  FE: app.talentpilot.io  │  │
+│  │           │  │          │  │  BE: api.talentpilot.io  │  │
+│  └──────────┘  └──────────┘  └──────────────────────────┘  │
+└─────────────────────────────────────────────────────────────┘
+```
+
+### Identyfikatory zasobów Coolify
+
+#### DEV (coolify-staging)
+| Zasób | UUID | Host wewnętrzny (Docker) |
+|---|---|---|
+| PostgreSQL | `aocw0cc8c8oo0084cokoscgs` | `aocw0cc8c8oo0084cokoscgs:5432` |
+| Redis | `boowwskogcocckgogokokko4` | `boowwskogcocckgogokokko4:6379` |
+| Aplikacja | `awk0c0800ks8sk4o004gok0g` | branch: `dev` |
+
+#### PROD (coolify-finarena)
+| Zasób | UUID | Host wewnętrzny (Docker) |
+|---|---|---|
+| PostgreSQL | `vce9dy97ni31uox7og3opa32` | `vce9dy97ni31uox7og3opa32:5432` |
+| Redis | `dc6v4uuhhaj8omrtp33ha4bo` | `dc6v4uuhhaj8omrtp33ha4bo:6379` |
+| Aplikacja | `vkppfv54xt5zvdli2pwqcv5d` | branch: `main` |
+
+### Domeny i DNS (Cloudflare)
+
+| Domena | IP | Środowisko | Cel |
+|---|---|---|---|
+| `app.talentpilot.io` | `204.168.226.1` | PROD | Frontend |
+| `api.talentpilot.io` | `204.168.226.1` | PROD | Backend |
+| `dev.talentpilot.io` | `37.27.193.161` | DEV | Frontend |
+| Backend DEV | sslip.io (auto) | DEV | Backend |
+
+### Dostęp MCP do Coolify
+
+Agent ma dostęp do obu instancji Coolify przez MCP:
+
+- **DEV:** użyj narzędzi `mcp_coolify-staging_*` (np. `mcp_coolify-staging_applications`)
+- **PROD:** użyj narzędzi `mcp_coolify_*` (np. `mcp_coolify_applications`)
+
+Alternatywnie przez API (curl):
+```bash
+# DEV
+curl -H "Authorization: Bearer 7|SfZ5mPP5pGfjpCjlIHx1P8bkl7z5ydHGhYVb3y9M43a88b94" \
+  https://cool.izzycars.pl/api/v1/...
+
+# PROD
+curl -H "Authorization: Bearer 1|fMaZGmvXFfO76O1WYurFqHEKghJYj7T93kaSYs1jb469ab74" \
+  http://204.168.226.1:8000/api/v1/...
+```
+
+### Sieć Docker
+
+Bazy danych i aplikacja komunikują się przez sieć `coolify` (external Docker network). Hosty baz danych to ich UUIDs w Coolify (np. `aocw0cc8c8oo0084cokoscgs:5432`). **Nie** używamy `localhost` ani nazw serwisów z docker-compose dla baz danych — bazy są osobnymi zasobami Coolify.
+
+---
+
+## 13) Branching i deployment workflow
+
+### Strategia branchy
+
+```
+dev  ──────────────────────────────►  Coolify DEV (dev.talentpilot.io)
+ │                                        ▲ auto-deploy on push
+ │                                        │
+ └──── merge ──► main ──────────────►  Coolify PROD (app.talentpilot.io)
+                                          ▲ auto-deploy on push
+```
+
+- **`dev`** — branch roboczy. Cały development odbywa się tutaj.
+- **`main`** — branch produkcyjny. Tylko merge z `dev` po przetestowaniu.
+
+### Workflow krok po kroku
+
+1. **Rozwój:** Pracuj na branchu `dev` lokalnie.
+2. **Push:** `git push origin dev` → Coolify DEV automatycznie deployuje.
+3. **Testowanie:** Weryfikuj na `https://dev.talentpilot.io`.
+4. **Merge do produkcji:**
+   ```bash
+   git checkout main
+   git merge dev
+   git push origin main
+   ```
+5. **Weryfikacja produkcji:** Sprawdź `https://app.talentpilot.io`.
+
+### Deploy manualny (przez MCP/API)
+
+Jeśli auto-deploy nie zadziała lub potrzebny jest force rebuild:
+
+```bash
+# DEV — przez MCP
+mcp_coolify-staging_deployments(operation="deploy", query='{"uuid":"awk0c0800ks8sk4o004gok0g","force_rebuild":true}')
+
+# PROD — przez MCP
+mcp_coolify_deployments(operation="deploy", query='{"uuid":"vkppfv54xt5zvdli2pwqcv5d","force_rebuild":true}')
+```
+
+### Ważne uwagi o env vars
+
+- **`NEXT_PUBLIC_API_URL`** jest zmienną **build-time** Next.js — zmiana wymaga `force_rebuild:true`.
+- **`CORS_ORIGINS`** musi zawierać URL frontendu (np. `https://app.talentpilot.io`).
+- Coolify potrafi generować duplikaty env vars — zawsze weryfikuj `docker exec <container> env | grep KEY`.
+- Cloudflare proxy (pomarańczowa chmurka) terminuje SSL — Traefik widzi HTTP, domena musi być z `https://` w Coolify.
+
+### Logi i debugging
+
+```bash
+# Logi backendu DEV
+ssh izzy-dev 'docker logs $(docker ps --format "{{.Names}}" | grep "^backend-awk0c0800" | head -1) --tail 50'
+
+# Logi backendu PROD
+ssh hetzner-priv 'docker logs $(docker ps --format "{{.Names}}" | grep "^backend-vkppfv54" | head -1) --tail 50'
+
+# Env vars w kontenerze
+ssh hetzner-priv 'docker exec $(docker ps --format "{{.Names}}" | grep "^backend-vkppfv54" | head -1) env | grep CORS'
+```
+
+### Backup i migracja danych
+
+```bash
+# Export backup z serwera
+ssh <server> 'docker exec <postgres-container-uuid> pg_dump -U talentpilot talentpilot > /tmp/backup.sql'
+
+# Import na inny serwer
+scp <source>:/tmp/backup.sql <dest>:/tmp/backup.sql
+ssh <dest> 'docker exec -i <postgres-container-uuid> psql -U talentpilot -d talentpilot < /tmp/backup.sql'
+```

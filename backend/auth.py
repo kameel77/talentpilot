@@ -201,3 +201,78 @@ def get_current_active_org_id(
         status_code=status.HTTP_403_FORBIDDEN,
         detail="You do not have access to this organization context"
     )
+
+
+def check_org_access(db: Session, user: User, organization_id: int) -> bool:
+    """
+    Check if a user has access to the given organization.
+
+    Returns True if:
+    - User is ADMIN (full access)
+    - organization_id matches user's home organization
+    - User is COACH with OrganizationAccess record for that org
+
+    This is a read-only check — does NOT raise exceptions.
+    """
+    from models import UserRole, OrganizationAccess
+
+    if user.role == UserRole.ADMIN:
+        return True
+    if user.organization_id == organization_id:
+        return True
+    if user.role == UserRole.COACH:
+        access = db.query(OrganizationAccess).filter(
+            OrganizationAccess.user_id == user.id,
+            OrganizationAccess.organization_id == organization_id
+        ).first()
+        return access is not None
+    return False
+
+
+def check_user_access(db: Session, current_user: User, target_user: User) -> bool:
+    """
+    Check if current_user can access target_user's profile.
+
+    Returns True if:
+    - current_user is ADMIN
+    - target_user is in an org that current_user has access to (home or guest)
+    - target_user shares a team in any org that current_user has access to
+
+    This handles cross-org users who were merged via Smart Replace.
+    """
+    from models import UserRole, OrganizationAccess, Team, user_teams
+
+    if current_user.role == UserRole.ADMIN:
+        return True
+
+    # Check home org match
+    if check_org_access(db, current_user, target_user.organization_id):
+        return True
+
+    # For coaches: check if target_user is a member of any team
+    # in an org that the coach has access to
+    if current_user.role == UserRole.COACH:
+        # Get all org IDs the coach can access
+        coach_org_ids = {current_user.organization_id}
+        accesses = db.query(OrganizationAccess).filter(
+            OrganizationAccess.user_id == current_user.id
+        ).all()
+        for a in accesses:
+            coach_org_ids.add(a.organization_id)
+
+        # Check if target user is in any team belonging to those orgs
+        team_in_accessible_org = db.query(Team).join(
+            user_teams, Team.id == user_teams.c.team_id
+        ).filter(
+            user_teams.c.user_id == target_user.id,
+            Team.organization_id.in_(coach_org_ids)
+        ).first()
+
+        return team_in_accessible_org is not None
+
+    # For managers: check if they share an org
+    if current_user.organization_id == target_user.organization_id:
+        return True
+
+    return False
+

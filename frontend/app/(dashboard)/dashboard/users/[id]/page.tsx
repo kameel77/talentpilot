@@ -15,27 +15,38 @@ import {
     Trophy,
     Zap,
     Pencil,
-
+    Upload,
+    Edit3,
     X,
     Sparkles,
     Loader2,
     Save,
+    Power,
+    UserCog,
+    AlertTriangle,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { DOMAIN_LABELS, DOMAIN_CSS_KEY, GALLUP_TALENTS } from "@/lib/gallup-data";
 import { api, tokenManager } from "@/lib/api";
 import { cn } from "@/lib/utils";
 import { GallupDomain } from '@/lib/gallup-data';
 import { UserTalent } from '@/types/talent';
+import { TalentImportDialog } from '@/components/talent-import/TalentImportDialog';
 
 interface UserProfile {
     id: number;
     full_name: string;
     email: string;
     role: string;
+    job_title?: string;
+    is_active?: boolean;
+    is_ghost?: boolean;
     superpowers?: string;
     motivators?: string;
     blockers?: string;
@@ -204,6 +215,7 @@ export default function UserProfilePage() {
     const [talentViewMode, setTalentViewMode] = useState<"top5" | "top15" | "all">("top15");
     const [loading, setLoading] = useState(true);
     const [canEdit, setCanEdit] = useState(false);
+    const [talentImportOpen, setTalentImportOpen] = useState(false);
 
     // Editing state for each section
     const [editingSection, setEditingSection] = useState<string | null>(null);
@@ -215,6 +227,16 @@ export default function UserProfilePage() {
     });
     const [saving, setSaving] = useState(false);
     const [generating, setGenerating] = useState(false);
+
+    // Edit profile state
+    const [editProfileOpen, setEditProfileOpen] = useState(false);
+    const [editProfileData, setEditProfileData] = useState({ full_name: '', email: '', job_title: '' });
+    const [editProfileSaving, setEditProfileSaving] = useState(false);
+    const [editProfileError, setEditProfileError] = useState('');
+    const [conflictData, setConflictData] = useState<{
+        existingUser: { id: number; full_name: string; email: string };
+    } | null>(null);
+    const [replacingUser, setReplacingUser] = useState(false);
 
     useEffect(() => {
         const loadUserData = async () => {
@@ -303,6 +325,27 @@ export default function UserProfilePage() {
     }, []);
 
     const hasTalents = memberTalents.length > 0;
+
+    const handleTalentsSave = async (talents: UserTalent[]) => {
+        try {
+            const rankings: Record<string, number> = {};
+            talents.forEach(t => { rankings[t.talentId] = t.rank; });
+            await api.gallup.saveTalents(userId, rankings, 'pl');
+            setMemberTalents(talents);
+            // Reload full talent data for display
+            const talentsData = await api.talents.getUserTalents(userId);
+            setMemberTalentResponse(talentsData);
+            setMemberTalents(
+                talentsData.map((ut: UserTalentResponse) => ({
+                    talentId: ut.talent.code,
+                    rank: ut.rank,
+                }))
+            );
+        } catch (error) {
+            console.error('Error saving talents:', error);
+            setMemberTalents(talents);
+        }
+    };
 
     const startEditing = (section: string) => {
         if (!user) return;
@@ -459,17 +502,74 @@ export default function UserProfilePage() {
 
     return (
         <div className="mx-auto max-w-5xl space-y-6">
+            {/* Talent Import Dialog */}
+            <TalentImportDialog
+                open={talentImportOpen}
+                onOpenChange={setTalentImportOpen}
+                onSave={handleTalentsSave}
+                initialTalents={memberTalents}
+                memberName={user.full_name}
+                userId={userId}
+            />
+
             <div className="flex items-center justify-between">
                 <div>
-                    <h1 className="text-headline">{user.full_name}</h1>
+                    <div className="flex items-center gap-3">
+                        <h1 className="text-headline">{user.full_name}</h1>
+                        {user.is_active === false && (
+                            <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-slate-100 text-slate-500 border border-slate-200">INACTIVE</span>
+                        )}
+                    </div>
                     <p className="text-body">{user.email}</p>
+                    {user.job_title && <p className="text-sm text-muted-foreground mt-0.5">{user.job_title}</p>}
                 </div>
                 <div className="flex items-center gap-2">
+                    {canEdit && (
+                        <>
+                            <Button variant="outline" onClick={() => {
+                                setEditProfileData({
+                                    full_name: user.full_name || '',
+                                    email: user.email || '',
+                                    job_title: user.job_title || '',
+                                });
+                                setEditProfileError('');
+                                setEditProfileOpen(true);
+                            }}>
+                                <UserCog className="h-4 w-4 mr-2" />
+                                Edytuj dane
+                            </Button>
+                            <Button
+                                variant="outline"
+                                onClick={async () => {
+                                    try {
+                                        const newStatus = !(user.is_active !== false);
+                                        await api.users.update(userId, { is_active: newStatus });
+                                        setUser(prev => prev ? { ...prev, is_active: newStatus } : prev);
+                                    } catch (err) {
+                                        console.error(err);
+                                    }
+                                }}
+                                className={user.is_active !== false
+                                    ? 'text-amber-600 border-amber-200 hover:bg-amber-50'
+                                    : 'text-emerald-600 border-emerald-200 hover:bg-emerald-50'
+                                }
+                            >
+                                <Power className="h-4 w-4 mr-2" />
+                                {user.is_active !== false ? 'Archiwizuj' : 'Aktywuj'}
+                            </Button>
+                        </>
+                    )}
                     {canEdit && hasTalents && (
-                        <Button variant="outline" onClick={generateWithAI} disabled={generating}>
-                            {generating ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Sparkles className="h-4 w-4 mr-2" />}
-                            {generating ? 'Generuję...' : 'Generuj z AI'}
-                        </Button>
+                        <>
+                            <Button variant="outline" onClick={() => setTalentImportOpen(true)}>
+                                <Edit3 className="h-4 w-4 mr-2" />
+                                Edytuj talenty
+                            </Button>
+                            <Button variant="outline" onClick={generateWithAI} disabled={generating}>
+                                {generating ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Sparkles className="h-4 w-4 mr-2" />}
+                                {generating ? 'Generuję...' : 'Generuj z AI'}
+                            </Button>
+                        </>
                     )}
                     <Button variant="outline" asChild>
                         <Link href="/dashboard/users">Wróć do zespołu</Link>
@@ -479,7 +579,7 @@ export default function UserProfilePage() {
 
             {!hasTalents ? (
                 <Card className="p-8 text-center border-slate-200/60 shadow-sm">
-                    <div className="max-w-md mx-auto space-y-4">
+                    <div className="max-w-md mx-auto space-y-6">
                         <div className="w-20 h-20 rounded-2xl bg-primary/10 flex items-center justify-center mx-auto">
                             <Star className="h-10 w-10 text-primary" />
                         </div>
@@ -489,6 +589,17 @@ export default function UserProfilePage() {
                                 Ten członek zespołu nie ma jeszcze przypisanych talentów Gallupa.
                             </p>
                         </div>
+                        {canEdit && (
+                            <div className="space-y-3">
+                                <Button size="lg" onClick={() => setTalentImportOpen(true)} className="bg-gradient-primary hover:opacity-90 transition-opacity">
+                                    <Upload className="h-5 w-5 mr-2" />
+                                    Importuj talenty
+                                </Button>
+                                <p className="text-xs text-muted-foreground">
+                                    Możesz zaimportować PDF z raportem Gallup lub wprowadzić talenty ręcznie
+                                </p>
+                            </div>
+                        )}
                     </div>
                 </Card>
             ) : (
@@ -625,6 +736,133 @@ export default function UserProfilePage() {
                     </div>
                 </div>
             )}
+
+            {/* Edit Profile Dialog */}
+            <Dialog open={editProfileOpen} onOpenChange={(open) => { if (!open) { setEditProfileOpen(false); setEditProfileError(''); } }}>
+                <DialogContent className="max-w-md">
+                    <DialogHeader>
+                        <DialogTitle>Edytuj dane użytkownika</DialogTitle>
+                    </DialogHeader>
+                    <form onSubmit={async (e) => {
+                        e.preventDefault();
+                        setEditProfileSaving(true);
+                        setEditProfileError('');
+                        try {
+                            await api.users.update(userId, {
+                                full_name: editProfileData.full_name,
+                                email: editProfileData.email,
+                                job_title: editProfileData.job_title || undefined,
+                            });
+                            setUser(prev => prev ? {
+                                ...prev,
+                                full_name: editProfileData.full_name,
+                                email: editProfileData.email,
+                                job_title: editProfileData.job_title,
+                            } : prev);
+                            setEditProfileOpen(false);
+                        } catch (err: unknown) {
+                            const axiosErr = err as { response?: { status?: number; data?: { detail?: { code?: string; existing_user?: { id: number; full_name: string; email: string }; message?: string } | string } } };
+                            if (axiosErr.response?.status === 409) {
+                                const detail = axiosErr.response.data?.detail;
+                                if (typeof detail === 'object' && detail?.code === 'EMAIL_CONFLICT' && detail.existing_user) {
+                                    setConflictData({ existingUser: detail.existing_user });
+                                    setEditProfileOpen(false);
+                                    setEditProfileSaving(false);
+                                    return;
+                                }
+                            }
+                            const detail = axiosErr.response?.data?.detail;
+                            const msg = typeof detail === 'string' ? detail : typeof detail === 'object' && detail?.message ? detail.message : 'Wystąpił błąd podczas zapisu.';
+                            setEditProfileError(msg);
+                        } finally {
+                            setEditProfileSaving(false);
+                        }
+                    }} className="space-y-4">
+                        <div className="space-y-2">
+                            <Label>Imię i nazwisko</Label>
+                            <Input value={editProfileData.full_name} onChange={e => setEditProfileData(prev => ({ ...prev, full_name: e.target.value }))} required />
+                        </div>
+                        <div className="space-y-2">
+                            <Label>Email</Label>
+                            <Input type="email" value={editProfileData.email} onChange={e => setEditProfileData(prev => ({ ...prev, email: e.target.value }))} required />
+                        </div>
+                        <div className="space-y-2">
+                            <Label>Stanowisko</Label>
+                            <Input value={editProfileData.job_title} onChange={e => setEditProfileData(prev => ({ ...prev, job_title: e.target.value }))} placeholder="np. Product Manager" />
+                        </div>
+                        {editProfileError && (
+                            <div className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-2 text-sm text-rose-700">
+                                {editProfileError}
+                            </div>
+                        )}
+                        <div className="flex justify-end gap-3 pt-4">
+                            <Button type="button" variant="outline" onClick={() => { setEditProfileOpen(false); setEditProfileError(''); }}>Anuluj</Button>
+                            <Button type="submit" disabled={editProfileSaving}>
+                                {editProfileSaving ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Zapisuję...</> : 'Zapisz zmiany'}
+                            </Button>
+                        </div>
+                    </form>
+                </DialogContent>
+            </Dialog>
+
+            {/* Email Conflict — Replace User Dialog */}
+            <Dialog open={!!conflictData} onOpenChange={(open) => !open && setConflictData(null)}>
+                <DialogContent className="max-w-md">
+                    <DialogHeader>
+                        <DialogTitle className="flex items-center gap-2">
+                            <AlertTriangle className="h-5 w-5 text-amber-500" />
+                            Email jest już zajęty
+                        </DialogTitle>
+                        <DialogDescription>
+                            Podany adres email należy do istniejącego użytkownika w systemie.
+                        </DialogDescription>
+                    </DialogHeader>
+                    {conflictData && (
+                        <div className="space-y-4 mt-2">
+                            <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+                                <div className="flex items-center gap-3">
+                                    <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white font-medium shadow-sm shrink-0">
+                                        {conflictData.existingUser.full_name.charAt(0).toUpperCase()}
+                                    </div>
+                                    <div>
+                                        <p className="font-medium text-slate-900">{conflictData.existingUser.full_name}</p>
+                                        <p className="text-sm text-slate-500">{conflictData.existingUser.email}</p>
+                                    </div>
+                                </div>
+                            </div>
+                            <p className="text-sm text-slate-600">
+                                Czy chcesz <strong>zastąpić obecny profil</strong> istniejącym użytkownikiem?
+                                Talenty zostaną przeniesione, a użytkownik zostanie dodany do wszystkich zespołów.
+                            </p>
+                            <div className="flex justify-end gap-3 pt-2">
+                                <Button variant="outline" onClick={() => setConflictData(null)} disabled={replacingUser}>
+                                    Anuluj
+                                </Button>
+                                <Button onClick={async () => {
+                                    setReplacingUser(true);
+                                    try {
+                                        const result = await api.users.replaceUser(userId, conflictData.existingUser.id);
+                                        setConflictData(null);
+                                        // Redirect to the existing user's profile
+                                        window.location.href = `/dashboard/users/${result.user.id}`;
+                                    } catch (err) {
+                                        console.error(err);
+                                        alert('Błąd podczas zamiany użytkownika.');
+                                    } finally {
+                                        setReplacingUser(false);
+                                    }
+                                }} disabled={replacingUser}>
+                                    {replacingUser ? (
+                                        <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Przenoszenie...</>
+                                    ) : (
+                                        'Zastąp i przenieś'
+                                    )}
+                                </Button>
+                            </div>
+                        </div>
+                    )}
+                </DialogContent>
+            </Dialog>
         </div>
     );
 }

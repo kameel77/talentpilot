@@ -11,9 +11,9 @@ from typing import List, Optional
 
 from schemas import GallupPdfParseResponse, UserTalentCreate, UserTalentResponse, TalentResponse, TalentTranslationResponse
 from services.gallup_pdf_parser import extract_gallup_rankings
-from auth import get_current_user, require_role
+from auth import get_current_user, require_role, check_org_access
 from database import get_db
-from models import User, Talent, TalentTranslation, UserTalent
+from models import User, UserRole, Talent, TalentTranslation, UserTalent
 
 router = APIRouter()
 
@@ -95,16 +95,16 @@ def save_gallup_talents(
             detail="User not found"
         )
     
-    # Check organization access
-    if user.organization_id != current_user.organization_id:  # type: ignore
+    # Check organization access (supports cross-org for coaches)
+    if not check_org_access(db, current_user, user.organization_id):  # type: ignore
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Access denied to this user"
         )
     
-    # Permission check: users can save their own talents, admin/manager can save anyone's
+    # Permission check: users can save their own talents, admin/manager/coach can save anyone's
     is_self = user_id == current_user.id  # type: ignore
-    is_privileged = current_user.role in ["admin", "manager"]  # type: ignore
+    is_privileged = current_user.role in (UserRole.ADMIN, UserRole.MANAGER, UserRole.COACH)  # type: ignore
     
     if not is_self and not is_privileged:
         raise HTTPException(

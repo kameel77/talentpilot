@@ -177,19 +177,45 @@ def delete_organization(
     db: Session = Depends(get_db),
     current_user: User = Depends(require_role(["admin", "coach"])),
 ):
-    """Delete an organization. Admin or coach only. Coach can only delete their own organization if permitted."""
-    if current_user.role != UserRole.ADMIN and current_user.organization_id != organization_id:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Access denied"
-        )
-    
+    """Delete an organization.
+
+    - Admin: can delete any organization
+    - Coach: can delete organizations they have access to, but only if
+      no users with MANAGER role are assigned to the organization.
+    """
     organization = db.query(Organization).filter(Organization.id == organization_id).first()
     if not organization:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Organization not found"
         )
-        
+
+    if current_user.role == UserRole.COACH:
+        # Check coach has access to this org
+        has_access = (current_user.organization_id == organization_id)
+        if not has_access:
+            access = db.query(OrganizationAccess).filter(
+                OrganizationAccess.user_id == current_user.id,
+                OrganizationAccess.organization_id == organization_id
+            ).first()
+            has_access = access is not None
+
+        if not has_access:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Access denied to this organization"
+            )
+
+        # Coach cannot delete org if any MANAGER is assigned
+        manager_count = db.query(User).filter(
+            User.organization_id == organization_id,
+            User.role == UserRole.MANAGER
+        ).count()
+        if manager_count > 0:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Cannot delete organization with assigned managers. Remove or reassign managers first."
+            )
+
     db.delete(organization)
     db.commit()

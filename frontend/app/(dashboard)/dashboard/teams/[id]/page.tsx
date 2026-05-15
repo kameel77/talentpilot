@@ -10,7 +10,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { UserPlus, Trash2, ChevronDown, Check, Crown, Edit2, Upload, Search, FileText, X, Loader2 } from "lucide-react";
+import { UserPlus, Trash2, ChevronDown, Check, Crown, Edit2, Upload, Search, FileText, X, Loader2, AlertTriangle } from "lucide-react";
 import { GALLUP_TALENTS, DOMAIN_CSS_KEY } from "@/lib/gallup-data";
 import { cn } from "@/lib/utils";
 
@@ -81,6 +81,12 @@ export default function TeamDetailPage() {
     
     // Edit Member State
     const [editingMember, setEditingMember] = useState<{ id: string | number, name: string, email: string, role: string } | null>(null);
+    const [editError, setEditError] = useState('');
+    const [conflictData, setConflictData] = useState<{
+        existingUser: { id: number; full_name: string; email: string };
+        ghostUserId: number;
+    } | null>(null);
+    const [replacingMember, setReplacingMember] = useState(false);
     const [membersSearch, setMembersSearch] = useState('');
     
     // PDF Import State
@@ -166,6 +172,7 @@ export default function TeamDetailPage() {
     const handleEditMemberSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!editingMember) return;
+        setEditError('');
         try {
             await api.users.update(editingMember.id as number, {
                 full_name: editingMember.name,
@@ -173,9 +180,37 @@ export default function TeamDetailPage() {
             });
             setEditingMember(null);
             await loadTeamData();
+        } catch (err: unknown) {
+            const axiosErr = err as { response?: { status?: number; data?: { detail?: { code?: string; existing_user?: { id: number; full_name: string; email: string }; message?: string } | string } } };
+            if (axiosErr.response?.status === 409) {
+                const detail = axiosErr.response.data?.detail;
+                if (typeof detail === 'object' && detail?.code === 'EMAIL_CONFLICT' && detail.existing_user) {
+                    setConflictData({
+                        existingUser: detail.existing_user,
+                        ghostUserId: editingMember.id as number,
+                    });
+                    setEditingMember(null);
+                    return;
+                }
+            }
+            const detail = axiosErr.response?.data?.detail;
+            const msg = typeof detail === 'string' ? detail : typeof detail === 'object' && detail?.message ? detail.message : 'Wystąpił błąd podczas edycji.';
+            setEditError(msg);
+        }
+    };
+
+    const handleReplaceMember = async () => {
+        if (!conflictData) return;
+        setReplacingMember(true);
+        try {
+            await api.teams.replaceMember(teamId, conflictData.ghostUserId, conflictData.existingUser.id);
+            setConflictData(null);
+            await loadTeamData();
         } catch (err) {
             console.error(err);
-            alert("Błąd podczas edycji członka.");
+            alert('Błąd podczas zamiany członka zespołu.');
+        } finally {
+            setReplacingMember(false);
         }
     };
 
@@ -604,7 +639,7 @@ export default function TeamDetailPage() {
             </div>
 
             {/* Edit Member Dialog */}
-            <Dialog open={!!editingMember} onOpenChange={(open) => !open && setEditingMember(null)}>
+            <Dialog open={!!editingMember} onOpenChange={(open) => { if (!open) { setEditingMember(null); setEditError(''); } }}>
                 <DialogContent>
                     <DialogHeader>
                         <DialogTitle>Edytuj członka zespołu</DialogTitle>
@@ -623,11 +658,62 @@ export default function TeamDetailPage() {
                                 <Label>Stanowisko</Label>
                                 <Input value={editingMember.role} onChange={e => setEditingMember({...editingMember, role: e.target.value})} />
                             </div>
+                            {editError && (
+                                <div className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-2 text-sm text-rose-700">
+                                    {editError}
+                                </div>
+                            )}
                             <div className="flex justify-end gap-3 pt-4">
-                                <Button type="button" variant="outline" onClick={() => setEditingMember(null)}>Anuluj</Button>
+                                <Button type="button" variant="outline" onClick={() => { setEditingMember(null); setEditError(''); }}>Anuluj</Button>
                                 <Button type="submit">Zapisz zmiany</Button>
                             </div>
                         </form>
+                    )}
+                </DialogContent>
+            </Dialog>
+
+            {/* Email Conflict — Replace Member Dialog */}
+            <Dialog open={!!conflictData} onOpenChange={(open) => !open && setConflictData(null)}>
+                <DialogContent className="max-w-md">
+                    <DialogHeader>
+                        <DialogTitle className="flex items-center gap-2">
+                            <AlertTriangle className="h-5 w-5 text-amber-500" />
+                            Email jest już zajęty
+                        </DialogTitle>
+                        <DialogDescription>
+                            Podany adres email należy do istniejącego użytkownika w systemie.
+                        </DialogDescription>
+                    </DialogHeader>
+                    {conflictData && (
+                        <div className="space-y-4 mt-2">
+                            <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+                                <div className="flex items-center gap-3">
+                                    <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white font-medium shadow-sm shrink-0">
+                                        {conflictData.existingUser.full_name.charAt(0).toUpperCase()}
+                                    </div>
+                                    <div>
+                                        <p className="font-medium text-slate-900">{conflictData.existingUser.full_name}</p>
+                                        <p className="text-sm text-slate-500">{conflictData.existingUser.email}</p>
+                                    </div>
+                                </div>
+                            </div>
+                            <p className="text-sm text-slate-600">
+                                Czy chcesz <strong>dodać tę osobę do zespołu</strong> i przenieść talenty z obecnego profilu ghost?
+                                Ghost user zostanie usunięty.
+                            </p>
+                            <div className="flex justify-end gap-3 pt-2">
+                                <Button variant="outline" onClick={() => setConflictData(null)} disabled={replacingMember}>
+                                    Anuluj
+                                </Button>
+                                <Button onClick={handleReplaceMember} disabled={replacingMember}>
+                                    {replacingMember ? (
+                                        <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Przenoszenie...</>
+                                    ) : (
+                                        'Dodaj do zespołu'
+                                    )}
+                                </Button>
+                            </div>
+                        </div>
                     )}
                 </DialogContent>
             </Dialog>
