@@ -14,13 +14,10 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
-import { api, tokenManager, User, UserTalentResponse } from "@/lib/api";
+import { api, tokenManager, DashboardOverview, User } from "@/lib/api";
 
-interface DashboardData {
-    users: User[];
+interface DashboardData extends DashboardOverview {
     currentUser: User | null;
-    teamDomains: { executing: number; influencing: number; relationship_building: number; strategic_thinking: number };
-    usersWithTalents: number;
 }
 
 export default function DashboardPage() {
@@ -31,38 +28,10 @@ export default function DashboardPage() {
     useEffect(() => {
         const loadDashboard = async () => {
             try {
-                const currentUser = tokenManager.getUser();
-                const users: User[] = await api.users.list();
-
-                // Aggregate domain distribution across all users
-                const teamDomains = { executing: 0, influencing: 0, relationship_building: 0, strategic_thinking: 0 };
-                let usersWithTalents = 0;
-
-                // Fetch talents for each user and aggregate domains
-                const domainPromises = users.map(async (user) => {
-                    try {
-                        const talents: UserTalentResponse[] = await api.talents.getUserTalentsTyped(user.id);
-                        if (talents.length > 0) {
-                            usersWithTalents++;
-                            talents.forEach((ut) => {
-                                const domain = ut.talent.domain as keyof typeof teamDomains;
-                                if (domain in teamDomains) {
-                                    teamDomains[domain]++;
-                                }
-                            });
-                        }
-                    } catch {
-                        // User may not have talents assigned
-                    }
-                });
-
-                await Promise.all(domainPromises);
-
+                const overview = await api.dashboard.overview();
                 setData({
-                    users,
-                    currentUser,
-                    teamDomains,
-                    usersWithTalents,
+                    ...overview,
+                    currentUser: tokenManager.getUser(),
                 });
             } catch {
                 setError("Nie udało się załadować danych. Spróbuj odświeżyć stronę.");
@@ -97,7 +66,7 @@ export default function DashboardPage() {
 
     if (!data) return null;
 
-    const { users, currentUser, teamDomains, usersWithTalents } = data;
+    const { currentUser, team_domains: teamDomains, users_with_talents: usersWithTalents, total_users: totalUsers, members } = data;
     const totalTalents = teamDomains.executing + teamDomains.influencing + teamDomains.relationship_building + teamDomains.strategic_thinking;
     const totalDomains = totalTalents || 1; // Avoid division by zero
 
@@ -109,9 +78,6 @@ export default function DashboardPage() {
     };
 
     const firstName = currentUser?.full_name?.split(" ")[0] || "Użytkowniku";
-
-    // Get a few users to display in the team section (max 6)
-    const displayUsers = users.slice(0, 6);
 
     return (
         <div className="space-y-8 max-w-7xl mx-auto">
@@ -136,7 +102,7 @@ export default function DashboardPage() {
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
                 <KPICard
                     title="Członków zespołu"
-                    value={users.length}
+                    value={totalUsers}
                     icon={<Users className="h-5 w-5" />}
                     description="aktywnych użytkowników"
                 />
@@ -154,9 +120,9 @@ export default function DashboardPage() {
                 />
                 <KPICard
                     title="Pokrycie talentami"
-                    value={users.length > 0 ? `${Math.round((usersWithTalents / users.length) * 100)}%` : "0%"}
+                    value={totalUsers > 0 ? `${Math.round((usersWithTalents / totalUsers) * 100)}%` : "0%"}
                     icon={<TrendingUp className="h-5 w-5" />}
-                    description={`${usersWithTalents} z ${users.length} użytkowników`}
+                    description={`${usersWithTalents} z ${totalUsers} użytkowników`}
                 />
             </div>
 
@@ -237,7 +203,7 @@ export default function DashboardPage() {
                     </Link>
                 </div>
 
-                {users.length === 0 ? (
+                {totalUsers === 0 ? (
                     <div className="rounded-3xl border border-dashed border-slate-300 bg-slate-50/50 p-12 sm:p-16 text-center">
                         <Users className="h-12 w-12 text-slate-300 mx-auto mb-4" />
                         <h4 className="text-lg font-semibold text-slate-700">Brak członków zespołu</h4>
@@ -254,14 +220,14 @@ export default function DashboardPage() {
                     </div>
                 ) : (
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
-                        {displayUsers.map((user) => (
+                        {members.map((member) => (
                             <MemberCard
-                                key={user.id}
-                                id={user.id}
-                                name={user.full_name}
-                                role={roleLabel(user.role)}
-                                email={user.email}
-                                initials={getInitials(user.full_name)}
+                                key={member.id}
+                                id={member.id}
+                                name={member.full_name}
+                                role={roleLabel(member.role)}
+                                email={member.email}
+                                initials={getInitials(member.full_name)}
                             />
                         ))}
                     </div>

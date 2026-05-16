@@ -741,3 +741,33 @@ class PublicTeamPresentationResponse(BaseModel):
     name: str
     organization: PresentationOrg
     members: List[PresentationMember]
+
+
+# ─────────────────────────────────────────────────────────────────────
+# Dashboard overview — replaces N+1 fetch pattern on /dashboard
+# ─────────────────────────────────────────────────────────────────────
+
+class TeamDomainCounts(BaseModel):
+    """Count of talents per Gallup domain across visible team members."""
+    executing: int = 0
+    influencing: int = 0
+    relationship_building: int = 0
+    strategic_thinking: int = 0
+
+
+class DashboardMember(BaseModel):
+    """Compact user info for dashboard member cards."""
+    id: int
+    full_name: str
+    email: str
+    role: str
+
+    model_config = {"from_attributes": True}
+
+
+class DashboardOverview(BaseModel):
+    """Single-call aggregate for the dashboard landing page."""
+    total_users: int
+    users_with_talents: int
+    team_domains: TeamDomainCounts
+    members: List[DashboardMember]

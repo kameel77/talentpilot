@@ -375,6 +375,28 @@ apiClient.interceptors.response.use(
     }
 );
 
+// Dashboard aggregate (replaces N+1 fetches on the dashboard landing page)
+export interface TeamDomainCounts {
+    executing: number;
+    influencing: number;
+    relationship_building: number;
+    strategic_thinking: number;
+}
+
+export interface DashboardMember {
+    id: number;
+    full_name: string;
+    email: string;
+    role: string;
+}
+
+export interface DashboardOverview {
+    total_users: number;
+    users_with_talents: number;
+    team_domains: TeamDomainCounts;
+    members: DashboardMember[];
+}
+
 // API methods
 export const api = {
     // Auth
@@ -779,6 +801,15 @@ export const api = {
             return response.data;
         },
     },
+
+    // Dashboard aggregate (one call replaces 1 + N user-talent fetches)
+    dashboard: {
+        overview: async (): Promise<DashboardOverview> => {
+            const response = await apiClient.get<DashboardOverview>('/api/dashboard/overview');
+            return response.data;
+        },
+    },
+
     tokenManager,
 };
 
