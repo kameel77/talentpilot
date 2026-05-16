@@ -54,6 +54,11 @@ services:
     build:
       context: ./frontend
       dockerfile: Dockerfile
+      # NEXT_PUBLIC_* must be passed at BUILD time so `next build` can inline
+      # the value into the client-side JS bundle. Setting only `environment`
+      # below would leave the public URL undefined in the browser.
+      args:
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:?NEXT_PUBLIC_API_URL is required}
     environment:
       NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:?NEXT_PUBLIC_API_URL is required}
     depends_on:
