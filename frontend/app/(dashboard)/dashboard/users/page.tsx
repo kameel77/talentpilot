@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 import { api, GhostInviteRequest, Talent, Team, tokenManager } from "@/lib/api";
 import { cn } from "@/lib/utils";
 import { KPICard } from "@/components/ui/KPICard";
@@ -32,6 +33,7 @@ interface UserSummary {
 }
 
 export default function UsersPage() {
+    const t = useTranslations('users');
     const [users, setUsers] = useState<UserSummary[]>([]);
     const [teams, setTeams] = useState<Team[]>([]);
     const [talents, setTalents] = useState<Talent[]>([]);
@@ -79,7 +81,7 @@ export default function UsersPage() {
             setUsers((prev) => prev.filter((u) => u.id !== deleteTarget.id));
             setDeleteTarget(null);
         } catch {
-            setError("Nie udało się usunąć użytkownika.");
+            setError(t('deleteUser'));
         } finally {
             setDeleting(false);
         }
@@ -229,7 +231,7 @@ export default function UsersPage() {
         <div className="space-y-10">
             <div className="flex flex-wrap items-center justify-between gap-6">
                 <div>
-                    <h1 className="text-3xl font-bold font-heading text-slate-900 tracking-tight">Users</h1>
+                    <h1 className="text-3xl font-bold font-heading text-slate-900 tracking-tight">{t('title')}</h1>
                     <p className="mt-2 text-slate-500 max-w-2xl">
                         Manage your organization&apos;s members, assign roles, and track talent development progress across teams.
                     </p>
@@ -473,7 +475,7 @@ export default function UsersPage() {
                     <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-white shadow-sm">
                         <Users className="h-8 w-8 text-slate-400" />
                     </div>
-                    <h3 className="text-lg font-semibold text-slate-900">No users found</h3>
+                    <h3 className="text-lg font-semibold text-slate-900">{t('noUsers')}</h3>
                     <p className="mt-2 text-slate-500 max-w-xs mx-auto">
                         Your organization is empty. Start by inviting your first team member.
                     </p>
@@ -482,7 +484,7 @@ export default function UsersPage() {
                         onClick={() => setInviteOpen(true)}
                     >
                         <UserPlus className="h-4 w-4" />
-                        Invite First User
+                        {t('addUser')}
                     </button>
                 </div>
             ) : (
@@ -525,7 +527,7 @@ export default function UsersPage() {
                                         user.is_active !== false ? "bg-emerald-500" : "bg-slate-300"
                                     )} />
                                     <span className="text-[11px] font-bold text-slate-500 uppercase tracking-tight">
-                                        {user.is_active !== false ? "Active" : "Inactive"}
+                                        {user.is_active !== false ? t('active') : t('inactive')}
                                     </span>
                                 </div>
                                 <div className="flex items-center gap-2">
@@ -553,10 +555,10 @@ export default function UsersPage() {
                                                         ? "text-amber-600 hover:bg-amber-50 border border-amber-200"
                                                         : "text-emerald-600 hover:bg-emerald-50 border border-emerald-200"
                                                 )}
-                                                title={user.is_active !== false ? "Archiwizuj" : "Aktywuj"}
+                                                title={user.is_active !== false ? t('archiveUser') : t('activateUser')}
                                             >
                                                 <Power className="h-3 w-3" />
-                                                {user.is_active !== false ? "Archiwizuj" : "Aktywuj"}
+                                                {user.is_active !== false ? t('archiveUser') : t('activateUser')}
                                             </button>
                                             <button
                                                 onClick={(e) => {
@@ -564,10 +566,10 @@ export default function UsersPage() {
                                                     setDeleteTarget(user);
                                                 }}
                                                 className="inline-flex items-center gap-1 rounded-lg px-2.5 py-1 text-[11px] font-bold uppercase tracking-tight text-rose-600 hover:bg-rose-50 border border-rose-200 transition-all"
-                                                title="Usuń"
+                                                title={t('deleteUser')}
                                             >
                                                 <Trash2 className="h-3 w-3" />
-                                                Usuń
+                                                {t('deleteUser')}
                                             </button>
                                         </>
                                     )}
@@ -575,7 +577,7 @@ export default function UsersPage() {
                                         href={`/dashboard/users/${user.id}`}
                                         className="text-xs font-semibold text-primary opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1"
                                     >
-                                        View profile
+                                        {t('viewProfile')}
                                         <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                                         </svg>
@@ -591,23 +593,22 @@ export default function UsersPage() {
             <AlertDialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>
                 <AlertDialogContent>
                     <AlertDialogHeader>
-                        <AlertDialogTitle>Usunąć użytkownika?</AlertDialogTitle>
+                        <AlertDialogTitle>{t('confirmDeleteTitle')}</AlertDialogTitle>
                         <AlertDialogDescription>
-                            Czy na pewno chcesz trwale usunąć konto <strong>{deleteTarget?.full_name}</strong> ({deleteTarget?.email})?
-                            Tej operacji nie można cofnąć.
+                            {t('confirmDelete')} <strong>{deleteTarget?.full_name}</strong> ({deleteTarget?.email})
                         </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>
-                        <AlertDialogCancel disabled={deleting}>Anuluj</AlertDialogCancel>
+                        <AlertDialogCancel disabled={deleting}>{t('cancel')}</AlertDialogCancel>
                         <AlertDialogAction
                             onClick={handleDeleteUser}
                             disabled={deleting}
                             className="bg-rose-600 hover:bg-rose-700 text-white"
                         >
                             {deleting ? (
-                                <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Usuwanie…</>
+                                <><Loader2 className="h-4 w-4 mr-2 animate-spin" />{t('deleting')}</>
                             ) : (
-                                <><Trash2 className="h-4 w-4 mr-2" />Usuń na stałe</>
+                                <><Trash2 className="h-4 w-4 mr-2" />{t('deletePermanent')}</>
                             )}
                         </AlertDialogAction>
                     </AlertDialogFooter>

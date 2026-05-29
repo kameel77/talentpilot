@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useTranslations } from "next-intl";
+import { getLocaleFromCookie } from "@/lib/locale";
 import { api, User, CompareResponse } from "@/lib/api";
 import { cn } from "@/lib/utils";
 import {
@@ -17,23 +19,17 @@ import {
     Target,
 } from "lucide-react";
 
-const DOMAIN_META: Record<string, { label: string; color: string; bg: string; icon: typeof Target }> = {
-    executing: { label: "Realizacja", color: "text-domain-executing", bg: "bg-domain-executing", icon: Target },
-    influencing: { label: "Wpływanie", color: "text-domain-influencing", bg: "bg-domain-influencing", icon: Zap },
-    relationship_building: { label: "Budowanie relacji", color: "text-domain-relationship", bg: "bg-domain-relationship", icon: Heart },
-    strategic_thinking: { label: "Myślenie strategiczne", color: "text-domain-strategic", bg: "bg-domain-strategic", icon: Lightbulb },
-};
-
 function getInitials(name: string): string {
     return name.split(" ").map(n => n[0]).join("").toUpperCase().slice(0, 2);
 }
 
-function SynergyGauge({ score }: { score: number }) {
+function SynergyGauge({ score, highLabel, mediumLabel, lowLabel }: { score: number; highLabel: string; mediumLabel: string; lowLabel: string }) {
+    const t = useTranslations('compare');
     const circumference = 2 * Math.PI * 54;
     const offset = circumference - (score / 100) * circumference;
     const color = score >= 70 ? "text-emerald-500" : score >= 40 ? "text-amber-500" : "text-rose-500";
     const bgRing = score >= 70 ? "stroke-emerald-100" : score >= 40 ? "stroke-amber-100" : "stroke-rose-100";
-    const label = score >= 70 ? "Wysoka synergia" : score >= 40 ? "Umiarkowana synergia" : "Potencjał do rozwoju";
+    const label = score >= 70 ? highLabel : score >= 40 ? mediumLabel : lowLabel;
 
     return (
         <div className="flex flex-col items-center">
@@ -53,7 +49,7 @@ function SynergyGauge({ score }: { score: number }) {
                 </svg>
                 <div className="absolute inset-0 flex flex-col items-center justify-center">
                     <span className={cn("text-3xl font-black", color)}>{score}</span>
-                    <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">punktów</span>
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">{t('points')}</span>
                 </div>
             </div>
             <p className="mt-3 text-sm font-semibold text-slate-600">{label}</p>
@@ -67,12 +63,16 @@ function UserSelector({
     onChange,
     label,
     excludeId,
+    placeholderText,
+    noUsersText,
 }: {
     users: User[];
     selectedId: number | null;
     onChange: (id: number) => void;
     label: string;
     excludeId: number | null;
+    placeholderText: string;
+    noUsersText: string;
 }) {
     const [open, setOpen] = useState(false);
     const filtered = users.filter(u => u.id !== excludeId);
@@ -101,7 +101,7 @@ function UserSelector({
                 ) : (
                     <div className="flex items-center gap-3 text-slate-400">
                         <Users className="h-5 w-5" />
-                        <span className="font-medium">Wybierz osobę...</span>
+                        <span className="font-medium">{placeholderText}</span>
                     </div>
                 )}
                 <ChevronDown className={cn("h-4 w-4 text-slate-400 shrink-0 transition-transform", open && "rotate-180")} />
@@ -110,7 +110,7 @@ function UserSelector({
             {open && (
                 <div className="absolute z-30 mt-2 w-full bg-white border border-slate-200 rounded-2xl shadow-xl max-h-64 overflow-y-auto">
                     {filtered.length === 0 ? (
-                        <p className="p-4 text-sm text-slate-400">Brak dostępnych użytkowników</p>
+                        <p className="p-4 text-sm text-slate-400">{noUsersText}</p>
                     ) : (
                         filtered.map(user => (
                             <button
@@ -138,6 +138,15 @@ function UserSelector({
 }
 
 export default function ComparePage() {
+    const t = useTranslations('compare');
+
+    const DOMAIN_META: Record<string, { label: string; color: string; bg: string; icon: typeof Target }> = {
+        executing: { label: t('domainExecuting'), color: "text-domain-executing", bg: "bg-domain-executing", icon: Target },
+        influencing: { label: t('domainInfluencing'), color: "text-domain-influencing", bg: "bg-domain-influencing", icon: Zap },
+        relationship_building: { label: t('domainRelationship'), color: "text-domain-relationship", bg: "bg-domain-relationship", icon: Heart },
+        strategic_thinking: { label: t('domainStrategic'), color: "text-domain-strategic", bg: "bg-domain-strategic", icon: Lightbulb },
+    };
+
     const [users, setUsers] = useState<User[]>([]);
     const [userAId, setUserAId] = useState<number | null>(null);
     const [userBId, setUserBId] = useState<number | null>(null);
@@ -152,7 +161,7 @@ export default function ComparePage() {
                 const data = await api.users.list();
                 setUsers(data);
             } catch {
-                setError("Nie udało się załadować listy użytkowników.");
+                setError(t('loadError'));
             } finally {
                 setUsersLoading(false);
             }
@@ -169,11 +178,11 @@ export default function ComparePage() {
             setLoading(true);
             setError("");
             try {
-                const data = await api.compare.users(userAId, userBId);
+                const data = await api.compare.users(userAId, userBId, getLocaleFromCookie());
                 setResult(data);
             } catch (err: unknown) {
                 const axiosErr = err as { response?: { data?: { detail?: string } } };
-                setError(axiosErr?.response?.data?.detail || "Nie udało się porównać użytkowników.");
+                setError(axiosErr?.response?.data?.detail || t('compareError'));
                 setResult(null);
             } finally {
                 setLoading(false);
@@ -192,7 +201,7 @@ export default function ComparePage() {
             <div className="flex h-[400px] items-center justify-center">
                 <div className="flex flex-col items-center gap-3">
                     <Loader2 className="h-8 w-8 animate-spin text-primary" />
-                    <p className="text-sm font-medium text-slate-500">Ładowanie...</p>
+                    <p className="text-sm font-medium text-slate-500">{t('loadingUsers')}</p>
                 </div>
             </div>
         );
@@ -202,9 +211,9 @@ export default function ComparePage() {
         <div className="max-w-5xl mx-auto space-y-8">
             {/* Header */}
             <div>
-                <h1 className="text-3xl font-bold font-heading text-slate-900 tracking-tight">Porównanie 1:1</h1>
+                <h1 className="text-3xl font-bold font-heading text-slate-900 tracking-tight">{t('title')}</h1>
                 <p className="mt-1 text-slate-500 font-medium">
-                    Porównaj talenty dwóch osób z zespołu i odkryj potencjał współpracy.
+                    {t('subtitle')}
                 </p>
             </div>
 
@@ -215,15 +224,17 @@ export default function ComparePage() {
                         users={users}
                         selectedId={userAId}
                         onChange={setUserAId}
-                        label="Osoba A"
+                        label={t('selectUserA')}
                         excludeId={userBId}
+                        placeholderText={t('selectPerson')}
+                        noUsersText={t('noUsersAvailable')}
                     />
 
                     <button
                         onClick={swap}
                         disabled={!userAId || !userBId}
                         className="self-center p-3 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
-                        title="Zamień miejscami"
+                        title={t('swap')}
                     >
                         <ArrowRightLeft className="h-5 w-5 text-slate-500" />
                     </button>
@@ -232,8 +243,10 @@ export default function ComparePage() {
                         users={users}
                         selectedId={userBId}
                         onChange={setUserBId}
-                        label="Osoba B"
+                        label={t('selectUserB')}
                         excludeId={userAId}
+                        placeholderText={t('selectPerson')}
+                        noUsersText={t('noUsersAvailable')}
                     />
                 </div>
             </div>
@@ -250,7 +263,7 @@ export default function ComparePage() {
                 <div className="flex items-center justify-center py-16">
                     <div className="flex flex-col items-center gap-3">
                         <Loader2 className="h-8 w-8 animate-spin text-primary" />
-                        <p className="text-sm font-medium text-slate-500">Analizuję talenty...</p>
+                        <p className="text-sm font-medium text-slate-500">{t('analyzing')}</p>
                     </div>
                 </div>
             )}
@@ -262,13 +275,13 @@ export default function ComparePage() {
                     <div className="grid grid-cols-1 lg:grid-cols-[280px_1fr] gap-6">
                         {/* Synergy Score */}
                         <div className="bg-white rounded-3xl border border-slate-200/60 p-8 shadow-sm flex flex-col items-center justify-center">
-                            <h3 className="text-sm font-bold uppercase tracking-wider text-slate-400 mb-6">Wskaźnik synergii</h3>
-                            <SynergyGauge score={result.synergy_score} />
+                            <h3 className="text-sm font-bold uppercase tracking-wider text-slate-400 mb-6">{t('synergyScore')}</h3>
+                            <SynergyGauge score={result.synergy_score} highLabel={t('highSynergy')} mediumLabel={t('mediumSynergy')} lowLabel={t('lowSynergy')} />
                         </div>
 
                         {/* Domain Balance */}
                         <div className="bg-white rounded-3xl border border-slate-200/60 p-6 sm:p-8 shadow-sm">
-                            <h3 className="text-lg font-bold font-heading text-slate-900 mb-6">Balans domen</h3>
+                            <h3 className="text-lg font-bold font-heading text-slate-900 mb-6">{t('domainBalance')}</h3>
                             <div className="space-y-5">
                                 {result.domain_balance.map(db => {
                                     const meta = DOMAIN_META[db.domain] || { label: db.domain_label, color: "text-slate-600", bg: "bg-slate-400", icon: Star };
@@ -320,14 +333,14 @@ export default function ComparePage() {
                                 <Sparkles className="h-5 w-5 text-amber-600" />
                             </div>
                             <div>
-                                <h3 className="text-lg font-bold font-heading text-slate-900">Wspólne talenty (Mosty)</h3>
-                                <p className="text-xs text-slate-400">Talenty obecne w Top 15 u obu osób — naturalne porozumienie</p>
+                                <h3 className="text-lg font-bold font-heading text-slate-900">{t('sharedTalents')}</h3>
+                                <p className="text-xs text-slate-400">{t('sharedTalentsDesc')}</p>
                             </div>
                         </div>
 
                         {result.shared_talents.length === 0 ? (
                             <p className="text-sm text-slate-400 py-4">
-                                Brak wspólnych talentów w Top 15 — to oznacza silne uzupełnianie się.
+                                {t('noSharedTalents')}
                             </p>
                         ) : (
                             <div className="grid gap-3 sm:grid-cols-2">
@@ -369,11 +382,11 @@ export default function ComparePage() {
                                 </div>
                                 <div>
                                     <h3 className="font-bold text-slate-900 text-sm">{result.user_a.full_name}</h3>
-                                    <p className="text-[11px] text-slate-400">Unikalne mocne strony</p>
+                                    <p className="text-[11px] text-slate-400">{t('uniqueStrengths')}</p>
                                 </div>
                             </div>
                             {result.unique_a.length === 0 ? (
-                                <p className="text-sm text-slate-400">Brak unikalnych talentów (wszystkie wspólne)</p>
+                                <p className="text-sm text-slate-400">{t('noUniqueTalents')}</p>
                             ) : (
                                 <div className="space-y-2">
                                     {result.unique_a.map(t => {
@@ -401,11 +414,11 @@ export default function ComparePage() {
                                 </div>
                                 <div>
                                     <h3 className="font-bold text-slate-900 text-sm">{result.user_b.full_name}</h3>
-                                    <p className="text-[11px] text-slate-400">Unikalne mocne strony</p>
+                                    <p className="text-[11px] text-slate-400">{t('uniqueStrengths')}</p>
                                 </div>
                             </div>
                             {result.unique_b.length === 0 ? (
-                                <p className="text-sm text-slate-400">Brak unikalnych talentów (wszystkie wspólne)</p>
+                                <p className="text-sm text-slate-400">{t('noUniqueTalents')}</p>
                             ) : (
                                 <div className="space-y-2">
                                     {result.unique_b.map(t => {
@@ -434,8 +447,8 @@ export default function ComparePage() {
                                     <Shield className="h-5 w-5 text-primary" />
                                 </div>
                                 <div>
-                                    <h3 className="text-lg font-bold font-heading text-slate-900">Wskazówki do współpracy</h3>
-                                    <p className="text-xs text-slate-400">Rekomendacje bazujące na wzorcach talentów</p>
+                                    <h3 className="text-lg font-bold font-heading text-slate-900">{t('collaborationTips')}</h3>
+                                    <p className="text-xs text-slate-400">{t('collaborationTipsDesc')}</p>
                                 </div>
                             </div>
                             <div className="space-y-3">
@@ -460,9 +473,9 @@ export default function ComparePage() {
                     <div className="mx-auto mb-4 h-16 w-16 rounded-2xl bg-blue-50 flex items-center justify-center">
                         <ArrowRightLeft className="h-8 w-8 text-blue-400" />
                     </div>
-                    <h3 className="text-lg font-bold text-slate-700">Wybierz dwie osoby</h3>
+                    <h3 className="text-lg font-bold text-slate-700">{t('noResult')}</h3>
                     <p className="mt-2 text-sm text-slate-400 max-w-md mx-auto">
-                        Wybierz dwóch członków zespołu powyżej, aby zobaczyć analizę synergii talentów, wspólne mocne strony i rekomendacje współpracy.
+                        {t('noResultDesc')}
                     </p>
                 </div>
             )}

@@ -3,6 +3,7 @@
 import { Suspense, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 import { api } from "@/lib/api";
 import { ArrowRight, Eye, EyeOff, Lock, CheckCircle2, ShieldAlert } from "lucide-react";
 
@@ -10,7 +11,7 @@ export default function ResetPasswordPage() {
     return (
         <Suspense fallback={
             <div className="flex min-h-screen w-full items-center justify-center p-6 bg-slate-50">
-                <div className="animate-pulse text-slate-400 font-medium">Ładowanie...</div>
+                <div className="animate-pulse text-slate-400 font-medium">Loading...</div>
             </div>
         }>
             <ResetPasswordContent />
@@ -22,11 +23,12 @@ function ResetPasswordContent() {
     const router = useRouter();
     const searchParams = useSearchParams();
     const token = searchParams.get("token");
+    const t = useTranslations("auth.resetPassword");
 
     const [password, setPassword] = useState("");
     const [confirmPassword, setConfirmPassword] = useState("");
     const [status, setStatus] = useState<"idle" | "loading" | "success" | "error">(token ? "idle" : "error");
-    const [message, setMessage] = useState(token ? "" : "Brakujący link do resetowania hasła z Twojego adresu e-mail.");
+    const [message, setMessage] = useState(token ? "" : t("missingToken"));
     const [showPassword, setShowPassword] = useState(false);
     const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
@@ -38,9 +40,9 @@ function ResetPasswordContent() {
             return detail;
         }
         if (Array.isArray(detail)) {
-            return detail.map((item) => item?.msg || "Błędne dane").join(", ");
+            return detail.map((item) => item?.msg || t("errorGeneric")).join(", ");
         }
-        return "Resetowanie hasła nie powiodło się, link mógł stracić ważność.";
+        return t("tokenExpired");
     };
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -48,19 +50,19 @@ function ResetPasswordContent() {
         
         if (!token) {
             setStatus("error");
-            setMessage("Brak prawidłowego tokenu.");
+            setMessage(t("missingTokenOnSubmit"));
             return;
         }
 
         if (password !== confirmPassword) {
             setStatus("error");
-            setMessage("Wprowadzone hasła muszą być identyczne.");
+            setMessage(t("passwordMismatch"));
             return;
         }
 
         if (password.length < 8) {
             setStatus("error");
-            setMessage("Hasło musi mieć co najmniej 8 znaków.");
+            setMessage(t("passwordMinLength"));
             return;
         }
 
@@ -70,7 +72,7 @@ function ResetPasswordContent() {
         try {
             const res = await api.auth.resetPassword(token, password);
             setStatus("success");
-            setMessage(res.message || "Hasło zostało pomyślnie zmienione.");
+            setMessage(res.message || t("successFallback"));
             
             // Redirect after couple of seconds
             setTimeout(() => {
@@ -89,13 +91,13 @@ function ResetPasswordContent() {
                     <div className="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-2xl bg-rose-100 text-rose-600">
                         <ShieldAlert className="h-8 w-8" />
                     </div>
-                    <h1 className="text-2xl font-bold mb-4 text-slate-800">Nieprawidłowy link</h1>
+                    <h1 className="text-2xl font-bold mb-4 text-slate-800">{t("invalidLinkTitle")}</h1>
                     <p className="text-slate-600 mb-8">{message}</p>
                     <Link
                         href="/login"
                         className="inline-flex items-center justify-center w-full min-w-40 rounded-xl bg-gradient-primary px-6 py-3 font-semibold text-white transition-opacity hover:opacity-90"
                     >
-                        Wróć do logowania
+                        {t("backToLoginLink")}
                     </Link>
                 </div>
             </div>
@@ -116,9 +118,9 @@ function ResetPasswordContent() {
                     </div>
 
                     <div className="mb-8">
-                        <h1 className="text-headline mb-2">Ustaw nowe hasło</h1>
+                        <h1 className="text-headline mb-2">{t("title")}</h1>
                         <p className="text-body">
-                            Wpisz mocne, nowe hasło poniżej. Wymagane są minimum 8 znaków.
+                            {t("subtitle")}
                         </p>
                     </div>
 
@@ -127,13 +129,13 @@ function ResetPasswordContent() {
                             <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-emerald-100 text-emerald-600">
                                 <CheckCircle2 className="h-8 w-8" />
                             </div>
-                            <h3 className="mb-2 text-xl font-bold text-emerald-900">Hasło Zmienione</h3>
+                            <h3 className="mb-2 text-xl font-bold text-emerald-900">{t("successTitle")}</h3>
                             <p className="mb-6">{message}</p>
                             <Link
                                 href="/login"
                                 className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-primary px-6 py-3.5 font-bold text-white transition-opacity hover:opacity-90 shadow-lg shadow-blue-500/10"
                             >
-                                Zaloguj się teraz
+                                {t("loginNow")}
                                 <ArrowRight className="h-5 w-5" />
                             </Link>
                         </div>
@@ -147,7 +149,7 @@ function ResetPasswordContent() {
 
                             <div className="space-y-2">
                                 <label htmlFor="new-password" className="block text-sm font-semibold text-slate-700 ml-1">
-                                    Nowe hasło
+                                    {t("passwordLabel")}
                                 </label>
                                 <div className="relative">
                                     <Lock className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-400" />
@@ -172,7 +174,7 @@ function ResetPasswordContent() {
 
                             <div className="space-y-2">
                                 <label htmlFor="confirm-password" className="block text-sm font-semibold text-slate-700 ml-1">
-                                    Powtórz hasło
+                                    {t("confirmLabel")}
                                 </label>
                                 <div className="relative">
                                     <Lock className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-400" />
@@ -200,7 +202,7 @@ function ResetPasswordContent() {
                                 disabled={status === "loading"}
                                 className="w-full bg-gradient-primary text-white py-3.5 rounded-xl font-bold hover:opacity-90 transition-all shadow-lg shadow-blue-500/10 disabled:opacity-50 disabled:cursor-not-allowed active:scale-[0.98] inline-flex items-center justify-center gap-2"
                             >
-                                {status === "loading" ? "Proszę czekać..." : "Zapisz hasło i Zaloguj się"}
+                                {status === "loading" ? t("loading") : t("submit")}
                                 {!status && <ArrowRight className="h-5 w-5" />}
                             </button>
                         </form>
@@ -215,11 +217,11 @@ function ResetPasswordContent() {
                 <div className="relative z-10 flex flex-col justify-center p-12 text-white">
                     <div className="max-w-lg">
                         <h2 className="text-display mb-6">
-                            Bezpieczeństwo{" "}
-                            <span className="text-domain-executing">potwierdzone</span>
+                            {t("heroHeadingPart1")}{" "}
+                            <span className="text-domain-executing">{t("heroHeadingHighlight")}</span>
                         </h2>
                         <p className="text-lg text-white/80 leading-relaxed mb-8">
-                            Dla ochrony wrażliwych danych na temat mocnych stron całego Twojego zespołu, przechowujemy tylko zhashowane wersje haseł, nie udostępniając ich nikomu innemu.
+                            {t("heroBody")}
                         </p>
                     </div>
 

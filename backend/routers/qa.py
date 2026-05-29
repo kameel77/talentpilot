@@ -97,8 +97,8 @@ def query_qa(
     current_user=Depends(get_current_user),
 ):
     logger.info(f"--- QA QUERY START --- User: {current_user.email}, Q: {request.question}, Context: {request.context}")
-    
-    language = request.language or "pl"
+
+    language = request.language or current_user.language or "pl"
     target_user_id = request.target_user_id or current_user.id
     target_user = get_user_in_organization(db, target_user_id, current_user.organization_id)
     if not target_user:

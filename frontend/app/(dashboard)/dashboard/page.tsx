@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useTranslations } from "next-intl";
 import { KPICard } from "@/components/ui/KPICard";
 import {
     Users,
@@ -21,6 +22,9 @@ interface DashboardData extends DashboardOverview {
 }
 
 export default function DashboardPage() {
+    const t = useTranslations("dashboard");
+    const tCommon = useTranslations("common");
+
     const [data, setData] = useState<DashboardData | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState("");
@@ -34,21 +38,21 @@ export default function DashboardPage() {
                     currentUser: tokenManager.getUser(),
                 });
             } catch {
-                setError("Nie udało się załadować danych. Spróbuj odświeżyć stronę.");
+                setError(t("loadError"));
             } finally {
                 setLoading(false);
             }
         };
 
         loadDashboard();
-    }, []);
+    }, [t]);
 
     if (loading) {
         return (
             <div className="flex h-[400px] items-center justify-center">
                 <div className="flex flex-col items-center gap-3">
                     <Loader2 className="h-8 w-8 animate-spin text-primary" />
-                    <p className="text-sm font-medium text-slate-500">Ładowanie panelu...</p>
+                    <p className="text-sm font-medium text-slate-500">{tCommon("loading")}</p>
                 </div>
             </div>
         );
@@ -77,23 +81,23 @@ export default function DashboardPage() {
         strategic_thinking: Math.round((teamDomains.strategic_thinking / totalDomains) * 100),
     };
 
-    const firstName = currentUser?.full_name?.split(" ")[0] || "Użytkowniku";
+    const firstName = currentUser?.full_name?.split(" ")[0];
 
     return (
         <div className="space-y-8 max-w-7xl mx-auto">
             {/* Page Header */}
             <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
                 <div>
-                    <h1 className="text-3xl font-bold font-heading text-slate-900 tracking-tight">Panel główny</h1>
+                    <h1 className="text-3xl font-bold font-heading text-slate-900 tracking-tight">{t("title")}</h1>
                     <p className="mt-1 text-slate-500 font-medium">
-                        Witaj, {firstName}! Oto przegląd Twojego zespołu.
+                        {firstName ? t("greeting", { name: firstName }) : t("greetingFallback")} {t("overview")}
                     </p>
                 </div>
                 <Link
                     href="/dashboard/users"
                     className="inline-flex items-center gap-2 px-6 py-3 bg-primary text-white rounded-xl font-bold text-sm shadow-lg shadow-primary/25 hover:bg-primary-dark transition-all group"
                 >
-                    Zarządzaj zespołem
+                    {t("manageTeam")}
                     <ArrowRight className="h-4 w-4 group-hover:translate-x-1 transition-transform" />
                 </Link>
             </div>
@@ -101,28 +105,28 @@ export default function DashboardPage() {
             {/* KPI Grid */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
                 <KPICard
-                    title="Członków zespołu"
+                    title={t("teamMembers")}
                     value={totalUsers}
                     icon={<Users className="h-5 w-5" />}
-                    description="aktywnych użytkowników"
+                    description={t("activeUsers")}
                 />
                 <KPICard
-                    title="Zaimportowane talenty"
+                    title={t("importedTalents")}
                     value={totalTalents}
                     icon={<Database className="h-5 w-5" />}
-                    description={`${usersWithTalents} profili talentowych`}
+                    description={`${usersWithTalents} ${t("talentProfiles")}`}
                 />
                 <KPICard
-                    title="Porównań 1:1"
+                    title={t("compare")}
                     value="—"
                     icon={<ArrowRightLeft className="h-5 w-5" />}
-                    description="wkrótce"
+                    description={t("comingSoon")}
                 />
                 <KPICard
-                    title="Pokrycie talentami"
+                    title={t("talentCoverage")}
                     value={totalUsers > 0 ? `${Math.round((usersWithTalents / totalUsers) * 100)}%` : "0%"}
                     icon={<TrendingUp className="h-5 w-5" />}
-                    description={`${usersWithTalents} z ${totalUsers} użytkowników`}
+                    description={`${usersWithTalents} ${t("coverageOf")} ${totalUsers} ${t("users")}`}
                 />
             </div>
 
@@ -130,23 +134,23 @@ export default function DashboardPage() {
                 {/* Domain Area */}
                 <div className="lg:col-span-4 bg-white rounded-3xl border border-slate-200/60 p-6 sm:p-8 shadow-sm">
                     <h3 className="text-xl font-bold font-heading text-slate-900 mb-6 tracking-tight">
-                        Rozkład domenowy zespołu
+                        {t("talentDistribution")}
                     </h3>
 
                     {totalTalents === 0 ? (
                         <div className="text-center py-8">
                             <Database className="h-10 w-10 text-slate-300 mx-auto mb-3" />
                             <p className="text-sm text-slate-500">
-                                Brak zaimportowanych talentów. Zacznij od dodania talentów dla członków zespołu.
+                                {t("noTalentsEmpty")}
                             </p>
                         </div>
                     ) : (
                         <>
                             <div className="space-y-6">
-                                <DomainProgress label="Realizacja" value={domainPercentages.executing} color="bg-domain-executing" />
-                                <DomainProgress label="Wpływanie" value={domainPercentages.influencing} color="bg-domain-influencing" />
-                                <DomainProgress label="Budowanie relacji" value={domainPercentages.relationship_building} color="bg-domain-relationship" />
-                                <DomainProgress label="Myślenie strategiczne" value={domainPercentages.strategic_thinking} color="bg-domain-strategic" />
+                                <DomainProgress label={t("domains.executing")} value={domainPercentages.executing} color="bg-domain-executing" />
+                                <DomainProgress label={t("domains.influencing")} value={domainPercentages.influencing} color="bg-domain-influencing" />
+                                <DomainProgress label={t("domains.relationship_building")} value={domainPercentages.relationship_building} color="bg-domain-relationship" />
+                                <DomainProgress label={t("domains.strategic_thinking")} value={domainPercentages.strategic_thinking} color="bg-domain-strategic" />
                             </div>
 
                             <div className="mt-8 flex gap-3">
@@ -172,13 +176,13 @@ export default function DashboardPage() {
                                 </span>
                             </div>
                             <h4 className="text-xl font-bold text-slate-900 font-heading tracking-tight">
-                                Zapytaj o swój zespół
+                                {t("askAboutTeam")}
                             </h4>
                         </div>
                     </div>
 
                     <p className="text-lg text-slate-600 leading-relaxed max-w-2xl">
-                        Użyj AI Copilota, aby dowiedzieć się więcej o talentach swojego zespołu. Zadaj pytanie o konkretną osobę, poproś o wskazówki do spotkania lub zaplanuj lepszą współpracę.
+                        {t("aiCopilotHint")}
                     </p>
 
                     <div className="mt-auto pt-8">
@@ -186,7 +190,7 @@ export default function DashboardPage() {
                             href="/dashboard/qa"
                             className="flex items-center gap-2 text-sm font-bold text-slate-900 hover:gap-3 transition-all"
                         >
-                            Otwórz Q&A Copilot
+                            {t("openQA")}
                             <ArrowRight className="h-4 w-4" />
                         </Link>
                     </div>
@@ -196,9 +200,9 @@ export default function DashboardPage() {
             {/* Team Section */}
             <div className="space-y-6">
                 <div className="flex items-center justify-between">
-                    <h3 className="text-2xl font-bold font-heading text-slate-900 tracking-tight">Twój zespół</h3>
+                    <h3 className="text-2xl font-bold font-heading text-slate-900 tracking-tight">{t("yourTeam")}</h3>
                     <Link href="/dashboard/users" className="text-sm font-bold text-primary hover:underline flex items-center gap-1">
-                        Zobacz wszystkich
+                        {t("viewAll")}
                         <ChevronRight className="h-4 w-4" />
                     </Link>
                 </div>
@@ -206,15 +210,15 @@ export default function DashboardPage() {
                 {totalUsers === 0 ? (
                     <div className="rounded-3xl border border-dashed border-slate-300 bg-slate-50/50 p-12 sm:p-16 text-center">
                         <Users className="h-12 w-12 text-slate-300 mx-auto mb-4" />
-                        <h4 className="text-lg font-semibold text-slate-700">Brak członków zespołu</h4>
+                        <h4 className="text-lg font-semibold text-slate-700">{t("noMembers")}</h4>
                         <p className="mt-2 text-sm text-slate-500">
-                            Zaproś pierwszych członków zespołu, aby rozpocząć pracę z TalentPilot.
+                            {t("inviteMembers")}
                         </p>
                         <Link
                             href="/dashboard/users"
                             className="mt-6 inline-flex items-center gap-2 rounded-xl bg-primary px-6 py-3 text-sm font-semibold text-white hover:bg-blue-700 transition-all shadow-sm"
                         >
-                            Dodaj użytkownika
+                            {t("addUser")}
                             <ArrowRight className="h-4 w-4" />
                         </Link>
                     </div>
@@ -225,9 +229,11 @@ export default function DashboardPage() {
                                 key={member.id}
                                 id={member.id}
                                 name={member.full_name}
-                                role={roleLabel(member.role)}
+                                role={roleLabel(member.role, t)}
                                 email={member.email}
                                 initials={getInitials(member.full_name)}
+                                activeLabel={t("active")}
+                                viewProfileLabel={t("viewProfile")}
                             />
                         ))}
                     </div>
@@ -251,7 +257,7 @@ function DomainProgress({ label, value, color }: { label: string; value: number;
     );
 }
 
-function MemberCard({ id, name, role, email, initials }: { id: number; name: string; role: string; email: string; initials: string }) {
+function MemberCard({ id, name, role, email, initials, activeLabel, viewProfileLabel }: { id: number; name: string; role: string; email: string; initials: string; activeLabel: string; viewProfileLabel: string }) {
     return (
         <Link
             href={`/dashboard/users/${id}`}
@@ -271,10 +277,10 @@ function MemberCard({ id, name, role, email, initials }: { id: number; name: str
             <div className="flex items-center justify-between">
                 <div className="flex items-center gap-1.5">
                     <div className="h-2 w-2 rounded-full bg-emerald-500" />
-                    <span className="text-[11px] font-bold text-slate-500 uppercase tracking-tight">Aktywny</span>
+                    <span className="text-[11px] font-bold text-slate-500 uppercase tracking-tight">{activeLabel}</span>
                 </div>
                 <span className="text-xs font-semibold text-primary opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1">
-                    Zobacz profil
+                    {viewProfileLabel}
                     <ChevronRight className="h-3 w-3" />
                 </span>
             </div>
@@ -291,13 +297,13 @@ function getInitials(name: string): string {
         .slice(0, 2);
 }
 
-function roleLabel(role: string): string {
+function roleLabel(role: string, t: (key: string) => string): string {
     switch (role) {
         case "admin":
-            return "Administrator";
+            return t("roleAdmin");
         case "manager":
-            return "Menedżer";
+            return t("roleManager");
         default:
-            return "Członek zespołu";
+            return t("roleUser");
     }
 }

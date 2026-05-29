@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useTranslations } from "next-intl";
 import { api, User, DailyTipResponse, SynergyTipResponse } from "@/lib/api";
 import { cn } from "@/lib/utils";
 import {
@@ -22,13 +23,13 @@ import {
     Handshake,
 } from "lucide-react";
 
-const CONTEXTS = [
-    { key: "general", label: "Ogólne", icon: Sparkles, description: "Ogólna wskazówka na dziś" },
-    { key: "feedback", label: "Feedback", icon: MessageCircle, description: "Dawanie lub odbieranie feedbacku" },
-    { key: "one_on_one", label: "1:1", icon: Handshake, description: "Spotkanie z liderem" },
-    { key: "conflict", label: "Konflikt", icon: Shield, description: "Napięcie w zespole" },
-    { key: "motivation", label: "Motywacja", icon: Flame, description: "Odzyskanie energii" },
-];
+const CONTEXT_ICONS: Record<string, React.FC<{ className?: string }>> = {
+    general: Sparkles,
+    feedback: MessageCircle,
+    one_on_one: Handshake,
+    conflict: Shield,
+    motivation: Flame,
+};
 
 const DOMAIN_META: Record<string, { label: string; color: string; bg: string }> = {
     executing: { label: "Realizacja", color: "text-domain-executing", bg: "bg-domain-executing" },
@@ -44,9 +45,19 @@ function getInitials(name: string): string {
 function FeedbackButtons({
     tipId,
     onFeedback,
+    labelHelpful,
+    labelNotHelpful,
+    labelQuestion,
+    labelThankYes,
+    labelThankNo,
 }: {
     tipId: number | null;
     onFeedback: (tipId: number, helpful: boolean) => void;
+    labelHelpful: string;
+    labelNotHelpful: string;
+    labelQuestion: string;
+    labelThankYes: string;
+    labelThankNo: string;
 }) {
     const [submitted, setSubmitted] = useState<boolean | null>(null);
 
@@ -56,9 +67,9 @@ function FeedbackButtons({
         return (
             <div className="flex items-center gap-2 text-xs font-medium text-slate-400">
                 {submitted ? (
-                    <><ThumbsUp className="h-3.5 w-3.5 text-emerald-500" /> Dzięki za feedback!</>
+                    <><ThumbsUp className="h-3.5 w-3.5 text-emerald-500" /> {labelThankYes}</>
                 ) : (
-                    <><ThumbsDown className="h-3.5 w-3.5 text-rose-400" /> Popracujemy nad tym</>
+                    <><ThumbsDown className="h-3.5 w-3.5 text-rose-400" /> {labelThankNo}</>
                 )}
             </div>
         );
@@ -66,16 +77,18 @@ function FeedbackButtons({
 
     return (
         <div className="flex items-center gap-2">
-            <span className="text-xs text-slate-400 mr-1">Pomocne?</span>
+            <span className="text-xs text-slate-400 mr-1">{labelQuestion}</span>
             <button
                 onClick={() => { onFeedback(tipId, true); setSubmitted(true); }}
                 className="p-1.5 rounded-lg hover:bg-emerald-50 text-slate-400 hover:text-emerald-600 transition-colors"
+                title={labelHelpful}
             >
                 <ThumbsUp className="h-4 w-4" />
             </button>
             <button
                 onClick={() => { onFeedback(tipId, false); setSubmitted(false); }}
                 className="p-1.5 rounded-lg hover:bg-rose-50 text-slate-400 hover:text-rose-500 transition-colors"
+                title={labelNotHelpful}
             >
                 <ThumbsDown className="h-4 w-4" />
             </button>
@@ -119,6 +132,16 @@ function TipContent({ content }: { content: string }) {
 }
 
 export default function TipsPage() {
+    const t = useTranslations("tips");
+
+    const CONTEXTS = [
+        { key: "general", label: t("context.general"), icon: CONTEXT_ICONS.general },
+        { key: "feedback", label: t("context.feedback"), icon: CONTEXT_ICONS.feedback },
+        { key: "one_on_one", label: t("context.one_on_one"), icon: CONTEXT_ICONS.one_on_one },
+        { key: "conflict", label: t("context.conflict"), icon: CONTEXT_ICONS.conflict },
+        { key: "motivation", label: t("context.motivation"), icon: CONTEXT_ICONS.motivation },
+    ];
+
     // Users
     const [users, setUsers] = useState<User[]>([]);
     const [usersLoading, setUsersLoading] = useState(true);
@@ -160,7 +183,7 @@ export default function TipsPage() {
             const data = await api.tips.getDaily(selectedContext);
             setDailyTip(data);
         } catch {
-            setDailyError("Nie udało się wygenerować wskazówki. Sprawdź czy masz zaimportowane talenty.");
+            setDailyError(t("noTalents"));
         } finally {
             setDailyLoading(false);
         }
@@ -176,7 +199,7 @@ export default function TipsPage() {
             const data = await api.tips.getSynergy(userId);
             setSynergyTip(data);
         } catch {
-            setSynergyError("Nie udało się wygenerować wskazówki relacyjnej.");
+            setSynergyError(t("synergyError"));
         } finally {
             setSynergyLoading(false);
         }
@@ -192,25 +215,34 @@ export default function TipsPage() {
 
     const selectedTargetUser = users.find(u => u.id === targetUserId);
 
+    const feedbackProps = {
+        onFeedback: handleFeedback,
+        labelHelpful: t("helpful"),
+        labelNotHelpful: t("notHelpful"),
+        labelQuestion: t("feedbackQuestion"),
+        labelThankYes: t("feedbackThankYes"),
+        labelThankNo: t("feedbackThankNo"),
+    };
+
     return (
         <div className="max-w-4xl mx-auto space-y-8">
             {/* Header */}
             <div>
-                <h1 className="text-3xl font-bold font-heading text-slate-900 tracking-tight">Actionable Insights</h1>
+                <h1 className="text-3xl font-bold font-heading text-slate-900 tracking-tight">{t("title")}</h1>
                 <p className="mt-1 text-slate-500 font-medium">
-                    Konkretne wskazówki na dziś — dla Ciebie i Twoich relacji w zespole.
+                    {t("subtitle")}
                 </p>
             </div>
 
-            {/* ─── SECTION 1: MÓJ RUCH ─── */}
+            {/* ─── SECTION 1: DAILY TIP ─── */}
             <div className="space-y-4">
                 <div className="flex items-center gap-3">
                     <div className="h-10 w-10 rounded-2xl bg-gradient-to-br from-indigo-500 to-blue-600 flex items-center justify-center shadow-lg shadow-indigo-500/20">
                         <Zap className="h-5 w-5 text-white" />
                     </div>
                     <div>
-                        <h2 className="text-xl font-bold font-heading text-slate-900">Mój Ruch</h2>
-                        <p className="text-xs text-slate-400">Jak wykorzystać swoje talenty dziś</p>
+                        <h2 className="text-xl font-bold font-heading text-slate-900">{t("daily")}</h2>
+                        <p className="text-xs text-slate-400">{t("dailySubtitle")}</p>
                     </div>
                 </div>
 
@@ -226,7 +258,6 @@ export default function TipsPage() {
                                     ? "bg-indigo-600 text-white shadow-lg shadow-indigo-500/20"
                                     : "bg-white text-slate-600 border border-slate-200 hover:border-indigo-300 hover:text-indigo-600 hover:bg-indigo-50/50",
                             )}
-                            title={ctx.description}
                         >
                             <ctx.icon className="h-4 w-4" />
                             {ctx.label}
@@ -238,7 +269,7 @@ export default function TipsPage() {
                 {dailyLoading ? (
                     <div className="bg-white rounded-3xl border border-slate-200/60 p-12 shadow-sm flex flex-col items-center gap-3">
                         <Loader2 className="h-8 w-8 animate-spin text-indigo-500" />
-                        <p className="text-sm font-medium text-slate-400">Generuję wskazówkę na dziś...</p>
+                        <p className="text-sm font-medium text-slate-400">{t("generating")}</p>
                     </div>
                 ) : dailyError ? (
                     <div className="rounded-2xl border border-rose-200 bg-rose-50 px-6 py-4 text-sm font-medium text-rose-700">
@@ -256,7 +287,7 @@ export default function TipsPage() {
                             <button
                                 onClick={() => generateDailyTip()}
                                 className="p-2 rounded-xl hover:bg-slate-100 text-slate-400 hover:text-slate-600 transition-colors"
-                                title="Nowa wskazówka"
+                                title={t("generate")}
                             >
                                 <RefreshCw className="h-4 w-4" />
                             </button>
@@ -265,7 +296,7 @@ export default function TipsPage() {
                         <TipContent content={dailyTip.content} />
 
                         <div className="mt-6 pt-4 border-t border-slate-100">
-                            <FeedbackButtons tipId={dailyTip.tip_id} onFeedback={handleFeedback} />
+                            <FeedbackButtons tipId={dailyTip.tip_id} {...feedbackProps} />
                         </div>
                     </div>
                 ) : (
@@ -273,23 +304,23 @@ export default function TipsPage() {
                         <div className="mx-auto mb-3 h-14 w-14 rounded-2xl bg-indigo-50 flex items-center justify-center">
                             <Zap className="h-7 w-7 text-indigo-400" />
                         </div>
-                        <h3 className="text-lg font-bold text-slate-700">Wybierz kontekst</h3>
+                        <h3 className="text-lg font-bold text-slate-700">{t("selectContext")}</h3>
                         <p className="mt-2 text-sm text-slate-400 max-w-md mx-auto">
-                            Kliknij jeden z kontekstów powyżej, aby otrzymać spersonalizowaną wskazówkę opartą na Twoich talentach.
+                            {t("selectContextHint")}
                         </p>
                     </div>
                 )}
             </div>
 
-            {/* ─── SECTION 2: MOSTY ─── */}
+            {/* ─── SECTION 2: SYNERGY ─── */}
             <div className="space-y-4">
                 <div className="flex items-center gap-3">
                     <div className="h-10 w-10 rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center shadow-lg shadow-emerald-500/20">
                         <Heart className="h-5 w-5 text-white" />
                     </div>
                     <div>
-                        <h2 className="text-xl font-bold font-heading text-slate-900">Mosty</h2>
-                        <p className="text-xs text-slate-400">Jak dogadać się z konkretną osobą z zespołu</p>
+                        <h2 className="text-xl font-bold font-heading text-slate-900">{t("synergy")}</h2>
+                        <p className="text-xs text-slate-400">{t("synergySubtitle")}</p>
                     </div>
                 </div>
 
@@ -309,13 +340,13 @@ export default function TipsPage() {
                                 </div>
                                 <div className="min-w-0 flex-1">
                                     <p className="font-bold text-slate-900 truncate">{selectedTargetUser.full_name}</p>
-                                    <p className="text-xs text-slate-400">Kliknij aby zmienić</p>
+                                    <p className="text-xs text-slate-400">{t("clickToChange")}</p>
                                 </div>
                             </>
                         ) : (
                             <div className="flex items-center gap-3 text-slate-400">
                                 <Users className="h-5 w-5" />
-                                <span className="font-medium">Z kim masz dziś interakcję?</span>
+                                <span className="font-medium">{t("selectMember")}</span>
                             </div>
                         )}
                         <ChevronDown className={cn("h-4 w-4 text-slate-400 shrink-0 transition-transform", userDropdownOpen && "rotate-180")} />
@@ -324,9 +355,9 @@ export default function TipsPage() {
                     {userDropdownOpen && (
                         <div className="absolute z-30 mt-2 w-full bg-white border border-slate-200 rounded-2xl shadow-xl max-h-64 overflow-y-auto">
                             {usersLoading ? (
-                                <p className="p-4 text-sm text-slate-400">Ładowanie...</p>
+                                <p className="p-4 text-sm text-slate-400">{t("loading")}</p>
                             ) : users.length === 0 ? (
-                                <p className="p-4 text-sm text-slate-400">Brak użytkowników</p>
+                                <p className="p-4 text-sm text-slate-400">{t("noUsers")}</p>
                             ) : (
                                 users.map(user => (
                                     <button
@@ -353,7 +384,7 @@ export default function TipsPage() {
                     <div className="bg-white rounded-3xl border border-slate-200/60 p-12 shadow-sm flex flex-col items-center gap-3">
                         <Loader2 className="h-8 w-8 animate-spin text-emerald-500" />
                         <p className="text-sm font-medium text-slate-400">
-                            Analizuję dynamikę talentów z {selectedTargetUser?.full_name}...
+                            {t("synergyAnalyzing", { name: selectedTargetUser?.full_name ?? "" })}
                         </p>
                     </div>
                 ) : synergyError ? (
@@ -370,16 +401,16 @@ export default function TipsPage() {
                                         <Lightbulb className="h-5 w-5 text-emerald-600" />
                                     </div>
                                     <div>
-                                        <h3 className="font-bold text-slate-900">Instrukcja obsługi relacji</h3>
+                                        <h3 className="font-bold text-slate-900">{t("synergyGuideTitle")}</h3>
                                         <p className="text-xs text-slate-400">
-                                            Ty ↔ {synergyTip.target_user_name} • Synergia: {synergyTip.synergy_score}/100
+                                            {t("synergyGuideSubtitle", { name: synergyTip.target_user_name ?? "", score: synergyTip.synergy_score })}
                                         </p>
                                     </div>
                                 </div>
                             </div>
                             <p className="text-slate-700 leading-relaxed">{synergyTip.content}</p>
                             <div className="mt-5 pt-4 border-t border-emerald-100/50">
-                                <FeedbackButtons tipId={synergyTip.tip_id} onFeedback={handleFeedback} />
+                                <FeedbackButtons tipId={synergyTip.tip_id} {...feedbackProps} />
                             </div>
                         </div>
 
@@ -389,28 +420,28 @@ export default function TipsPage() {
                             <div className="bg-white rounded-3xl border border-slate-200/60 p-6 shadow-sm">
                                 <h4 className="font-bold text-sm text-slate-900 mb-4 flex items-center gap-2">
                                     <Sparkles className="h-4 w-4 text-amber-500" />
-                                    Wspólne talenty
+                                    {t("sharedTalents")}
                                 </h4>
                                 {synergyTip.shared_talents.length === 0 ? (
                                     <p className="text-sm text-slate-400">
-                                        Brak wspólnych talentów w Top 15 — uzupełniacie się nawzajem.
+                                        {t("noSharedTalents")}
                                     </p>
                                 ) : (
                                     <div className="space-y-2">
-                                        {synergyTip.shared_talents.map(t => {
-                                            const meta = DOMAIN_META[t.domain];
+                                        {synergyTip.shared_talents.map(talent => {
+                                            const meta = DOMAIN_META[talent.domain];
                                             return (
-                                                <div key={t.code} className="flex items-center justify-between py-1.5">
+                                                <div key={talent.code} className="flex items-center justify-between py-1.5">
                                                     <div className="flex items-center gap-2">
                                                         <div className={cn("h-5 w-5 rounded flex items-center justify-center", meta?.bg + "/20")}>
                                                             <Star className={cn("h-3 w-3", meta?.color)} />
                                                         </div>
-                                                        <span className="text-sm font-medium text-slate-700">{t.name}</span>
+                                                        <span className="text-sm font-medium text-slate-700">{talent.name}</span>
                                                     </div>
                                                     <div className="flex items-center gap-2 text-xs">
-                                                        <span className="font-bold text-indigo-500">#{t.rank_a}</span>
+                                                        <span className="font-bold text-indigo-500">#{talent.rank_a}</span>
                                                         <span className="text-slate-300">•</span>
-                                                        <span className="font-bold text-emerald-500">#{t.rank_b}</span>
+                                                        <span className="font-bold text-emerald-500">#{talent.rank_b}</span>
                                                     </div>
                                                 </div>
                                             );
@@ -423,10 +454,10 @@ export default function TipsPage() {
                             <div className="bg-white rounded-3xl border border-slate-200/60 p-6 shadow-sm">
                                 <h4 className="font-bold text-sm text-slate-900 mb-4 flex items-center gap-2">
                                     <Target className="h-4 w-4 text-blue-500" />
-                                    Wskazówki współpracy
+                                    {t("collaborationTips")}
                                 </h4>
                                 {synergyTip.collaboration_tips.length === 0 ? (
-                                    <p className="text-sm text-slate-400">Brak dodatkowych wskazówek.</p>
+                                    <p className="text-sm text-slate-400">{t("noCollaborationTips")}</p>
                                 ) : (
                                     <div className="space-y-2.5">
                                         {synergyTip.collaboration_tips.map((tip, i) => (
@@ -445,7 +476,7 @@ export default function TipsPage() {
                         {/* Domain Balance Mini */}
                         {synergyTip.domain_balance.length > 0 && (
                             <div className="bg-white rounded-3xl border border-slate-200/60 p-6 shadow-sm">
-                                <h4 className="font-bold text-sm text-slate-900 mb-4">Porównanie domen</h4>
+                                <h4 className="font-bold text-sm text-slate-900 mb-4">{t("domainBalance")}</h4>
                                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
                                     {synergyTip.domain_balance.map(db => {
                                         const meta = DOMAIN_META[db.domain];
@@ -469,9 +500,9 @@ export default function TipsPage() {
                         <div className="mx-auto mb-3 h-14 w-14 rounded-2xl bg-emerald-50 flex items-center justify-center">
                             <Heart className="h-7 w-7 text-emerald-400" />
                         </div>
-                        <h3 className="text-lg font-bold text-slate-700">Wybierz osobę z zespołu</h3>
+                        <h3 className="text-lg font-bold text-slate-700">{t("selectMember")}</h3>
                         <p className="mt-2 text-sm text-slate-400 max-w-md mx-auto">
-                            Z kim masz dziś spotkanie lub interakcję? Wybierz osobę, a otrzymasz spersonalizowaną instrukcję obsługi relacji.
+                            {t("selectMemberHint")}
                         </p>
                     </div>
                 ) : null}

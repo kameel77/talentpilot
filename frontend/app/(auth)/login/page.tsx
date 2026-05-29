@@ -3,11 +3,14 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 import { api, tokenManager } from "@/lib/api";
+import { setLocale } from "@/lib/locale";
 import { ArrowRight, Eye, EyeOff, Lock, Mail } from "lucide-react";
 
 export default function LoginPage() {
     const router = useRouter();
+    const t = useTranslations("auth.login");
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
     const [error, setError] = useState("");
@@ -43,6 +46,10 @@ export default function LoginPage() {
             const user = await api.auth.getCurrentUser();
             tokenManager.setUser(user);
 
+            if (user.language) {
+                setLocale(user.language as "pl" | "en");
+            }
+
             // Redirect to dashboard
             router.push("/dashboard");
         } catch (err) {
@@ -66,9 +73,9 @@ export default function LoginPage() {
                     </div>
 
                     <div className="mb-8">
-                        <h1 className="text-headline mb-2">Witaj ponownie</h1>
+                        <h1 className="text-headline mb-2">{t("title")}</h1>
                         <p className="text-body">
-                            Zaloguj się, aby zarządzać talentami swojego zespołu
+                            {t("subtitle")}
                         </p>
                     </div>
 
@@ -81,7 +88,7 @@ export default function LoginPage() {
 
                         <div className="space-y-2">
                             <label htmlFor="email" className="block text-sm font-semibold text-slate-700 ml-1">
-                                Email
+                                {t("emailLabel")}
                             </label>
                             <div className="relative">
                                 <Mail className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-400" />
@@ -100,13 +107,13 @@ export default function LoginPage() {
                         <div className="space-y-2">
                             <div className="flex items-center justify-between">
                                 <label htmlFor="password" className="block text-sm font-semibold text-slate-700 ml-1">
-                                    Hasło
+                                    {t("passwordLabel")}
                                 </label>
                                 <Link
                                     href="/forgot-password"
                                     className="text-sm text-primary hover:underline font-medium"
                                 >
-                                    Zapomniałeś hasła?
+                                    {t("forgotPassword")}
                                 </Link>
                             </div>
                             <div className="relative">
@@ -135,7 +142,7 @@ export default function LoginPage() {
                             disabled={loading}
                             className="w-full bg-gradient-primary text-white py-3.5 rounded-xl font-bold hover:opacity-90 transition-all shadow-lg shadow-blue-500/10 disabled:opacity-50 disabled:cursor-not-allowed active:scale-[0.98] inline-flex items-center justify-center gap-2"
                         >
-                            {loading ? "Logowanie..." : "Zaloguj sie"}
+                            {loading ? t("loading") : t("submit")}
                             <ArrowRight className="h-5 w-5" />
                         </button>
                     </form>

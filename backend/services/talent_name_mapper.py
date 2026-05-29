@@ -31,10 +31,12 @@ TALENT_MAP: Dict[str, str] = {
     "ideation": "ideation",
     "includer": "includer",
     "individualization": "individualization",
+    "individualisation": "individualization",  # British English
     "input": "input",
     "intellection": "intellection",
     "learner": "learner",
     "maximizer": "maximizer",
+    "maximiser": "maximizer",  # British English
     "positivity": "positivity",
     "relator": "relator",
     "responsibility": "responsibility",

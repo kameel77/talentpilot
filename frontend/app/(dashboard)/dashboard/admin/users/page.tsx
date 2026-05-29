@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useTranslations } from "next-intl";
 import { api, User, Organization } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -54,6 +55,7 @@ const EMPTY_NEW_ORG: NewOrgForm = {
 };
 
 export default function AdminUsersPage() {
+    const t = useTranslations('admin.users');
     const [users, setUsers] = useState<User[]>([]);
     const [organizations, setOrganizations] = useState<Organization[]>([]);
     const [loading, setLoading] = useState(true);
@@ -111,7 +113,7 @@ export default function AdminUsersPage() {
             setUsers(users.map(u => u.id === userId ? { ...u, role: updatedUser.role, organizations_access: updatedUser.organizations_access } : u));
         } catch (error) {
             console.error("Failed to update role:", error);
-            alert("Błąd podczas zmiany roli");
+            alert(t('roleError'));
         }
     };
 
@@ -150,7 +152,7 @@ export default function AdminUsersPage() {
         } catch (error: unknown) {
             const err = error as { response?: { data?: { detail?: string | string[] } } };
             const detail = err?.response?.data?.detail;
-            setOrgCreateError(typeof detail === 'string' ? detail : "Nie udało się utworzyć organizacji.");
+            setOrgCreateError(typeof detail === 'string' ? detail : t('createOrgError'));
         } finally {
             setCreatingOrg(false);
         }
@@ -162,7 +164,7 @@ export default function AdminUsersPage() {
 
         const orgOptional = newUser.role === 'admin' || newUser.role === 'coach';
         if (!orgOptional && !newUser.organization_id) {
-            setCreateError("Wybierz organizację domyślną.");
+            setCreateError(t('selectOrgError'));
             return;
         }
 
@@ -180,7 +182,7 @@ export default function AdminUsersPage() {
         } catch (error: unknown) {
             const err = error as { response?: { data?: { detail?: string | string[] } } };
             const detail = err?.response?.data?.detail;
-            setCreateError(typeof detail === 'string' ? detail : "Nie udało się utworzyć użytkownika.");
+            setCreateError(typeof detail === 'string' ? detail : t('createUserError'));
         } finally {
             setCreating(false);
         }
@@ -202,7 +204,7 @@ export default function AdminUsersPage() {
             
         } catch (error) {
             console.error("Failed to toggle access:", error);
-            alert("Wystąpił błąd podczas odbierania/nadawania dostępu.");
+            alert(t('accessToggleError'));
         } finally {
             setSavingAccess(null);
         }
@@ -229,7 +231,7 @@ export default function AdminUsersPage() {
             setEditUser(null);
         } catch (error: unknown) {
             const err = error as { response?: { data?: { detail?: string } } };
-            setEditError(err?.response?.data?.detail || "Nie udało się zaktualizować użytkownika.");
+            setEditError(err?.response?.data?.detail || t('updateUserError'));
         } finally {
             setEditSaving(false);
         }
@@ -240,7 +242,7 @@ export default function AdminUsersPage() {
             const updated = await api.admin.updateUser(user.id, { is_active: !user.is_active });
             setUsers(users.map(u => u.id === user.id ? { ...u, ...updated } : u));
         } catch {
-            alert("Błąd podczas zmiany statusu użytkownika.");
+            alert(t('archiveUserError'));
         }
     };
 
@@ -253,7 +255,7 @@ export default function AdminUsersPage() {
             setDeleteTarget(null);
         } catch (error: unknown) {
             const err = error as { response?: { data?: { detail?: string } } };
-            alert(err?.response?.data?.detail || "Nie udało się usunąć użytkownika.");
+            alert(err?.response?.data?.detail || t('deleteUserError'));
         } finally {
             setDeleting(false);
         }
@@ -274,10 +276,10 @@ export default function AdminUsersPage() {
                 <div>
                     <h1 className="text-3xl font-bold font-heading text-slate-900 tracking-tight flex items-center gap-3">
                         <Users className="h-8 w-8 text-blue-600" />
-                        Użytkownicy i dostępy
+                        {t('title')}
                     </h1>
                     <p className="mt-1 text-slate-500 font-medium">
-                        Zarządzaj kontami, rolami i dostępami do organizacji trenerskich.
+                        {t('subtitle')}
                     </p>
                 </div>
                 <div className="flex gap-2 shrink-0">
@@ -287,7 +289,7 @@ export default function AdminUsersPage() {
                     </Button>
                     <Button onClick={openCreateModal}>
                         <UserPlus className="h-4 w-4 mr-2" />
-                        Dodaj użytkownika
+                        {t('addUser')}
                     </Button>
                 </div>
             </div>

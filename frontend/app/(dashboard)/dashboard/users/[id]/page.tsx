@@ -26,6 +26,8 @@ import {
     AlertTriangle,
 } from "lucide-react";
 
+import { useTranslations } from "next-intl";
+import { getLocaleFromCookie } from "@/lib/locale";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -71,6 +73,7 @@ interface TalentListViewProps {
     talents: UserTalent[];
     viewMode: "top5" | "top15" | "all";
     talentLookup: Map<string, { name: string; namePl: string; domain: GallupDomain }>;
+    locale: string;
 }
 
 function normalizeApiDomain(domain?: string): GallupDomain {
@@ -82,7 +85,7 @@ function normalizeApiDomain(domain?: string): GallupDomain {
     return "executing";
 }
 
-function TalentListView({ talents, viewMode, talentLookup }: TalentListViewProps) {
+function TalentListView({ talents, viewMode, talentLookup, locale }: TalentListViewProps) {
     const limit = viewMode === "top5" ? 5 : viewMode === "top15" ? 15 : 34;
     const displayTalents = talents
         .filter((t) => t.rank <= limit)
@@ -95,7 +98,7 @@ function TalentListView({ talents, viewMode, talentLookup }: TalentListViewProps
             acc[talent.domain].push({ ...userTalent, talent });
         }
         return acc;
-    }, {} as Record<GallupDomain, Array<UserTalent & { talent: { namePl: string; domain: GallupDomain } }>>);
+    }, {} as Record<GallupDomain, Array<UserTalent & { talent: { name: string; namePl: string; domain: GallupDomain } }>>);
 
     const domains: GallupDomain[] = ["executing", "influencing", "relationship_building", "strategic_thinking"];
 
@@ -108,7 +111,7 @@ function TalentListView({ talents, viewMode, talentLookup }: TalentListViewProps
                 return (
                     <div key={domain}>
                         <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2">
-                            {DOMAIN_LABELS[domain].pl}
+                            {locale === 'en' ? DOMAIN_LABELS[domain].en : DOMAIN_LABELS[domain].pl}
                         </p>
                         <div className="flex flex-wrap gap-2">
                             {domainTalents.map(({ talent, rank }) => (
@@ -125,7 +128,7 @@ function TalentListView({ talents, viewMode, talentLookup }: TalentListViewProps
                                     >
                                         {rank}
                                     </span>
-                                    {talent.namePl}
+                                    {locale === 'en' ? talent.name : talent.namePl}
                                 </div>
                             ))}
                         </div>
@@ -136,7 +139,8 @@ function TalentListView({ talents, viewMode, talentLookup }: TalentListViewProps
     );
 }
 
-function DomainSummary({ talents, talentLookup }: { talents: UserTalent[]; talentLookup: Map<string, { domain: GallupDomain }> }) {
+function DomainSummary({ talents, talentLookup, locale }: { talents: UserTalent[]; talentLookup: Map<string, { domain: GallupDomain }>; locale: string }) {
+    const t = useTranslations('users');
     const top15 = talents.filter((t) => t.rank <= 15);
 
     const domainCounts = top15.reduce((acc, userTalent) => {
@@ -159,8 +163,8 @@ function DomainSummary({ talents, talentLookup }: { talents: UserTalent[]; talen
                 return (
                     <div key={domain} className="space-y-1">
                         <div className="flex items-center justify-between text-sm">
-                            <span className="font-medium">{DOMAIN_LABELS[domain].pl}</span>
-                            <span className="text-muted-foreground">{count} talentów</span>
+                            <span className="font-medium">{locale === 'en' ? DOMAIN_LABELS[domain].en : DOMAIN_LABELS[domain].pl}</span>
+                            <span className="text-muted-foreground">{t('talentsCount', { count })}</span>
                         </div>
                         <div className="h-2 bg-muted rounded-full overflow-hidden">
                             <div
@@ -178,16 +182,7 @@ function DomainSummary({ talents, talentLookup }: { talents: UserTalent[]; talen
     );
 }
 
-const quickTipTemplates = [
-    (viewer: string, member: string, name: string) =>
-        `Wykorzystaj swój talent ${viewer}, żeby ułatwić ${name} pracę z talentem ${member}.`,
-    (viewer: string, member: string, name: string) =>
-        `${name} ma silny talent ${member} — dopasuj komunikację, używając swojego ${viewer}.`,
-    (viewer: string, member: string, name: string) =>
-        `Łącząc Twój ${viewer} z ${member} u ${name}, szybciej uzgodnicie priorytety.`,
-    (viewer: string, member: string, name: string) =>
-        `W spotkaniach z ${name} opieraj się na swoim ${viewer}, by wzmocnić jego/jej ${member}.`,
-];
+const quickTipKeys = ['quickTip0', 'quickTip1', 'quickTip2', 'quickTip3'] as const;
 
 const quickTipIcons: Record<GallupDomain, typeof Target> = {
     executing: Target,
@@ -205,6 +200,8 @@ function parseBulletList(value?: string): string[] {
 }
 
 export default function UserProfilePage() {
+    const t = useTranslations('users');
+    const locale = getLocaleFromCookie();
     const params = useParams();
     const userId = parseInt(params.id as string);
 
@@ -373,7 +370,7 @@ export default function UserProfilePage() {
             setEditingSection(null);
         } catch (err) {
             console.error('Failed to save section', err);
-            alert('Błąd podczas zapisywania. Sprawdź uprawnienia.');
+            alert(t('saveError'));
         } finally {
             setSaving(false);
         }
@@ -394,7 +391,7 @@ export default function UserProfilePage() {
             setEditingSection(null);
         } catch (err) {
             console.error('AI generation failed', err);
-            alert('Nie udało się wygenerować danych z AI.');
+            alert(t('aiError'));
         } finally {
             setGenerating(false);
         }
@@ -434,12 +431,14 @@ export default function UserProfilePage() {
         return Array.from({ length: Math.min(4, viewerTalents.length, memberTop.length) }).map((_, index) => {
             const viewer = viewerTalents[index % viewerTalents.length];
             const member = memberTop[index % memberTop.length];
-            const viewerTalent = currentUserLookup.get(viewer.talentId)?.namePl || viewer.talentId;
-            const memberTalent = talentLookup.get(member.talentId)?.namePl || member.talentId;
-            const memberDomain = talentLookup.get(member.talentId)?.domain || "executing";
-            const template = quickTipTemplates[index % quickTipTemplates.length];
+            const viewerEntry = currentUserLookup.get(viewer.talentId);
+            const memberEntry = talentLookup.get(member.talentId);
+            const viewerTalent = (locale === 'en' ? viewerEntry?.name : viewerEntry?.namePl) || viewer.talentId;
+            const memberTalent = (locale === 'en' ? memberEntry?.name : memberEntry?.namePl) || member.talentId;
+            const memberDomain = memberEntry?.domain || "executing";
+            const tipKey = quickTipKeys[index % quickTipKeys.length];
             const icon = quickTipIcons[memberDomain] || Target;
-            return { icon, tip: template(viewerTalent, memberTalent, user.full_name), domain: memberDomain };
+            return { icon, tip: t(tipKey, { viewer: viewerTalent, member: memberTalent, name: user.full_name }), domain: memberDomain };
         });
     })();
 
@@ -472,15 +471,15 @@ export default function UserProfilePage() {
                             className="w-full min-h-[120px] rounded-lg border border-slate-200 p-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 resize-y bg-white"
                             value={editValues[sectionKey as keyof typeof editValues]}
                             onChange={(e) => setEditValues(prev => ({ ...prev, [sectionKey]: e.target.value }))}
-                            placeholder={`Wpisz ${title.toLowerCase()}...`}
+                            placeholder={t('editSectionPlaceholder', { title: title.toLowerCase() })}
                         />
                         <div className="flex items-center gap-2 justify-end">
                             <Button variant="ghost" size="sm" onClick={cancelEditing} disabled={saving}>
-                                <X className="h-4 w-4 mr-1" /> Anuluj
+                                <X className="h-4 w-4 mr-1" /> {t('editSectionCancel')}
                             </Button>
                             <Button size="sm" onClick={() => saveSection(sectionKey)} disabled={saving}>
                                 {saving ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <Save className="h-4 w-4 mr-1" />}
-                                Zapisz
+                                {t('editSectionSave')}
                             </Button>
                         </div>
                     </div>
@@ -536,7 +535,7 @@ export default function UserProfilePage() {
                                 setEditProfileOpen(true);
                             }}>
                                 <UserCog className="h-4 w-4 mr-2" />
-                                Edytuj dane
+                                {t('editProfile')}
                             </Button>
                             <Button
                                 variant="outline"
@@ -555,7 +554,7 @@ export default function UserProfilePage() {
                                 }
                             >
                                 <Power className="h-4 w-4 mr-2" />
-                                {user.is_active !== false ? 'Archiwizuj' : 'Aktywuj'}
+                                {user.is_active !== false ? t('archiveUser') : t('activateUser')}
                             </Button>
                         </>
                     )}
@@ -563,16 +562,16 @@ export default function UserProfilePage() {
                         <>
                             <Button variant="outline" onClick={() => setTalentImportOpen(true)}>
                                 <Edit3 className="h-4 w-4 mr-2" />
-                                Edytuj talenty
+                                {t('editTalents')}
                             </Button>
                             <Button variant="outline" onClick={generateWithAI} disabled={generating}>
                                 {generating ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Sparkles className="h-4 w-4 mr-2" />}
-                                {generating ? 'Generuję...' : 'Generuj z AI'}
+                                {generating ? t('generating') : t('generateWithAI')}
                             </Button>
                         </>
                     )}
                     <Button variant="outline" asChild>
-                        <Link href="/dashboard/users">Wróć do zespołu</Link>
+                        <Link href="/dashboard/users">{t('backToTeam')}</Link>
                     </Button>
                 </div>
             </div>
@@ -584,19 +583,19 @@ export default function UserProfilePage() {
                             <Star className="h-10 w-10 text-primary" />
                         </div>
                         <div className="space-y-2">
-                            <h2 className="text-xl font-semibold">Brak talentów w profilu</h2>
+                            <h2 className="text-xl font-semibold">{t('noTalentsInProfile')}</h2>
                             <p className="text-muted-foreground">
-                                Ten członek zespołu nie ma jeszcze przypisanych talentów Gallupa.
+                                {t('noTalentsInProfileDesc')}
                             </p>
                         </div>
                         {canEdit && (
                             <div className="space-y-3">
                                 <Button size="lg" onClick={() => setTalentImportOpen(true)} className="bg-gradient-primary hover:opacity-90 transition-opacity">
                                     <Upload className="h-5 w-5 mr-2" />
-                                    Importuj talenty
+                                    {t('importTalents')}
                                 </Button>
                                 <p className="text-xs text-muted-foreground">
-                                    Możesz zaimportować PDF z raportem Gallup lub wprowadzić talenty ręcznie
+                                    {t('importTalentsHint')}
                                 </p>
                             </div>
                         )}
@@ -612,10 +611,10 @@ export default function UserProfilePage() {
                                         <Trophy className="h-5 w-5" />
                                     </div>
                                     <div>
-                                        <h2 className="text-title">Top talenty</h2>
+                                        <h2 className="text-title">{t('topTalents')}</h2>
                                         {dominantDomain && (
                                             <p className="text-sm text-muted-foreground">
-                                                Dominująca domena: <span className="font-medium">{DOMAIN_LABELS[dominantDomain].pl}</span>
+                                                {t('dominantDomain')}: <span className="font-medium">{locale === 'en' ? DOMAIN_LABELS[dominantDomain].en : DOMAIN_LABELS[dominantDomain].pl}</span>
                                             </p>
                                         )}
                                     </div>
@@ -628,14 +627,14 @@ export default function UserProfilePage() {
                                     </TabsList>
                                 </Tabs>
                             </div>
-                            <TalentListView talents={memberTalents} viewMode={talentViewMode} talentLookup={talentLookup} />
+                            <TalentListView talents={memberTalents} viewMode={talentViewMode} talentLookup={talentLookup} locale={locale} />
                         </Card>
 
                         {renderEditableSection(
                             'superpowers',
-                            'Mocne strony',
+                            t('strengths'),
                             strengths,
-                            'Brak informacji o mocnych stronach.',
+                            t('noStrengths'),
                             <div className="rounded-xl bg-emerald-500/10 p-2.5 text-emerald-600 dark:text-emerald-400"><ThumbsUp className="h-5 w-5" /></div>,
                             'bg-emerald-50/20 dark:bg-emerald-950/20',
                             'bg-emerald-500'
@@ -644,9 +643,9 @@ export default function UserProfilePage() {
                         <div className="grid gap-6 md:grid-cols-2">
                             {renderEditableSection(
                                 'motivators',
-                                'Motywatory',
+                                t('motivators'),
                                 motivators,
-                                'Brak informacji o motywatorach.',
+                                t('noMotivators'),
                                 <div className="rounded-xl bg-amber-500/10 p-2.5 text-amber-600 dark:text-amber-400"><TriangleAlert className="h-5 w-5" /></div>,
                                 'bg-amber-50/20 dark:bg-amber-950/20',
                                 'bg-amber-500'
@@ -654,9 +653,9 @@ export default function UserProfilePage() {
 
                             {renderEditableSection(
                                 'blockers',
-                                'Blokady',
+                                t('blockers'),
                                 blockers,
-                                'Brak informacji o blokadach.',
+                                t('noBlockers'),
                                 <div className="rounded-xl bg-rose-500/10 p-2.5 text-rose-600 dark:text-rose-400"><Ban className="h-5 w-5" /></div>,
                                 'bg-rose-50/20 dark:bg-rose-950/20',
                                 'bg-rose-500'
@@ -665,9 +664,9 @@ export default function UserProfilePage() {
 
                         {renderEditableSection(
                             'feedback_style',
-                            'Jak dawać mi feedback',
+                            t('feedbackStyle'),
                             user.feedback_style ? [user.feedback_style] : [],
-                            'Brak informacji o preferowanym feedbacku.',
+                            t('noFeedbackStyle'),
                             <div className="rounded-xl bg-primary/10 p-2.5 text-primary"><MessageCircle className="h-5 w-5" /></div>,
                             '',
                             'bg-primary'
@@ -680,9 +679,9 @@ export default function UserProfilePage() {
                                 <div className="rounded-xl bg-primary/10 p-2.5 text-primary">
                                     <Star className="h-5 w-5" />
                                 </div>
-                                <h2 className="text-title">Rozkład domen</h2>
+                                <h2 className="text-title">{t('domainDistribution')}</h2>
                             </div>
-                            <DomainSummary talents={memberTalents} talentLookup={talentLookup} />
+                            <DomainSummary talents={memberTalents} talentLookup={talentLookup} locale={locale} />
                         </Card>
 
                         <Card className="p-6 border-slate-200/60 shadow-sm">
@@ -690,7 +689,7 @@ export default function UserProfilePage() {
                                 <div className="rounded-xl bg-domain-strategic-light p-2.5 text-domain-strategic">
                                     <Lightbulb className="h-5 w-5" />
                                 </div>
-                                <h2 className="text-title">Szybkie podpowiedzi</h2>
+                                <h2 className="text-title">{t('quickTips')}</h2>
                             </div>
                             {quickTips.length > 0 ? (
                                 <div className="space-y-3">
@@ -712,24 +711,24 @@ export default function UserProfilePage() {
                                 </div>
                             ) : (
                                 <p className="text-sm text-muted-foreground">
-                                    Dodaj swoje talenty, aby otrzymać podpowiedzi dopasowane do {user.full_name}.
+                                    {t('addYourTalentsHint', { name: user.full_name })}
                                 </p>
                             )}
                             <Button variant="outline" className="w-full mt-4" asChild>
                                 <Link href="/dashboard/tips">
-                                    Więcej wskazówek
+                                    {t('moreTips')}
                                     <ChevronRight className="h-4 w-4" />
                                 </Link>
                             </Button>
                         </Card>
 
                         <Card className="p-6 bg-gradient-to-br from-primary/5 to-primary/10 border-slate-200/60 shadow-sm">
-                            <h3 className="font-semibold mb-2">Udostępnij profil</h3>
+                            <h3 className="font-semibold mb-2">{t('shareProfile')}</h3>
                             <p className="text-sm text-muted-foreground mb-4">
-                                Ułatw zespołowi współpracę z {user.full_name} dzięki szybkiemu dostępowi do profilu talentów.
+                                {t('shareProfileDesc', { name: user.full_name })}
                             </p>
                             <Button variant="outline" className="w-full">
-                                Generuj link do profilu
+                                {t('generateProfileLink')}
                                 <ChevronRight className="h-4 w-4" />
                             </Button>
                         </Card>
@@ -741,7 +740,7 @@ export default function UserProfilePage() {
             <Dialog open={editProfileOpen} onOpenChange={(open) => { if (!open) { setEditProfileOpen(false); setEditProfileError(''); } }}>
                 <DialogContent className="max-w-md">
                     <DialogHeader>
-                        <DialogTitle>Edytuj dane użytkownika</DialogTitle>
+                        <DialogTitle>{t('editProfileTitle')}</DialogTitle>
                     </DialogHeader>
                     <form onSubmit={async (e) => {
                         e.preventDefault();
@@ -772,23 +771,23 @@ export default function UserProfilePage() {
                                 }
                             }
                             const detail = axiosErr.response?.data?.detail;
-                            const msg = typeof detail === 'string' ? detail : typeof detail === 'object' && detail?.message ? detail.message : 'Wystąpił błąd podczas zapisu.';
+                            const msg = typeof detail === 'string' ? detail : typeof detail === 'object' && detail?.message ? detail.message : t('saveProfileError');
                             setEditProfileError(msg);
                         } finally {
                             setEditProfileSaving(false);
                         }
                     }} className="space-y-4">
                         <div className="space-y-2">
-                            <Label>Imię i nazwisko</Label>
+                            <Label>{t('fullName')}</Label>
                             <Input value={editProfileData.full_name} onChange={e => setEditProfileData(prev => ({ ...prev, full_name: e.target.value }))} required />
                         </div>
                         <div className="space-y-2">
-                            <Label>Email</Label>
+                            <Label>{t('email')}</Label>
                             <Input type="email" value={editProfileData.email} onChange={e => setEditProfileData(prev => ({ ...prev, email: e.target.value }))} required />
                         </div>
                         <div className="space-y-2">
-                            <Label>Stanowisko</Label>
-                            <Input value={editProfileData.job_title} onChange={e => setEditProfileData(prev => ({ ...prev, job_title: e.target.value }))} placeholder="np. Product Manager" />
+                            <Label>{t('jobTitle')}</Label>
+                            <Input value={editProfileData.job_title} onChange={e => setEditProfileData(prev => ({ ...prev, job_title: e.target.value }))} placeholder="e.g. Product Manager" />
                         </div>
                         {editProfileError && (
                             <div className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-2 text-sm text-rose-700">
@@ -796,9 +795,9 @@ export default function UserProfilePage() {
                             </div>
                         )}
                         <div className="flex justify-end gap-3 pt-4">
-                            <Button type="button" variant="outline" onClick={() => { setEditProfileOpen(false); setEditProfileError(''); }}>Anuluj</Button>
+                            <Button type="button" variant="outline" onClick={() => { setEditProfileOpen(false); setEditProfileError(''); }}>{t('cancel')}</Button>
                             <Button type="submit" disabled={editProfileSaving}>
-                                {editProfileSaving ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Zapisuję...</> : 'Zapisz zmiany'}
+                                {editProfileSaving ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" />{t('saving')}</> : t('saveChanges')}
                             </Button>
                         </div>
                     </form>
@@ -811,10 +810,10 @@ export default function UserProfilePage() {
                     <DialogHeader>
                         <DialogTitle className="flex items-center gap-2">
                             <AlertTriangle className="h-5 w-5 text-amber-500" />
-                            Email jest już zajęty
+                            {t('emailConflictTitle')}
                         </DialogTitle>
                         <DialogDescription>
-                            Podany adres email należy do istniejącego użytkownika w systemie.
+                            {t('emailConflictDesc')}
                         </DialogDescription>
                     </DialogHeader>
                     {conflictData && (
@@ -831,12 +830,11 @@ export default function UserProfilePage() {
                                 </div>
                             </div>
                             <p className="text-sm text-slate-600">
-                                Czy chcesz <strong>zastąpić obecny profil</strong> istniejącym użytkownikiem?
-                                Talenty zostaną przeniesione, a użytkownik zostanie dodany do wszystkich zespołów.
+                                {t('emailConflictBody')}
                             </p>
                             <div className="flex justify-end gap-3 pt-2">
                                 <Button variant="outline" onClick={() => setConflictData(null)} disabled={replacingUser}>
-                                    Anuluj
+                                    {t('cancel')}
                                 </Button>
                                 <Button onClick={async () => {
                                     setReplacingUser(true);
@@ -847,15 +845,15 @@ export default function UserProfilePage() {
                                         window.location.href = `/dashboard/users/${result.user.id}`;
                                     } catch (err) {
                                         console.error(err);
-                                        alert('Błąd podczas zamiany użytkownika.');
+                                        alert(t('swapError'));
                                     } finally {
                                         setReplacingUser(false);
                                     }
                                 }} disabled={replacingUser}>
                                     {replacingUser ? (
-                                        <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Przenoszenie...</>
+                                        <><Loader2 className="h-4 w-4 mr-2 animate-spin" />{t('transferring')}</>
                                     ) : (
-                                        'Zastąp i przenieś'
+                                        t('replaceAndTransfer')
                                     )}
                                 </Button>
                             </div>

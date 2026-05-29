@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useTranslations } from "next-intl";
 import { api, AdminSettingUpdate } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -10,6 +11,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Save, Loader2, Sparkles, Shield, Cpu, Zap } from "lucide-react";
 
 export default function AdminSettingsPage() {
+    const t = useTranslations('admin.settings');
     const [settings, setSettings] = useState<Record<string, string>>({});
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
@@ -64,7 +66,7 @@ export default function AdminSettingsPage() {
     return (
         <div className="space-y-8 max-w-4xl mx-auto">
             <div>
-                <h1 className="text-3xl font-bold font-heading text-slate-900 tracking-tight">Ustawienia AI</h1>
+                <h1 className="text-3xl font-bold font-heading text-slate-900 tracking-tight">{t('title')}</h1>
                 <p className="mt-1 text-slate-500 font-medium">
                     Skonfiguruj parametry działania asystenta AI oraz bazy wiedzy.
                 </p>
@@ -234,7 +236,7 @@ export default function AdminSettingsPage() {
                     ) : (
                         <Save className="h-5 w-5 mr-3 group-hover:scale-110 transition-transform" />
                     )}
-                    Zapisz ustawienia AI
+                    {saving ? t('saving') : t('save')}
                 </Button>
             </div>
         </div>

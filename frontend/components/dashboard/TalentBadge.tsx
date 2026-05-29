@@ -1,19 +1,13 @@
 "use client";
 
 import { motion } from "framer-motion";
+import { useTranslations } from "next-intl";
 
 const domainColors: Record<string, string> = {
     executing: "var(--color-domain-executing)",
     influencing: "var(--color-domain-influencing)",
     relationship_building: "var(--color-domain-relationship)",
     strategic_thinking: "var(--color-domain-strategic)",
-};
-
-const domainLabels: Record<string, string> = {
-    executing: "Executing",
-    influencing: "Influencing",
-    relationship_building: "Relationship",
-    strategic_thinking: "Strategic",
 };
 
 function normalizeDomain(domain?: string) {
@@ -39,9 +33,17 @@ export default function TalentBadge({
     description?: string;
     hideDomainLabel?: boolean;
 }) {
+    const t = useTranslations('dashboard');
     const normalized = normalizeDomain(domain);
     const color = domainColors[normalized] || "var(--color-domain-executing)";
-    const label = domainLabels[normalized] || "Executing";
+
+    const domainLabelMap: Record<string, string> = {
+        executing: t('domains.executing'),
+        influencing: t('domains.influencing'),
+        relationship_building: t('domains.relationship_building'),
+        strategic_thinking: t('domains.strategic_thinking'),
+    };
+    const label = domainLabelMap[normalized] || normalized;
 
     return (
         <motion.div

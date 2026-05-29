@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import { useTranslations } from "next-intl";
 import { Check, X, Loader2, MessageSquare, Database, Settings2, Sparkles } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -12,6 +13,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { api, QueryReview } from "@/lib/api";
 
 export default function AdminKnowledgePage() {
+    const t = useTranslations('admin.knowledge');
     const [queries, setQueries] = useState<QueryReview[]>([]);
     const [loading, setLoading] = useState(true);
     const [processingId, setProcessingId] = useState<number | null>(null);
@@ -104,7 +106,7 @@ export default function AdminKnowledgePage() {
         <div className="space-y-8 max-w-5xl mx-auto">
             <div className="flex items-center justify-between">
                 <div>
-                    <h1 className="text-3xl font-bold font-heading text-slate-900 tracking-tight">Baza wiedzy</h1>
+                    <h1 className="text-3xl font-bold font-heading text-slate-900 tracking-tight">{t('title')}</h1>
                     <p className="mt-1 text-slate-500 font-medium">
                         Zarządzaj bazą wiedzy, przeglądaj pytania i konfiguruj parametry RAG.
                     </p>

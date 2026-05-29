@@ -3,13 +3,16 @@
 import { Suspense, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 import { api, tokenManager } from "@/lib/api";
+import { setLocale } from "@/lib/locale";
 import { ArrowRight, Eye, EyeOff, Lock, PartyPopper } from "lucide-react";
 
 function JoinForm() {
     const router = useRouter();
     const searchParams = useSearchParams();
     const token = searchParams.get("token");
+    const t = useTranslations("auth.join");
 
     const [password, setPassword] = useState("");
     const [confirmPassword, setConfirmPassword] = useState("");
@@ -38,12 +41,12 @@ function JoinForm() {
         setError("");
 
         if (password !== confirmPassword) {
-            setError("Hasła nie są takie same.");
+            setError(t("passwordMismatch"));
             return;
         }
 
         if (!token) {
-            setError("Brak tokenu zaproszenia w linku.");
+            setError(t("missingToken"));
             return;
         }
 
@@ -56,6 +59,10 @@ function JoinForm() {
             // Get user info and store
             const user = await api.auth.getCurrentUser();
             tokenManager.setUser(user);
+
+            if (user.language) {
+                setLocale(user.language as "pl" | "en");
+            }
 
             // Redirect to dashboard
             router.push("/dashboard");
@@ -73,16 +80,15 @@ function JoinForm() {
                     <div className="mb-4 flex h-16 w-16 mx-auto items-center justify-center rounded-2xl bg-rose-50">
                         <Lock className="h-8 w-8 text-rose-500" />
                     </div>
-                    <h1 className="text-headline mb-2">Nieprawidłowy link</h1>
+                    <h1 className="text-headline mb-2">{t("invalidTokenTitle")}</h1>
                     <p className="text-body mb-6">
-                        Link zaproszenia jest nieprawidłowy lub brakuje tokenu.
-                        Skontaktuj się z osobą, która wysłała zaproszenie.
+                        {t("invalidToken")}
                     </p>
                     <Link
                         href="/login"
                         className="text-primary hover:text-blue-700 font-bold transition-colors"
                     >
-                        Przejdź do logowania
+                        {t("backToLogin")}
                     </Link>
                 </div>
             </div>
@@ -105,10 +111,10 @@ function JoinForm() {
                     <div className="mb-8">
                         <div className="flex items-center gap-3 mb-2">
                             <PartyPopper className="h-7 w-7 text-primary" />
-                            <h1 className="text-headline">Aktywuj konto</h1>
+                            <h1 className="text-headline">{t("title")}</h1>
                         </div>
                         <p className="text-body">
-                            Zostałeś zaproszony do zespołu! Ustaw hasło, aby aktywować swoje konto.
+                            {t("subtitle")}
                         </p>
                     </div>
 
@@ -121,7 +127,7 @@ function JoinForm() {
 
                         <div className="space-y-2">
                             <label htmlFor="password" className="block text-sm font-semibold text-slate-700 ml-1">
-                                Hasło
+                                {t("passwordLabel")}
                             </label>
                             <div className="relative">
                                 <Lock className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-400" />
@@ -144,13 +150,13 @@ function JoinForm() {
                                 </button>
                             </div>
                             <p className="text-[10px] text-slate-400 font-bold uppercase tracking-tight ml-1">
-                                Min. 8 znaków
+                                {t("passwordMinLength")}
                             </p>
                         </div>
 
                         <div className="space-y-2">
                             <label htmlFor="confirm-password" className="block text-sm font-semibold text-slate-700 ml-1">
-                                Potwierdź hasło
+                                {t("confirmPasswordLabel")}
                             </label>
                             <div className="relative">
                                 <Lock className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-400" />
@@ -172,15 +178,15 @@ function JoinForm() {
                             disabled={loading}
                             className="w-full bg-gradient-primary text-white py-3.5 rounded-xl font-bold hover:opacity-90 transition-all shadow-lg shadow-blue-500/10 disabled:opacity-50 disabled:cursor-not-allowed active:scale-[0.98] inline-flex items-center justify-center gap-2"
                         >
-                            {loading ? "Aktywuję konto..." : "Aktywuj konto"}
+                            {loading ? t("loading") : t("submit")}
                             <ArrowRight className="h-5 w-5" />
                         </button>
                     </form>
 
                     <div className="mt-6 text-center text-sm text-slate-500 font-medium">
-                        Masz już aktywne konto?{" "}
+                        {t("alreadyHaveAccount")}{" "}
                         <Link href="/login" className="text-primary hover:text-blue-700 font-bold transition-colors">
-                            Zaloguj się
+                            {t("signIn")}
                         </Link>
                     </div>
                 </div>
@@ -193,27 +199,25 @@ function JoinForm() {
                 <div className="relative z-10 flex flex-col justify-center p-12 text-white">
                     <div className="max-w-lg">
                         <h2 className="text-display mb-6">
-                            Witamy w{" "}
+                            {t('heroWelcome')}{" "}
                             <span className="text-domain-strategic">TalentPilot</span>
                         </h2>
                         <p className="text-lg text-white/80 leading-relaxed mb-8">
-                            Twój zespół zaprasza Cię do platformy, która pomoże Ci
-                            zrozumieć swoje talenty Gallupa i wykorzystać je do
-                            budowania silniejszych relacji w pracy.
+                            {t('heroSubtitle')}
                         </p>
 
                         <div className="grid grid-cols-3 gap-6">
                             <div className="space-y-1">
                                 <p className="text-3xl font-bold font-heading">34</p>
-                                <p className="text-sm text-white/60">Talenty Gallupa</p>
+                                <p className="text-sm text-white/60">{t('heroTalents')}</p>
                             </div>
                             <div className="space-y-1">
                                 <p className="text-3xl font-bold font-heading">4</p>
-                                <p className="text-sm text-white/60">Domeny</p>
+                                <p className="text-sm text-white/60">{t('heroDomains')}</p>
                             </div>
                             <div className="space-y-1">
                                 <p className="text-3xl font-bold font-heading">INF</p>
-                                <p className="text-sm text-white/60">Możliwości</p>
+                                <p className="text-sm text-white/60">{t('heroOpportunities')}</p>
                             </div>
                         </div>
                     </div>

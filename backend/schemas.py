@@ -94,6 +94,7 @@ class UserUpdate(BaseModel):
         pattern=r'^[a-z0-9][a-z0-9\-]*[a-z0-9]$',
         description="Custom vanity slug for /aboutme/{slug}. Lowercase letters, numbers and hyphens only.",
     )
+    language: Optional[str] = Field(default=None, pattern=r'^(pl|en)$')
 
 
 class PasswordChangeRequest(BaseModel):
@@ -117,7 +118,8 @@ class UserResponse(BaseModel):
     created_at: datetime
     public_token: Optional[str] = None
     public_slug: Optional[str] = None
-    
+    language: str = "pl"
+
     # Relationships for admins
     organizations_access: Optional[List[int]] = None
 

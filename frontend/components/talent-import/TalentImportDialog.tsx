@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useTranslations } from "next-intl";
 import {
   Dialog,
   DialogContent,
@@ -33,6 +34,7 @@ export function TalentImportDialog({
   userId,
   onUsersChange
 }: TalentImportDialogProps) {
+  const t = useTranslations('talentImport');
   const [activeTab, setActiveTab] = useState<'pdf' | 'manual'>('pdf');
   const [prefilledTalents, setPrefilledTalents] = useState<UserTalent[]>(initialTalents);
 
@@ -66,7 +68,7 @@ export function TalentImportDialog({
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="text-xl">
-            {memberName ? `Import talentów: ${memberName}` : 'Import talentów Gallup'}
+            {memberName ? `${t('title')}: ${memberName}` : t('title')}
           </DialogTitle>
           <DialogDescription>
             Zaimportuj talenty z raportu PDF lub wprowadź je ręcznie
@@ -77,11 +79,11 @@ export function TalentImportDialog({
           <TabsList className="grid w-full grid-cols-2">
             <TabsTrigger value="pdf" className="gap-2">
               <FileText className="h-4 w-4" />
-              Import z PDF
+              {t('pdfTab')}
             </TabsTrigger>
             <TabsTrigger value="manual" className="gap-2">
               <Keyboard className="h-4 w-4" />
-              Wprowadź ręcznie
+              {t('manualTab')}
             </TabsTrigger>
           </TabsList>
 

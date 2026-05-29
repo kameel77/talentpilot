@@ -107,6 +107,9 @@ class User(Base):
     blockers_en = Column(Text, nullable=True)
     feedback_style_en = Column(Text, nullable=True)
 
+    # User language preference
+    language = Column(String(10), nullable=False, default="pl")
+
     # Public profile (wizytówka)
     public_token = Column(String(64), unique=True, nullable=True, index=True)
     public_slug = Column(String(64), unique=True, nullable=True, index=True)  # custom vanity slug

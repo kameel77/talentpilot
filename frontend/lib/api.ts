@@ -25,6 +25,7 @@ export interface User {
     created_at: string;
     public_token?: string;
     public_slug?: string;
+    language?: string;
     organizations_access?: number[];
 }
 
@@ -75,6 +76,7 @@ export interface UserUpdateData {
     motivators_en?: string;
     blockers_en?: string;
     feedback_style_en?: string;
+    language?: string;
 }
 
 export interface LoginCredentials {

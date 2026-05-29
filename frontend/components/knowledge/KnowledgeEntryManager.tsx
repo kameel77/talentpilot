@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useCallback, useEffect, useMemo, useState } from "react";
+import { useTranslations } from "next-intl";
 import { ChevronDown, ChevronRight, Plus, Search, X } from "lucide-react";
 
 import { api, KnowledgeItem } from "@/lib/api";
@@ -216,9 +217,10 @@ function KnowledgeFormFields({
     tagSuggestions: string[];
     section: string;
 }) {
+    const t = useTranslations('admin.knowledge');
     return (
         <div className="space-y-5">
-            {/* Row 1: Tytuł + Kategoria */}
+            {/* Row 1: Title + Category */}
             <div className="grid gap-4 md:grid-cols-2">
                 <div className="space-y-2">
                     <label className="text-sm font-semibold text-slate-700">Tytuł</label>
@@ -230,7 +232,7 @@ function KnowledgeFormFields({
                     />
                 </div>
                 <div className="space-y-2">
-                    <label className="text-sm font-semibold text-slate-700">Kategoria</label>
+                    <label className="text-sm font-semibold text-slate-700">{t('category')}</label>
                     <Input
                         value={form.category}
                         onChange={(event) => setForm({ ...form, category: event.target.value })}
@@ -261,7 +263,7 @@ function KnowledgeFormFields({
                     options={CONTENT_TYPE_OPTIONS}
                 />
                 <FormSelect
-                    label="Język"
+                    label={t('language')}
                     value={form.language}
                     onChange={(value) => setForm({ ...form, language: value })}
                     options={LANGUAGE_OPTIONS}
@@ -286,7 +288,7 @@ function KnowledgeFormFields({
 
             {/* Row 3: Tags */}
             <TagInput
-                label="Tagi"
+                label={t('tags')}
                 tags={form.tags}
                 suggestions={tagSuggestions}
                 onChange={(tags) => setForm({ ...form, tags })}
@@ -294,7 +296,7 @@ function KnowledgeFormFields({
 
             {/* Row 4: Content */}
             <div className="space-y-2">
-                <label className="text-sm font-semibold text-slate-700">Treść (Markdown)</label>
+                <label className="text-sm font-semibold text-slate-700">{t('content')}</label>
                 <Textarea
                     value={form.content}
                     onChange={(event) => setForm({ ...form, content: event.target.value })}
@@ -309,6 +311,7 @@ function KnowledgeFormFields({
 // --- Main Component ---
 
 export function KnowledgeEntryManager({ section, title, description }: KnowledgeEntryManagerProps) {
+    const t = useTranslations('admin.knowledge');
     const [entries, setEntries] = useState<KnowledgeItem[]>([]);
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
@@ -450,12 +453,12 @@ export function KnowledgeEntryManager({ section, title, description }: Knowledge
                     {showCreateForm ? (
                         <>
                             <X className="h-4 w-4 mr-2" />
-                            Zamknij formularz
+                            {t('closeForm')}
                         </>
                     ) : (
                         <>
                             <Plus className="h-4 w-4 mr-2" />
-                            Dodaj nową treść
+                            {t('addNew')}
                         </>
                     )}
                 </Button>
@@ -483,7 +486,7 @@ export function KnowledgeEntryManager({ section, title, description }: Knowledge
             {showCreateForm && (
                 <Card className="border-slate-200/70 shadow-sm border-blue-200/50">
                     <CardHeader>
-                        <CardTitle className="text-xl">Dodaj nowy wpis</CardTitle>
+                        <CardTitle className="text-xl">{t('addEntry')}</CardTitle>
                         <CardDescription>
                             Każda aktualizacja treści generuje nowe embeddingi i wzmacnia bazę wiedzy.
                         </CardDescription>
@@ -502,7 +505,7 @@ export function KnowledgeEntryManager({ section, title, description }: Knowledge
                                 disabled={saving || !form.title || !form.category || !form.content}
                                 className="bg-blue-600 hover:bg-blue-700 text-white"
                             >
-                                Dodaj wpis
+                                {t('addEntry')}
                             </Button>
                         </div>
                     </CardContent>
