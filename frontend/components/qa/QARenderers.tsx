@@ -1,6 +1,7 @@
 "use client";
 
 import type { ReactNode } from "react";
+import { useTranslations } from "next-intl";
 import { QAAnswer } from "@/lib/api";
 import { ResponseBlock } from "@/components/qa/QAComponents";
 
@@ -17,11 +18,12 @@ export interface RendererProps {
 // --- Structured Renderer (Talent / Kompetencja / Akcja boxes) ---
 
 export function StructuredRenderer({ answer }: RendererProps) {
+    const t = useTranslations("qa");
     return (
         <div className="mt-4 space-y-3">
-            <ResponseBlock title="Talent" value={answer.talent} tone="indigo" />
-            <ResponseBlock title="Kompetencja" value={answer.competency} tone="blue" />
-            <ResponseBlock title="Akcja (7 dni)" tone="emerald">
+            <ResponseBlock title={t("talent")} value={answer.talent} tone="indigo" />
+            <ResponseBlock title={t("competency")} value={answer.competency} tone="blue" />
+            <ResponseBlock title={t("actionsLabel")} tone="emerald">
                 <ul className="list-disc pl-5 text-sm text-slate-600 space-y-1">
                     {answer.actions.map((action, i) => (
                         <li key={i}>{action}</li>
