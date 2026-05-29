@@ -30,7 +30,7 @@ def get_daily_tip(
     if context not in valid_contexts:
         context = "general"
 
-    result = generate_daily_tip(db, current_user, context=context)
+    result = generate_daily_tip(db, current_user, context=context, language=current_user.language or "pl")
     return DailyTipResponse(**result)
 
 
@@ -61,7 +61,7 @@ def get_synergy_tip(
             detail="Użytkownik nie został znaleziony w Twojej organizacji.",
         )
 
-    result = generate_synergy_tip(db, current_user, target_user)
+    result = generate_synergy_tip(db, current_user, target_user, language=current_user.language or "pl")
     return SynergyTipResponse(**result)
 
 

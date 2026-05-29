@@ -1,4 +1,6 @@
 """Compare router — 1:1 talent comparison between two users."""
+from typing import Optional
+
 from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.orm import Session
 
@@ -15,15 +17,17 @@ router = APIRouter()
 def compare_two_users(
     user_a_id: int,
     user_b_id: int,
-    language: str = Query("pl", description="Language for talent names"),
+    language: Optional[str] = Query(None, description="Language for talent names"),
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
     """Compare talents of two users in the same organization.
-    
+
     Returns shared talents, unique strengths, domain balance,
     synergy score, and collaboration tips.
     """
+    language = language or current_user.language or "pl"
+
     if user_a_id == user_b_id:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
