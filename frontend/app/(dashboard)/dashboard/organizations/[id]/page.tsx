@@ -24,15 +24,18 @@ interface Organization {
     postal_code: string | null;
     city: string | null;
     tax_id: string | null;
+    language: string;
     created_at: string;
 }
 
 export default function OrganizationDetailsPage() {
     const t = useTranslations('organizations');
+    const tInv = useTranslations('invitations');
     const params = useParams();
     const id = Number(params.id);
 
     const [org, setOrg] = useState<Organization | null>(null);
+    const [orgLang, setOrgLang] = useState<'pl' | 'en'>('pl');
     const [teams, setTeams] = useState<Team[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState("");
@@ -62,7 +65,8 @@ export default function OrganizationDetailsPage() {
                     api.teams.list(),
                 ]);
                 setOrg(orgData as Organization);
-                
+                setOrgLang(((orgData as Organization).language ?? 'pl') as 'pl' | 'en');
+
                 // Filter teams by this organization
                 const orgTeams = allTeams.filter(t => t.organization_id === id);
                 setTeams(orgTeams);
@@ -108,6 +112,16 @@ export default function OrganizationDetailsPage() {
         setEditTaxId(org.tax_id || "");
         setSaveSuccess(false);
         setShowEditOrg(true);
+    };
+
+    const handleOrgLangChange = async (lang: 'pl' | 'en') => {
+        try {
+            const updated = await api.organizations.update(id, { language: lang });
+            setOrg(updated as Organization);
+            setOrgLang(lang);
+        } catch (err) {
+            console.error("Failed to update org language:", err);
+        }
     };
 
     const handleSaveOrg = async () => {
@@ -249,6 +263,28 @@ export default function OrganizationDetailsPage() {
                                     <p className="text-base text-slate-400 italic">{t('fieldNotProvided')}</p>
                                 )}
                             </div>
+                        </div>
+                    </div>
+
+                    {/* Invitation Language */}
+                    <div className="bg-white rounded-xl border border-slate-200 p-6">
+                        <h3 className="text-sm font-semibold text-slate-900 mb-1">{tInv('orgLanguage.title')}</h3>
+                        <p className="text-sm text-slate-500 mb-4">{tInv('orgLanguage.description')}</p>
+                        <div className="flex gap-2">
+                            <Button
+                                variant={orgLang === 'pl' ? 'default' : 'outline'}
+                                size="sm"
+                                onClick={() => handleOrgLangChange('pl')}
+                            >
+                                Polski
+                            </Button>
+                            <Button
+                                variant={orgLang === 'en' ? 'default' : 'outline'}
+                                size="sm"
+                                onClick={() => handleOrgLangChange('en')}
+                            >
+                                English
+                            </Button>
                         </div>
                     </div>
                 </div>
