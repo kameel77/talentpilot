@@ -155,7 +155,16 @@
       "influencing": "Influencing",
       "relationship_building": "Relationship Building",
       "strategic_thinking": "Strategic Thinking"
-    }
+    },
+    "title": "Overview",
+    "overview": "Here's your team overview.",
+    "manageTeam": "Manage team",
+    "activeUsers": "active users",
+    "talentProfiles": "talent profiles",
+    "compare": "1:1 Comparisons",
+    "comingSoon": "Coming soon",
+    "coverageOf": "of",
+    "noTalentsEmpty": "No imported talents. Start by adding talents for team members."
   },
   "myTalents": {
     "title": "My Talents",

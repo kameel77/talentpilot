@@ -155,7 +155,16 @@
       "influencing": "Wywieranie wpływu",
       "relationship_building": "Budowanie relacji",
       "strategic_thinking": "Myślenie strategiczne"
-    }
+    },
+    "title": "Panel główny",
+    "overview": "Oto przegląd Twojego zespołu.",
+    "manageTeam": "Zarządzaj zespołem",
+    "activeUsers": "aktywnych użytkowników",
+    "talentProfiles": "profili talentowych",
+    "compare": "Porównań 1:1",
+    "comingSoon": "Wkrótce",
+    "coverageOf": "z",
+    "noTalentsEmpty": "Brak zaimportowanych talentów. Zacznij od dodania talentów dla członków zespołu."
   },
   "myTalents": {
     "title": "Moje talenty",
