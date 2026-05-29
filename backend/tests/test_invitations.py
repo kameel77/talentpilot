@@ -124,3 +124,73 @@ def test_compute_invitation_status_no_invited_at():
         invited_at = None
 
     assert compute_invitation_status(FakeUser()) == "invited"
+
+
+@patch("routers.users.send_invitation_email")
+def test_resend_invitation(mock_send, client, db_session, test_org, test_team, coach_headers):
+    """Resend endpoint re-sends email and resets invited_at."""
+    import secrets
+    import hashlib
+    from models import TeamInvitation, InvitationStatus
+    from datetime import datetime, timedelta, timezone
+
+    ghost = User(
+        email="ghost@example.com",
+        hashed_password="x",
+        full_name="Ghost User",
+        role=UserRole.USER,
+        is_active=False,
+        is_ghost=True,
+        organization_id=test_org.id,
+        invited_at=datetime.now(timezone.utc) - timedelta(days=10),
+    )
+    db_session.add(ghost)
+    db_session.flush()
+    test_team.members.append(ghost)
+
+    token = secrets.token_urlsafe(32)
+    inv = TeamInvitation(
+        user_id=ghost.id,
+        team_id=test_team.id,
+        token_hash=hashlib.sha256(token.encode()).hexdigest(),
+        status=InvitationStatus.ACTIVE,
+        expires_at=datetime.now(timezone.utc) + timedelta(days=7),
+        created_by=None,
+    )
+    db_session.add(inv)
+    db_session.commit()
+
+    old_invited_at = ghost.invited_at
+
+    response = client.post(
+        f"/api/users/{ghost.id}/resend-invitation",
+        headers=coach_headers,
+    )
+    assert response.status_code == 200
+    assert response.json()["ok"] is True
+    mock_send.assert_called_once()
+
+    db_session.refresh(ghost)
+    assert ghost.invited_at > old_invited_at
+
+
+@patch("routers.users.send_invitation_email")
+def test_resend_invitation_not_ghost(mock_send, client, db_session, test_org, coach_headers):
+    """Resend endpoint returns 400 if user is not a ghost."""
+    active_user = User(
+        email="active@example.com",
+        hashed_password="x",
+        full_name="Active User",
+        role=UserRole.USER,
+        is_active=True,
+        is_ghost=False,
+        organization_id=test_org.id,
+    )
+    db_session.add(active_user)
+    db_session.commit()
+
+    response = client.post(
+        f"/api/users/{active_user.id}/resend-invitation",
+        headers=coach_headers,
+    )
+    assert response.status_code == 400
