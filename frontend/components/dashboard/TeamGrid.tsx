@@ -1,6 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
+import { useTranslations } from "next-intl";
 import TalentBadge from "./TalentBadge";
 
 interface TeamMemberTalent {
@@ -26,6 +27,8 @@ const cardVariants = {
 };
 
 export default function TeamGrid({ members }: { members: TeamMember[] }) {
+    const t = useTranslations('teams');
+
     return (
         <div className="grid grid-cols-1 gap-5 md:grid-cols-2 xl:grid-cols-3">
             {members.map((member, index) => (
@@ -43,7 +46,7 @@ export default function TeamGrid({ members }: { members: TeamMember[] }) {
                                 {member.full_name}
                             </h3>
                             <p className="text-xs uppercase tracking-wide text-slate-400">
-                                {member.role || "Team member"}
+                                {member.role || t('teamMemberRole')}
                             </p>
                         </div>
                         <div className="h-10 w-10 rounded-full bg-slate-100 text-sm font-semibold text-slate-500 flex items-center justify-center">
@@ -67,7 +70,7 @@ export default function TeamGrid({ members }: { members: TeamMember[] }) {
                             ))
                         ) : (
                             <span className="text-sm text-slate-500">
-                                No talents assigned yet.
+                                {t('noTalentsAssigned')}
                             </span>
                         )}
                     </div>

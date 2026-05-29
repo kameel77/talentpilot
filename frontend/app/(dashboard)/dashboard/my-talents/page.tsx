@@ -1,9 +1,11 @@
 "use client";
 
 import { useState, useEffect } from 'react';
+import { useTranslations } from 'next-intl';
 import { Button } from '@/components/ui/button';
 import { TalentImportDialog } from '@/components/talent-import/TalentImportDialog';
 import { DOMAIN_LABELS, DOMAIN_CSS_KEY, GALLUP_TALENTS, GallupDomain } from '@/lib/gallup-data';
+import { getLocaleFromCookie } from '@/lib/locale';
 import { UserTalent } from '@/types/talent';
 import { Card } from '@/components/ui/card';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -40,9 +42,10 @@ interface ManualFields {
 interface TalentListViewProps {
     talents: UserTalent[];
     viewMode: 'top5' | 'top15' | 'all' | 'bottom5';
+    locale: string;
 }
 
-function TalentListView({ talents, viewMode }: TalentListViewProps) {
+function TalentListView({ talents, viewMode, locale }: TalentListViewProps) {
     const limit = viewMode === 'top5' ? 5 : viewMode === 'top15' ? 15 : 34;
     let displayTalents = talents;
 
@@ -72,7 +75,7 @@ function TalentListView({ talents, viewMode }: TalentListViewProps) {
                 return (
                     <div key={domain}>
                         <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2">
-                            {DOMAIN_LABELS[domain].pl}
+                            {locale === 'en' ? DOMAIN_LABELS[domain].en : DOMAIN_LABELS[domain].pl}
                         </p>
                         <div className="flex flex-wrap gap-2">
                             {domainTalents.map(({ talent, rank }) => (
@@ -89,7 +92,7 @@ function TalentListView({ talents, viewMode }: TalentListViewProps) {
                                     >
                                         {rank}
                                     </span>
-                                    {talent.pl}
+                                    {locale === 'en' ? talent.en : talent.pl}
                                 </div>
                             ))}
                         </div>
@@ -100,7 +103,7 @@ function TalentListView({ talents, viewMode }: TalentListViewProps) {
     );
 }
 
-function DomainSummary({ talents }: { talents: UserTalent[] }) {
+function DomainSummary({ talents, locale, talentsCountLabel }: { talents: UserTalent[]; locale: string; talentsCountLabel: (count: number) => string }) {
     const top15 = talents.filter(t => t.rank <= 15);
 
     const domainCounts = top15.reduce((acc, userTalent) => {
@@ -123,8 +126,10 @@ function DomainSummary({ talents }: { talents: UserTalent[] }) {
                 return (
                     <div key={domain} className="space-y-1">
                         <div className="flex items-center justify-between text-sm">
-                            <span className="font-medium">{DOMAIN_LABELS[domain].pl}</span>
-                            <span className="text-muted-foreground">{count} talentów</span>
+                            <span className="font-medium">
+                                {locale === 'en' ? DOMAIN_LABELS[domain].en : DOMAIN_LABELS[domain].pl}
+                            </span>
+                            <span className="text-muted-foreground">{talentsCountLabel(count)}</span>
                         </div>
                         <div className="h-2 bg-muted rounded-full overflow-hidden">
                             <div
@@ -143,6 +148,8 @@ function DomainSummary({ talents }: { talents: UserTalent[] }) {
 }
 
 function EmptyTalentsView({ onImport }: { onImport: () => void }) {
+    const t = useTranslations('myTalents');
+
     return (
         <Card className="p-8 text-center border-slate-200/60 shadow-sm">
             <div className="max-w-md mx-auto space-y-6">
@@ -150,31 +157,24 @@ function EmptyTalentsView({ onImport }: { onImport: () => void }) {
                     <Sparkles className="h-10 w-10 text-primary" />
                 </div>
                 <div className="space-y-2">
-                    <h2 className="text-xl font-semibold">Moje talenty Gallup</h2>
-                    <p className="text-muted-foreground">
-                        Importuj swój raport Gallup lub wprowadź talenty ręcznie, aby odblokować spersonalizowane wskazówki i analizy
-                    </p>
+                    <h2 className="text-xl font-semibold">{t('noTalentsTitle')}</h2>
+                    <p className="text-muted-foreground">{t('noTalentsDesc')}</p>
                 </div>
                 <div className="space-y-3">
                     <Button size="lg" onClick={onImport} className="bg-gradient-primary hover:opacity-90 transition-opacity">
                         <Upload className="h-5 w-5 mr-2" />
-                        Importuj talenty
+                        {t('importTalents')}
                     </Button>
-                    <p className="text-xs text-muted-foreground">
-                        Możesz zaimportować PDF z raportem Gallup lub wprowadzić talenty ręcznie
-                    </p>
                 </div>
 
                 <div className="pt-6 border-t border-slate-200/60 space-y-3 text-left">
-                    <p className="text-sm font-medium text-center text-muted-foreground">Co zyskasz?</p>
                     <div className="grid gap-3">
                         <div className="flex items-start gap-3 text-sm">
                             <div className="rounded-lg p-1.5 domain-executing">
                                 <Star className="h-4 w-4" />
                             </div>
                             <div>
-                                <p className="font-medium">Analiza mocnych stron</p>
-                                <p className="text-muted-foreground">Poznaj swoje naturalne talenty</p>
+                                <p className="font-medium">{t('superpowersTitle')}</p>
                             </div>
                         </div>
                         <div className="flex items-start gap-3 text-sm">
@@ -182,8 +182,7 @@ function EmptyTalentsView({ onImport }: { onImport: () => void }) {
                                 <Lightbulb className="h-4 w-4" />
                             </div>
                             <div>
-                                <p className="font-medium">Spersonalizowane wskazówki</p>
-                                <p className="text-muted-foreground">Codzienne porady dopasowane do Ciebie</p>
+                                <p className="font-medium">{t('quickTips')}</p>
                             </div>
                         </div>
                         <div className="flex items-start gap-3 text-sm">
@@ -191,8 +190,7 @@ function EmptyTalentsView({ onImport }: { onImport: () => void }) {
                                 <MessageCircle className="h-4 w-4" />
                             </div>
                             <div>
-                                <p className="font-medium">Instrukcja obsługi</p>
-                                <p className="text-muted-foreground">Pomóż innym lepiej z Tobą współpracować</p>
+                                <p className="font-medium">{t('userManual')}</p>
                             </div>
                         </div>
                     </div>
@@ -210,6 +208,7 @@ function ManualSection({
     iconColorClass,
     value,
     placeholder,
+    emptyText,
     editing,
     editValue,
     onEditChange,
@@ -220,6 +219,7 @@ function ManualSection({
     iconColorClass: string;
     value?: string;
     placeholder: string;
+    emptyText: string;
     editing: boolean;
     editValue: string;
     onEditChange: (v: string) => void;
@@ -241,7 +241,7 @@ function ManualSection({
                 />
             ) : (
                 <p className="text-sm text-muted-foreground leading-relaxed whitespace-pre-wrap">
-                    {value || <span className="italic text-slate-400">Nie uzupełniono jeszcze. Kliknij &quot;Edytuj&quot; lub wygeneruj przez AI.</span>}
+                    {value || <span className="italic text-slate-400">{emptyText}</span>}
                 </p>
             )}
         </Card>
@@ -249,6 +249,9 @@ function ManualSection({
 }
 
 export default function MyTalentsPage() {
+    const t = useTranslations('myTalents');
+    const locale = getLocaleFromCookie();
+
     const [talentImportOpen, setTalentImportOpen] = useState(false);
     const [myTalents, setMyTalents] = useState<UserTalent[]>([]);
     const [talentViewMode, setTalentViewMode] = useState<'top5' | 'top15' | 'all' | 'bottom5'>('top15');
@@ -389,20 +392,20 @@ export default function MyTalentsPage() {
                 onOpenChange={setTalentImportOpen}
                 onSave={handleTalentsSave}
                 initialTalents={myTalents}
-                memberName="Moje talenty"
+                memberName={t('title')}
                 userId={currentUser?.id}
             />
 
             {/* Header */}
             <div className="flex items-center justify-between">
                 <div>
-                    <h1 className="text-headline">Moje talenty</h1>
-                    <p className="text-body">Twoje centrum talentów i wskazówek</p>
+                    <h1 className="text-headline">{t('title')}</h1>
+                    <p className="text-body">{t('pageSubtitle')}</p>
                 </div>
                 {hasTalents && (
                     <Button variant="outline" onClick={() => setTalentImportOpen(true)}>
                         <Edit3 className="h-4 w-4 mr-2" />
-                        Edytuj talenty
+                        {t('editTalents')}
                     </Button>
                 )}
             </div>
@@ -421,31 +424,33 @@ export default function MyTalentsPage() {
                                         <Trophy className="h-5 w-5" />
                                     </div>
                                     <div>
-                                        <h2 className="text-title">Top talenty</h2>
+                                        <h2 className="text-title">{t('topTalentsTitle')}</h2>
                                         {dominantDomain && (
                                             <p className="text-sm text-muted-foreground">
-                                                Dominująca domena: <span className="font-medium">{DOMAIN_LABELS[dominantDomain].pl}</span>
+                                                {t('dominantDomain')}: <span className="font-medium">
+                                                    {locale === 'en' ? DOMAIN_LABELS[dominantDomain].en : DOMAIN_LABELS[dominantDomain].pl}
+                                                </span>
                                             </p>
                                         )}
                                     </div>
                                 </div>
                                 <Tabs value={talentViewMode} onValueChange={(v) => setTalentViewMode(v as 'top5' | 'top15' | 'all' | 'bottom5')}>
                                     <TabsList className="h-8">
-                                        <TabsTrigger value="top5" className="text-xs px-2 h-6">Top 5</TabsTrigger>
-                                        <TabsTrigger value="top15" className="text-xs px-2 h-6">Top 15</TabsTrigger>
-                                        <TabsTrigger value="all" className="text-xs px-2 h-6">1-34</TabsTrigger>
-                                        <TabsTrigger value="bottom5" className="text-xs px-2 h-6">30-34</TabsTrigger>
+                                        <TabsTrigger value="top5" className="text-xs px-2 h-6">{t('viewTop5')}</TabsTrigger>
+                                        <TabsTrigger value="top15" className="text-xs px-2 h-6">{t('viewTop15')}</TabsTrigger>
+                                        <TabsTrigger value="all" className="text-xs px-2 h-6">{t('viewAll')}</TabsTrigger>
+                                        <TabsTrigger value="bottom5" className="text-xs px-2 h-6">{t('viewBottom5')}</TabsTrigger>
                                     </TabsList>
                                 </Tabs>
                             </div>
-                            <TalentListView talents={myTalents} viewMode={talentViewMode} />
+                            <TalentListView talents={myTalents} viewMode={talentViewMode} locale={locale} />
                         </Card>
 
-                        {/* Instrukcja obsługi header */}
+                        {/* User Manual header */}
                         <div className="flex items-center justify-between">
                             <div>
-                                <h2 className="text-lg font-semibold text-slate-900">Instrukcja obsługi</h2>
-                                <p className="text-sm text-muted-foreground">Jak najlepiej ze mną współpracować</p>
+                                <h2 className="text-lg font-semibold text-slate-900">{t('userManual')}</h2>
+                                <p className="text-sm text-muted-foreground">{t('manualSubtitle')}</p>
                             </div>
                             <div className="flex items-center gap-2">
                                 {generateError && (
@@ -464,23 +469,22 @@ export default function MyTalentsPage() {
                                         ) : (
                                             <Sparkles className="h-4 w-4" />
                                         )}
-                                        {generating ? 'Generuję...' : 'Generuj przez AI'}
+                                        {generating ? t('generatingAI') : t('generateManual')}
                                     </Button>
                                 )}
                                 {!editingManual ? (
                                     <Button variant="outline" size="sm" onClick={startEditing} className="gap-2">
                                         <Pencil className="h-4 w-4" />
-                                        Edytuj
+                                        {t('editManual')}
                                     </Button>
                                 ) : (
                                     <div className="flex items-center gap-2">
                                         <Button variant="outline" size="sm" onClick={cancelEditing} className="gap-1.5">
                                             <X className="h-4 w-4" />
-                                            Anuluj
                                         </Button>
                                         <Button size="sm" onClick={saveManual} disabled={savingManual} className="gap-1.5 bg-indigo-600 hover:bg-indigo-700">
                                             {savingManual ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
-                                            Zapisz
+                                            {t('saveManual')}
                                         </Button>
                                     </div>
                                 )}
@@ -491,7 +495,7 @@ export default function MyTalentsPage() {
                             <Card className="p-6 border-indigo-200 bg-indigo-50/40 shadow-sm">
                                 <div className="flex items-center gap-3 text-indigo-700">
                                     <Loader2 className="h-5 w-5 animate-spin" />
-                                    <p className="text-sm font-medium">AI analizuje Twoje talenty i generuje instrukcję obsługi…</p>
+                                    <p className="text-sm font-medium">{t('aiAnalyzing')}</p>
                                 </div>
                             </Card>
                         )}
@@ -499,11 +503,12 @@ export default function MyTalentsPage() {
                         {/* Superpowers */}
                         <ManualSection
                             icon={<ThumbsUp className="h-5 w-5" />}
-                            title="Mocne strony"
+                            title={t('superpowersTitle')}
                             colorClass="bg-emerald-50/20 dark:bg-emerald-950/20"
                             iconColorClass="bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
                             value={userDetail?.superpowers}
-                            placeholder="Twoje naturalne mocne strony i unikalna wartość dla zespołu…"
+                            placeholder={t('superpowersPlaceholder')}
+                            emptyText={t('notFilledYet')}
                             editing={editingManual}
                             editValue={editFields.superpowers}
                             onEditChange={v => setEditFields(f => ({ ...f, superpowers: v }))}
@@ -513,22 +518,24 @@ export default function MyTalentsPage() {
                         <div className="grid gap-6 md:grid-cols-2">
                             <ManualSection
                                 icon={<Smile className="h-5 w-5" />}
-                                title="Motywatory"
+                                title={t('motivatorsTitle')}
                                 colorClass="bg-amber-50/20 dark:bg-amber-950/20"
                                 iconColorClass="bg-amber-500/10 text-amber-600 dark:text-amber-400"
                                 value={userDetail?.motivators}
-                                placeholder="Co daje Ci energię i motywację do działania…"
+                                placeholder={t('motivatorsPlaceholder')}
+                                emptyText={t('notFilledYet')}
                                 editing={editingManual}
                                 editValue={editFields.motivators}
                                 onEditChange={v => setEditFields(f => ({ ...f, motivators: v }))}
                             />
                             <ManualSection
                                 icon={<Ban className="h-5 w-5" />}
-                                title="Blokady"
+                                title={t('blockersTitle')}
                                 colorClass="bg-rose-50/20 dark:bg-rose-950/20"
                                 iconColorClass="bg-rose-500/10 text-rose-600 dark:text-rose-400"
                                 value={userDetail?.blockers}
-                                placeholder="Co spowalnia, frustruje lub drażni Cię we współpracy…"
+                                placeholder={t('blockersPlaceholder')}
+                                emptyText={t('notFilledYet')}
                                 editing={editingManual}
                                 editValue={editFields.blockers}
                                 onEditChange={v => setEditFields(f => ({ ...f, blockers: v }))}
@@ -538,11 +545,12 @@ export default function MyTalentsPage() {
                         {/* Feedback style */}
                         <ManualSection
                             icon={<MessageCircle className="h-5 w-5" />}
-                            title="Jak dawać mi feedback"
+                            title={t('feedbackStyleTitle')}
                             colorClass=""
                             iconColorClass="bg-primary/10 text-primary"
                             value={userDetail?.feedback_style}
-                            placeholder="Forma, timing i styl komunikacji przy feedbacku…"
+                            placeholder={t('feedbackStylePlaceholder')}
+                            emptyText={t('notFilledYet')}
                             editing={editingManual}
                             editValue={editFields.feedback_style}
                             onEditChange={v => setEditFields(f => ({ ...f, feedback_style: v }))}
@@ -557,9 +565,13 @@ export default function MyTalentsPage() {
                                 <div className="rounded-xl bg-primary/10 p-2.5 text-primary">
                                     <Star className="h-5 w-5" />
                                 </div>
-                                <h2 className="text-title">Rozkład domen</h2>
+                                <h2 className="text-title">{t('domainDistribution')}</h2>
                             </div>
-                            <DomainSummary talents={myTalents} />
+                            <DomainSummary
+                                talents={myTalents}
+                                locale={locale}
+                                talentsCountLabel={(count) => t('talentsCount', { count })}
+                            />
                         </Card>
 
                         {/* Quick Tips */}
@@ -568,14 +580,14 @@ export default function MyTalentsPage() {
                                 <div className="rounded-xl bg-domain-strategic-light p-2.5 text-domain-strategic">
                                     <Lightbulb className="h-5 w-5" />
                                 </div>
-                                <h2 className="text-title">Szybkie podpowiedzi</h2>
+                                <h2 className="text-title">{t('quickTips')}</h2>
                             </div>
                             <div className="space-y-3">
                                 {[
-                                    { icon: Target, tip: 'Zacznij dzień od ustalenia 3 najważniejszych celów', domain: 'executing' as GallupDomain },
-                                    { icon: Zap, tip: 'Wykorzystaj swoje talenty do planowania spotkań', domain: 'strategic_thinking' as GallupDomain },
-                                    { icon: MessageCircle, tip: 'Dziel się swoją perspektywą — Twój głos ma znaczenie', domain: 'influencing' as GallupDomain },
-                                    { icon: ThumbsUp, tip: 'Buduj głębokie relacje, nie powierzchowne kontakty', domain: 'relationship_building' as GallupDomain },
+                                    { icon: Target, domain: 'executing' as GallupDomain },
+                                    { icon: Zap, domain: 'strategic_thinking' as GallupDomain },
+                                    { icon: MessageCircle, domain: 'influencing' as GallupDomain },
+                                    { icon: ThumbsUp, domain: 'relationship_building' as GallupDomain },
                                 ].map((item, i) => (
                                     <div
                                         key={i}
@@ -588,13 +600,13 @@ export default function MyTalentsPage() {
                                         )}
                                     >
                                         <item.icon className="h-4 w-4 mt-0.5 shrink-0" />
-                                        <span>{item.tip}</span>
+                                        <span>{locale === 'en' ? DOMAIN_LABELS[item.domain].en : DOMAIN_LABELS[item.domain].pl}</span>
                                     </div>
                                 ))}
                             </div>
                             <Button variant="outline" className="w-full mt-4" asChild>
                                 <Link href="/dashboard/tips">
-                                    Więcej wskazówek
+                                    {t('moreTips')}
                                     <ChevronRight className="h-4 w-4" />
                                 </Link>
                             </Button>
@@ -602,21 +614,19 @@ export default function MyTalentsPage() {
 
                         {/* Share Profile Card */}
                         <Card className="p-6 bg-gradient-to-br from-primary/5 to-primary/10 border-slate-200/60 shadow-sm">
-                            <h3 className="font-semibold mb-2">Udostępnij swój profil</h3>
-                            <p className="text-sm text-muted-foreground mb-4">
-                                Pozwól zespołowi lepiej zrozumieć Twoje talenty i preferencje współpracy
-                            </p>
+                            <h3 className="font-semibold mb-2">{t('shareProfile')}</h3>
+                            <p className="text-sm text-muted-foreground mb-4">{t('shareProfileDesc')}</p>
                             {currentUser?.public_token || currentUser?.public_slug ? (
                                 <Button variant="outline" className="w-full" asChild>
                                     <Link href={`/aboutme/${currentUser.public_slug || currentUser.public_token}`} target="_blank">
-                                        Otwórz wizytówkę
+                                        {t('openBusinessCard')}
                                         <ChevronRight className="h-4 w-4" />
                                     </Link>
                                 </Button>
                             ) : (
                                 <Button variant="outline" className="w-full" asChild>
                                     <Link href="/dashboard/settings">
-                                        Skonfiguruj w Ustawieniach
+                                        {t('configureInSettings')}
                                         <ChevronRight className="h-4 w-4" />
                                     </Link>
                                 </Button>

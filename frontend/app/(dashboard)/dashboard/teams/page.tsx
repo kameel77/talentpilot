@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 import { api, tokenManager, type Team } from "@/lib/api";
 import { Users, Plus, Loader2, Save } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -23,6 +24,9 @@ interface OrgOption {
 }
 
 export default function TeamsPage() {
+    const t = useTranslations('teams');
+    const tCommon = useTranslations('common');
+
     const [teams, setTeams] = useState<Team[]>([]);
     const [orgs, setOrgs] = useState<OrgOption[]>([]);
     const [loading, setLoading] = useState(true);
@@ -52,7 +56,7 @@ export default function TeamsPage() {
             setTeams(teamsData);
             setOrgs(orgsData);
         } catch {
-            setError("Nie udało się pobrać zespołów.");
+            setError(t('loadError'));
         } finally {
             setLoading(false);
         }
@@ -70,7 +74,7 @@ export default function TeamsPage() {
         setCreateError(null);
 
         if (!organizationId) {
-            setCreateError("Wybierz organizację.");
+            setCreateError(t('selectOrgError'));
             return;
         }
 
@@ -85,7 +89,7 @@ export default function TeamsPage() {
         } catch (err: unknown) {
             const error = err as { response?: { data?: { detail?: unknown } } };
             const detail = error?.response?.data?.detail;
-            setCreateError(typeof detail === "string" ? detail : "Nie udało się utworzyć zespołu.");
+            setCreateError(typeof detail === "string" ? detail : t('createError'));
         } finally {
             setCreating(false);
         }
@@ -96,7 +100,7 @@ export default function TeamsPage() {
             <div className="flex h-[400px] items-center justify-center">
                 <div className="flex flex-col items-center gap-2">
                     <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
-                    <p className="text-sm font-medium text-slate-500">Pobieranie zespołów…</p>
+                    <p className="text-sm font-medium text-slate-500">{t('loadingTeams')}</p>
                 </div>
             </div>
         );
@@ -106,15 +110,15 @@ export default function TeamsPage() {
         <div className="space-y-10">
             <div className="flex flex-wrap items-center justify-between gap-6">
                 <div>
-                    <h1 className="text-3xl font-bold font-heading text-slate-900 tracking-tight">Zespoły</h1>
+                    <h1 className="text-3xl font-bold font-heading text-slate-900 tracking-tight">{t('title')}</h1>
                     <p className="mt-2 text-slate-500 max-w-2xl">
-                        Zarządzaj zespołami i analizuj ich kompozycje talentowe.
+                        {t('manageTeamsDesc')}
                     </p>
                 </div>
                 {canCreate && (
                     <Button onClick={openModal}>
                         <Plus className="h-4 w-4 mr-2" />
-                        Dodaj zespół
+                        {t('addTeam')}
                     </Button>
                 )}
             </div>
@@ -130,14 +134,14 @@ export default function TeamsPage() {
                     <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-white shadow-sm">
                         <Users className="h-8 w-8 text-slate-400" />
                     </div>
-                    <h3 className="text-lg font-semibold text-slate-900">Brak zespołów</h3>
+                    <h3 className="text-lg font-semibold text-slate-900">{t('noTeams')}</h3>
                     <p className="mt-2 text-slate-500 max-w-xs mx-auto">
-                        Nie masz jeszcze żadnych zespołów. Stwórz swój pierwszy.
+                        {t('noTeamsDesc')}
                     </p>
                     {canCreate && (
                         <Button onClick={openModal} className="mt-6">
                             <Plus className="h-4 w-4 mr-2" />
-                            Dodaj zespół
+                            {t('addTeam')}
                         </Button>
                     )}
                 </div>
@@ -159,7 +163,7 @@ export default function TeamsPage() {
                             </div>
                             <div className="mt-8 flex items-center gap-2 text-sm text-slate-500">
                                 <Users className="h-4 w-4" />
-                                <span>{team.members_count ?? 0} członków</span>
+                                <span>{t('membersCount', { count: team.members_count ?? 0 })}</span>
                             </div>
                         </Link>
                     ))}
@@ -172,16 +176,16 @@ export default function TeamsPage() {
                     <DialogHeader>
                         <DialogTitle className="flex items-center gap-2 text-xl">
                             <Users className="h-5 w-5 text-blue-600" />
-                            Dodaj zespół
+                            {t('createTeamTitle')}
                         </DialogTitle>
                         <DialogDescription>
-                            Zespół jest tworzony w ramach wybranej organizacji.
+                            {t('createTeamDesc')}
                         </DialogDescription>
                     </DialogHeader>
 
                     <form onSubmit={handleCreate} className="space-y-4 py-2">
                         <div className="space-y-2">
-                            <Label htmlFor="team-name">Nazwa zespołu *</Label>
+                            <Label htmlFor="team-name">{t('teamNameLabel')}</Label>
                             <Input
                                 id="team-name"
                                 value={name}
@@ -193,7 +197,7 @@ export default function TeamsPage() {
                         </div>
 
                         <div className="space-y-2">
-                            <Label htmlFor="team-org">Organizacja *</Label>
+                            <Label htmlFor="team-org">{t('orgLabel')}</Label>
                             <select
                                 id="team-org"
                                 className="bg-white border border-slate-200 text-slate-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5"
@@ -201,7 +205,7 @@ export default function TeamsPage() {
                                 onChange={(e) => setOrganizationId(e.target.value)}
                                 required
                             >
-                                <option value="">— wybierz organizację —</option>
+                                <option value="">{t('selectOrg')}</option>
                                 {orgs.map((org) => (
                                     <option key={org.id} value={org.id}>{org.name}</option>
                                 ))}
@@ -216,13 +220,13 @@ export default function TeamsPage() {
 
                         <DialogFooter className="pt-2">
                             <DialogClose asChild>
-                                <Button type="button" variant="outline" disabled={creating}>Anuluj</Button>
+                                <Button type="button" variant="outline" disabled={creating}>{tCommon('cancel')}</Button>
                             </DialogClose>
                             <Button type="submit" disabled={creating}>
                                 {creating ? (
-                                    <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Tworzenie…</>
+                                    <><Loader2 className="h-4 w-4 mr-2 animate-spin" />{t('creating')}</>
                                 ) : (
-                                    <><Save className="h-4 w-4 mr-2" />Utwórz zespół</>
+                                    <><Save className="h-4 w-4 mr-2" />{t('createTeam')}</>
                                 )}
                             </Button>
                         </DialogFooter>

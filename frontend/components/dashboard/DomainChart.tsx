@@ -7,26 +7,27 @@ import {
     ResponsiveContainer,
     Tooltip,
 } from "recharts";
+import { useTranslations } from "next-intl";
 
 const DOMAIN_CONFIG = [
     {
         key: "executing",
-        label: "Executing",
+        labelKey: "domains.executing" as const,
         color: "var(--color-domain-executing)",
     },
     {
         key: "influencing",
-        label: "Influencing",
+        labelKey: "domains.influencing" as const,
         color: "var(--color-domain-influencing)",
     },
     {
         key: "relationship_building",
-        label: "Relationship",
+        labelKey: "domains.relationship_building" as const,
         color: "var(--color-domain-relationship)",
     },
     {
         key: "strategic_thinking",
-        label: "Strategic",
+        labelKey: "domains.strategic_thinking" as const,
         color: "var(--color-domain-strategic)",
     },
 ];
@@ -36,8 +37,11 @@ export default function DomainChart({
 }: {
     talents: { domain: string }[];
 }) {
+    const t = useTranslations('dashboard');
+    const tTeams = useTranslations('teams');
+
     const data = DOMAIN_CONFIG.map((domain) => ({
-        name: domain.label,
+        name: t(domain.labelKey),
         value: talents.filter((talent) =>
             talent.domain
                 ?.toLowerCase()
@@ -53,10 +57,10 @@ export default function DomainChart({
         <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
             <div className="flex items-center justify-between">
                 <h3 className="text-lg font-semibold text-slate-900">
-                    Gallup Domains
+                    {tTeams('gallupDomains')}
                 </h3>
                 <span className="text-xs uppercase tracking-wide text-slate-400">
-                    Top talents
+                    {tTeams('topTalentsShort')}
                 </span>
             </div>
             {hasData ? (
@@ -104,7 +108,7 @@ export default function DomainChart({
                 </div>
             ) : (
                 <p className="mt-6 text-sm text-slate-500">
-                    No domain data yet. Assign talents to reveal the balance.
+                    {tTeams('noDomainData')}
                 </p>
             )}
         </div>

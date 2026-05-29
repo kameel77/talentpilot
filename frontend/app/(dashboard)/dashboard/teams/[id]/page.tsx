@@ -3,6 +3,8 @@
 import { useEffect, useState, useCallback, useRef } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
+import { useTranslations } from "next-intl";
+import { getLocaleFromCookie } from "@/lib/locale";
 import { api } from "@/lib/api";
 
 import MatrixDashboard from "@/components/dashboard/MatrixDashboard";
@@ -59,6 +61,10 @@ interface Team {
 }
 
 export default function TeamDetailPage() {
+    const t = useTranslations('teams');
+    const tCommon = useTranslations('common');
+    const locale = getLocaleFromCookie();
+
     const params = useParams();
     const teamId = parseInt(params.id as string);
 
@@ -71,14 +77,14 @@ export default function TeamDetailPage() {
     const [allTalents, setAllTalents] = useState<Talent[]>([]);
     const [loading, setLoading] = useState(true);
     const [showMatrix, setShowMatrix] = useState(false);
-    
+
     // Add Member State
     const [showAddMember, setShowAddMember] = useState(false);
     const [memberForm, setMemberForm] = useState({ name: '', email: '', role: '' });
     const [selectedTalents, setSelectedTalents] = useState<number[]>([0, 0, 0, 0, 0]);
     const [submitLoading, setSubmitLoading] = useState(false);
     const [error, setError] = useState("");
-    
+
     // Edit Member State
     const [editingMember, setEditingMember] = useState<{ id: string | number, name: string, email: string, role: string } | null>(null);
     const [editError, setEditError] = useState('');
@@ -88,7 +94,7 @@ export default function TeamDetailPage() {
     } | null>(null);
     const [replacingMember, setReplacingMember] = useState(false);
     const [membersSearch, setMembersSearch] = useState('');
-    
+
     // PDF Import State
     const pdfImportRef = useRef<HTMLInputElement>(null);
     const triggerPdfImport = () => pdfImportRef.current?.click();
@@ -124,21 +130,21 @@ export default function TeamDetailPage() {
     const handleAddMember = async (e: React.FormEvent) => {
         e.preventDefault();
         setError("");
-        
+
         if (!memberForm.name || !memberForm.email) {
-            setError("Imię i nazwisko oraz email są wymagane.");
+            setError(t('fullNameLabel') + " " + t('emailLabel'));
             return;
         }
 
         const validTalents = selectedTalents.filter(t => t > 0);
         if (validTalents.length > 0 && validTalents.length !== 5) {
-            setError("Wybierz dokładnie 5 talentów lub żadnego.");
+            setError(t('top5TalentsOptional'));
             return;
         }
 
         try {
             setSubmitLoading(true);
-            
+
             const payload: GhostInvitePayload = {
                 team_id: teamId,
                 full_name: memberForm.name,
@@ -154,16 +160,16 @@ export default function TeamDetailPage() {
             }
 
             await api.invitations.createGhostInvite(payload);
-            
+
             setShowAddMember(false);
             setMemberForm({ name: '', email: '', role: '' });
             setSelectedTalents([0, 0, 0, 0, 0]);
             await loadTeamData();
-            
+
         } catch (err: unknown) {
             console.error(err);
             const detail = (err as {response?: {data?: {detail?: string}}}).response?.data?.detail;
-            setError(detail || "Wystąpił błąd podczas dodawania użytkownika.");
+            setError(detail || tCommon('error'));
         } finally {
             setSubmitLoading(false);
         }
@@ -194,7 +200,7 @@ export default function TeamDetailPage() {
                 }
             }
             const detail = axiosErr.response?.data?.detail;
-            const msg = typeof detail === 'string' ? detail : typeof detail === 'object' && detail?.message ? detail.message : 'Wystąpił błąd podczas edycji.';
+            const msg = typeof detail === 'string' ? detail : typeof detail === 'object' && detail?.message ? detail.message : tCommon('error');
             setEditError(msg);
         }
     };
@@ -208,7 +214,7 @@ export default function TeamDetailPage() {
             await loadTeamData();
         } catch (err) {
             console.error(err);
-            alert('Błąd podczas zamiany członka zespołu.');
+            alert(tCommon('error'));
         } finally {
             setReplacingMember(false);
         }
@@ -218,7 +224,7 @@ export default function TeamDetailPage() {
         const previousMembers = [...members];
         try {
             const newManagerId = member.is_leader ? null : parseInt(member.id as string, 10);
-            
+
             // Optimistic update for UI responsiveness
             setMembers(members.map(m => ({
                 ...m,
@@ -230,7 +236,7 @@ export default function TeamDetailPage() {
         } catch (err) {
             console.error(err);
             setMembers(previousMembers);
-            alert("Błąd podczas zmiany lidera. Sprawdź, czy masz odpowiednie uprawnienia.");
+            alert(tCommon('error'));
         }
     };
 
@@ -243,8 +249,8 @@ export default function TeamDetailPage() {
         setPdfImportItems(items);
         setShowPdfImport(true);
 
-        // Pobierz świeżą listę talentów z API - nie polegaj na allTalents ze stanu,
-        // który może być pusty w momencie wywołania (race condition)
+        // Fetch fresh talents list from API - don't rely on allTalents state
+        // which might be empty at call time (race condition)
         let currentTalents = allTalents;
         if (currentTalents.length === 0) {
             try {
@@ -260,7 +266,7 @@ export default function TeamDetailPage() {
             try {
                 const data = await api.gallup.parsePdf(files[i]);
                 const name = `${data.first_name || ''} ${data.last_name || ''}`.trim() || files[i].name.replace('.pdf', '');
-                
+
                 const rankingsData = data.rankings || {};
                 const mappedTalents = Object.entries(rankingsData).map(([talentCode, rank]) => {
                     const found = currentTalents.find(at => at.code === talentCode || at.translation?.name === talentCode);
@@ -288,7 +294,7 @@ export default function TeamDetailPage() {
                 setPdfImportItems(prev => prev.map((it, idx) => idx === i ? { ...it, name, status: 'success' } : it));
             } catch (err: unknown) {
                 const errorObj = err as { response?: { data?: { detail?: string } }, message?: string };
-                const msg = errorObj.response?.data?.detail || errorObj.message || 'Error';
+                const msg = errorObj.response?.data?.detail || errorObj.message || tCommon('error');
                 setPdfImportItems(prev => prev.map((it, idx) => idx === i ? { ...it, status: 'error', error: msg } : it));
             }
         }
@@ -296,13 +302,13 @@ export default function TeamDetailPage() {
     };
 
     const handleRemoveMember = async (userId: number) => {
-        if (!confirm("Czy na pewno chcesz usunąć tego członka z zespołu?")) return;
+        if (!confirm(t('confirmRemoveMember'))) return;
         try {
             await api.teams.removeMember(teamId, userId);
             await loadTeamData();
         } catch (err) {
             console.error(err);
-            alert("Błąd podczas usuwania członka.");
+            alert(tCommon('error'));
         }
     };
 
@@ -312,17 +318,17 @@ export default function TeamDetailPage() {
         setSelectedTalents(newTalents);
     };
 
-    const filteredMembers = members.filter(m => 
-        m.name.toLowerCase().includes(membersSearch.toLowerCase()) || 
+    const filteredMembers = members.filter(m =>
+        m.name.toLowerCase().includes(membersSearch.toLowerCase()) ||
         (m.role || '').toLowerCase().includes(membersSearch.toLowerCase())
     );
 
     if (loading) {
-        return <div className="text-gray-600">Loading team...</div>;
+        return <div className="text-gray-600">{tCommon('loading')}</div>;
     }
 
     if (!team) {
-        return <div className="text-red-600">Team not found</div>;
+        return <div className="text-red-600">{tCommon('notFound')}</div>;
     }
 
     return (
@@ -330,7 +336,7 @@ export default function TeamDetailPage() {
             <div className="flex items-start justify-between rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
                 <div>
                     <div className="relative">
-                        <button 
+                        <button
                             onClick={() => setDropdownOpen(!dropdownOpen)}
                             className="flex items-center gap-2 text-3xl font-bold text-slate-900 mb-2 hover:opacity-80 transition-opacity"
                         >
@@ -342,25 +348,25 @@ export default function TeamDetailPage() {
                                 <div className="fixed inset-0 z-10" onClick={() => setDropdownOpen(false)} />
                                 <div className="absolute top-full left-0 mt-2 w-72 bg-white border border-slate-200 shadow-xl rounded-xl z-20 py-2 overflow-hidden">
                                     <div className="px-3 py-2 text-xs font-semibold text-slate-500 uppercase tracking-wider bg-slate-50 border-b border-slate-100 mb-1">
-                                        Zmień kontekst zespołu
+                                        {t('switchContext')}
                                     </div>
                                     <div className="max-h-64 overflow-y-auto">
                                         {allTeams.length === 0 ? (
-                                            <div className="px-4 py-3 text-sm text-slate-500 text-center">Brak innych zespołów</div>
+                                            <div className="px-4 py-3 text-sm text-slate-500 text-center">{t('noOtherTeams')}</div>
                                         ) : (
-                                            allTeams.map(t => (
+                                            allTeams.map(tm => (
                                                 <button
-                                                    key={t.id}
+                                                    key={tm.id}
                                                     onClick={() => {
                                                         setDropdownOpen(false);
-                                                        if (t.id !== team.id) {
-                                                            router.push(`/dashboard/teams/${t.id}`);
+                                                        if (tm.id !== team.id) {
+                                                            router.push(`/dashboard/teams/${tm.id}`);
                                                         }
                                                     }}
-                                                    className={`w-full text-left px-4 py-2.5 text-sm flex items-center justify-between hover:bg-slate-50 transition-colors ${t.id === team.id ? 'text-primary font-medium bg-blue-50/50 hover:bg-blue-50' : 'text-slate-700'}`}
+                                                    className={`w-full text-left px-4 py-2.5 text-sm flex items-center justify-between hover:bg-slate-50 transition-colors ${tm.id === team.id ? 'text-primary font-medium bg-blue-50/50 hover:bg-blue-50' : 'text-slate-700'}`}
                                                 >
-                                                    <span className="truncate">{t.name}</span>
-                                                    {t.id === team.id && <Check className="w-4 h-4 text-primary shrink-0 ml-2" />}
+                                                    <span className="truncate">{tm.name}</span>
+                                                    {tm.id === team.id && <Check className="w-4 h-4 text-primary shrink-0 ml-2" />}
                                                 </button>
                                             ))
                                         )}
@@ -379,34 +385,34 @@ export default function TeamDetailPage() {
                         onClick={() => setShowMatrix(!showMatrix)}
                         className="rounded-lg font-medium"
                     >
-                        {showMatrix ? "Ukryj matrycę" : "Pokaż matrycę zespołu"}
+                        {showMatrix ? t('hideMatrix') : t('showMatrix')}
                     </Button>
-                    
-                    <Button 
+
+                    <Button
                         variant="secondary"
                         onClick={triggerPdfImport}
                         className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white shadow-sm"
                     >
                         <Upload className="h-4 w-4" />
-                        Importuj PDF
+                        {t('importPdf')}
                     </Button>
                     <Dialog open={showAddMember} onOpenChange={setShowAddMember}>
                         <DialogTrigger asChild>
                             <Button className="inline-flex items-center gap-2 rounded-xl bg-primary text-white shadow-sm">
                                 <UserPlus className="h-4 w-4" />
-                                Dodaj członka
+                                {t('addMember')}
                             </Button>
                         </DialogTrigger>
                         <DialogContent className="max-w-xl max-h-[90vh] overflow-y-auto">
                             <DialogHeader>
-                                <DialogTitle>Dodaj członka do zespołu</DialogTitle>
+                                <DialogTitle>{t('addMemberTitle')}</DialogTitle>
                                 <DialogDescription>
-                                    Wprowadź dane użytkownika. Zostanie mu utworzone konto (Ghost) przypisane do zespołu.
+                                    {t('addMemberDesc')}
                                 </DialogDescription>
                             </DialogHeader>
                             <form onSubmit={handleAddMember} className="grid gap-4 mt-4">
                                 <div className="grid gap-2">
-                                    <Label htmlFor="name">Imię i nazwisko *</Label>
+                                    <Label htmlFor="name">{t('fullNameLabel')}</Label>
                                     <Input
                                         id="name"
                                         value={memberForm.name}
@@ -415,7 +421,7 @@ export default function TeamDetailPage() {
                                     />
                                 </div>
                                 <div className="grid gap-2">
-                                    <Label htmlFor="email">Email *</Label>
+                                    <Label htmlFor="email">{t('emailLabel')}</Label>
                                     <Input
                                         id="email"
                                         type="email"
@@ -425,7 +431,7 @@ export default function TeamDetailPage() {
                                     />
                                 </div>
                                 <div className="grid gap-2">
-                                    <Label htmlFor="role">Rola / Stanowisko</Label>
+                                    <Label htmlFor="role">{t('roleLabel')}</Label>
                                     <Input
                                         id="role"
                                         value={memberForm.role}
@@ -434,7 +440,7 @@ export default function TeamDetailPage() {
                                 </div>
 
                                 <div className="mt-4 border-t pt-4">
-                                    <h4 className="text-sm font-semibold mb-3">Top 5 Talentów (opcjonalnie)</h4>
+                                    <h4 className="text-sm font-semibold mb-3">{t('top5TalentsOptional')}</h4>
                                     <div className="space-y-3">
                                         {[1, 2, 3, 4, 5].map((rank, idx) => (
                                             <div key={rank} className="flex items-center gap-3">
@@ -446,12 +452,14 @@ export default function TeamDetailPage() {
                                                     value={selectedTalents[idx]}
                                                     onChange={(e) => handleTalentChange(idx, parseInt(e.target.value))}
                                                 >
-                                                    <option value={0}>-- Wybierz talent --</option>
-                                                    {allTalents.map(t => {
-                                                        const localTalent = GALLUP_TALENTS.find(gt => gt.code === t.code || gt.en === t.code || gt.pl === t.code);
-                                                        const translatedName = localTalent?.pl || t.translation?.name || t.code;
+                                                    <option value={0}>{t('selectTalent')}</option>
+                                                    {allTalents.map(talent => {
+                                                        const localTalent = GALLUP_TALENTS.find(gt => gt.code === talent.code || gt.en === talent.code || gt.pl === talent.code);
+                                                        const translatedName = locale === 'en'
+                                                            ? (localTalent?.en || talent.translation?.name || talent.code)
+                                                            : (localTalent?.pl || talent.translation?.name || talent.code);
                                                         return (
-                                                            <option key={t.id} value={t.id} disabled={selectedTalents.includes(t.id) && selectedTalents[idx] !== t.id}>
+                                                            <option key={talent.id} value={talent.id} disabled={selectedTalents.includes(talent.id) && selectedTalents[idx] !== talent.id}>
                                                                 {translatedName}
                                                             </option>
                                                         );
@@ -469,10 +477,10 @@ export default function TeamDetailPage() {
                                 )}
                                 <div className="flex justify-end gap-3 mt-4 border-t pt-4">
                                     <Button type="button" variant="outline" onClick={() => setShowAddMember(false)}>
-                                        Anuluj
+                                        {tCommon('cancel')}
                                     </Button>
                                     <Button type="submit" disabled={submitLoading}>
-                                        {submitLoading ? "Dodawanie..." : "Zapisz"}
+                                        {submitLoading ? t('adding') : tCommon('save')}
                                     </Button>
                                 </div>
                             </form>
@@ -489,11 +497,11 @@ export default function TeamDetailPage() {
                 <div className="p-6 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                     <div>
                         <h2 className="text-xl font-semibold text-slate-900">
-                            Członkowie Zespołu <span className="text-sm font-normal text-slate-500 ml-2">({members.length})</span>
+                            {t('membersTableTitle')} <span className="text-sm font-normal text-slate-500 ml-2">({members.length})</span>
                         </h2>
-                        <p className="text-sm text-slate-500 mt-1">Zarządzaj osobami w tym zespole i ich profilami talentowymi.</p>
+                        <p className="text-sm text-slate-500 mt-1">{t('membersTableDesc')}</p>
                     </div>
-                    
+
                     <div className="flex items-center gap-3 w-full sm:w-auto">
                         <div className="relative flex-1 sm:w-64">
                             <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -501,7 +509,7 @@ export default function TeamDetailPage() {
                             </div>
                             <input
                                 type="text"
-                                placeholder="Szukaj członka..."
+                                placeholder={t('searchMember')}
                                 className="block w-full pl-10 pr-3 py-2 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-primary focus:border-primary transition-shadow bg-slate-50 focus:bg-white"
                                 value={membersSearch}
                                 onChange={(e) => setMembersSearch(e.target.value)}
@@ -515,9 +523,9 @@ export default function TeamDetailPage() {
                         <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-4">
                             <UserPlus className="w-8 h-8 text-slate-400" />
                         </div>
-                        <h3 className="text-lg font-medium text-slate-900 mb-1">Brak członków</h3>
+                        <h3 className="text-lg font-medium text-slate-900 mb-1">{t('noMembers')}</h3>
                         <p className="text-slate-500 max-w-sm mx-auto">
-                            Ten zespół jest obecnie pusty. Dodaj członków ręcznie lub zaimportuj ich z raportów Gallup.
+                            {t('teamEmptyDesc')}
                         </p>
                     </div>
                 ) : (
@@ -525,10 +533,10 @@ export default function TeamDetailPage() {
                         <table className="w-full text-left border-collapse">
                             <thead>
                                 <tr className="bg-slate-50/80 border-b border-slate-200">
-                                    <th className="py-4 px-6 text-xs font-semibold text-slate-500 uppercase tracking-wider">Osoba</th>
-                                    <th className="py-4 px-6 text-xs font-semibold text-slate-500 uppercase tracking-wider">Rola / Stanowisko</th>
-                                    <th className="py-4 px-6 text-xs font-semibold text-slate-500 uppercase tracking-wider">Top 5 Talentów</th>
-                                    <th className="py-4 px-6 text-xs font-semibold text-slate-500 uppercase tracking-wider text-right">Akcje</th>
+                                    <th className="py-4 px-6 text-xs font-semibold text-slate-500 uppercase tracking-wider">{t('columnPerson')}</th>
+                                    <th className="py-4 px-6 text-xs font-semibold text-slate-500 uppercase tracking-wider">{t('columnRole')}</th>
+                                    <th className="py-4 px-6 text-xs font-semibold text-slate-500 uppercase tracking-wider">{t('columnTop5')}</th>
+                                    <th className="py-4 px-6 text-xs font-semibold text-slate-500 uppercase tracking-wider text-right">{t('columnActions')}</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-slate-100">
@@ -548,43 +556,47 @@ export default function TeamDetailPage() {
                                                         <div className="font-medium text-slate-900 group-hover/link:text-blue-600 transition-colors flex items-center gap-2">
                                                             {member.name}
                                                             {member.is_leader && (
-                                                                <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-amber-100 text-amber-600" title="Lider zespołu">
+                                                                <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-amber-100 text-amber-600" title={t('manager')}>
                                                                     <Crown className="w-3 h-3" />
                                                                 </span>
                                                             )}
                                                         </div>
-                                                        <div className="text-sm text-slate-500">{member.email || "Brak adresu email"}</div>
+                                                        <div className="text-sm text-slate-500">{member.email || t('noEmailAddress')}</div>
                                                     </div>
                                                 </Link>
                                             </td>
                                             <td className="py-4 px-6">
                                                 <span className="text-sm text-slate-700 bg-slate-100 px-2.5 py-1 rounded-md inline-block">
-                                                    {member.role || 'Brak stanowiska'}
+                                                    {member.role || t('noRole')}
                                                 </span>
                                             </td>
                                             <td className="py-4 px-6">
                                                 <div className="flex flex-wrap gap-1.5 max-w-md">
-                                                    {top5.length > 0 ? top5.map((t) => {
-                                                        const localTalentInfo = GALLUP_TALENTS.find(gt => gt.code === t.talent || gt.en === t.talent || gt.pl === t.talent || gt.code.toLowerCase() === t.talent.toLowerCase());
-                                                        const translatedName = localTalentInfo?.pl || t.talent;
-                                                        const translatedDesc = localTalentInfo?.pl_desc || undefined;
+                                                    {top5.length > 0 ? top5.map((tr) => {
+                                                        const localTalentInfo = GALLUP_TALENTS.find(gt => gt.code === tr.talent || gt.en === tr.talent || gt.pl === tr.talent || gt.code.toLowerCase() === tr.talent.toLowerCase());
+                                                        const translatedName = locale === 'en'
+                                                            ? (localTalentInfo?.en || tr.talent)
+                                                            : (localTalentInfo?.pl || tr.talent);
+                                                        const translatedDesc = locale === 'en'
+                                                            ? (localTalentInfo?.en_desc || undefined)
+                                                            : (localTalentInfo?.pl_desc || undefined);
 
                                                         return (
                                                             <div
-                                                                key={t.talent}
+                                                                key={tr.talent}
                                                                 className={cn(
                                                                     "relative inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium border transition-colors hover:[&>.talent-tooltip]:opacity-100",
-                                                                    `domain-${DOMAIN_CSS_KEY[t.domain as keyof typeof DOMAIN_CSS_KEY] || t.domain}`
+                                                                    `domain-${DOMAIN_CSS_KEY[tr.domain as keyof typeof DOMAIN_CSS_KEY] || tr.domain}`
                                                                 )}
                                                             >
                                                                 <span
                                                                     className="w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold text-white shadow-sm"
-                                                                    style={{ backgroundColor: `var(--color-domain-${DOMAIN_CSS_KEY[t.domain as keyof typeof DOMAIN_CSS_KEY] || t.domain})` }}
+                                                                    style={{ backgroundColor: `var(--color-domain-${DOMAIN_CSS_KEY[tr.domain as keyof typeof DOMAIN_CSS_KEY] || tr.domain})` }}
                                                                 >
-                                                                    {t.rank}
+                                                                    {tr.rank}
                                                                 </span>
                                                                 {translatedName}
-                                                                
+
                                                                 {translatedDesc && (
                                                                     <div className="talent-tooltip pointer-events-none absolute bottom-full left-1/2 mb-2 w-64 -translate-x-1/2 rounded-lg bg-slate-900 px-3 py-2 text-xs text-slate-100 opacity-0 shadow-lg transition-opacity z-50 whitespace-normal text-center">
                                                                         {translatedDesc}
@@ -593,30 +605,30 @@ export default function TeamDetailPage() {
                                                             </div>
                                                         );
                                                     }) : (
-                                                        <span className="text-sm text-slate-400 italic">Brak wprowadzonych talentów</span>
+                                                        <span className="text-sm text-slate-400 italic">{t('noTalentsEntered')}</span>
                                                     )}
                                                 </div>
                                             </td>
                                             <td className="py-4 px-6 text-right">
                                                 <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                                                    <button 
+                                                    <button
                                                         onClick={() => toggleLeader(member)}
                                                         className={`p-2 rounded-lg transition-colors ${member.is_leader ? 'text-amber-600 bg-amber-50 hover:bg-amber-100' : 'text-slate-400 hover:text-slate-600 hover:bg-slate-100'}`}
-                                                        title={member.is_leader ? "Odbierz status lidera" : "Ustaw jako lidera"}
+                                                        title={member.is_leader ? t('noManager') : t('manager')}
                                                     >
                                                         <Crown className="w-4 h-4" />
                                                     </button>
-                                                    <button 
+                                                    <button
                                                         onClick={() => setEditingMember({ id: member.id, name: member.name, email: member.email || '', role: member.role || '' })}
                                                         className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-                                                        title="Edytuj dane"
+                                                        title={tCommon('edit')}
                                                     >
                                                         <Edit2 className="w-4 h-4" />
                                                     </button>
-                                                    <button 
+                                                    <button
                                                         onClick={() => handleRemoveMember(parseInt(member.id as string))}
                                                         className="p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors"
-                                                        title="Usuń członka z zespołu"
+                                                        title={t('removeMember')}
                                                     >
                                                         <Trash2 className="w-4 h-4" />
                                                     </button>
@@ -628,7 +640,7 @@ export default function TeamDetailPage() {
                                 {filteredMembers.length === 0 && members.length > 0 && (
                                     <tr>
                                         <td colSpan={4} className="py-8 text-center text-slate-500">
-                                            Nie znaleziono osób pasujących do wyszukiwania.
+                                            {t('searchNoResults')}
                                         </td>
                                     </tr>
                                 )}
@@ -642,20 +654,20 @@ export default function TeamDetailPage() {
             <Dialog open={!!editingMember} onOpenChange={(open) => { if (!open) { setEditingMember(null); setEditError(''); } }}>
                 <DialogContent>
                     <DialogHeader>
-                        <DialogTitle>Edytuj członka zespołu</DialogTitle>
+                        <DialogTitle>{t('editMemberTitle')}</DialogTitle>
                     </DialogHeader>
                     {editingMember && (
                         <form onSubmit={handleEditMemberSubmit} className="space-y-4">
                             <div className="space-y-2">
-                                <Label>Imię i nazwisko</Label>
+                                <Label>{t('fullNameEditLabel')}</Label>
                                 <Input value={editingMember.name} onChange={e => setEditingMember({...editingMember, name: e.target.value})} required />
                             </div>
                             <div className="space-y-2">
-                                <Label>Email</Label>
+                                <Label>{t('emailEditLabel')}</Label>
                                 <Input type="email" value={editingMember.email} onChange={e => setEditingMember({...editingMember, email: e.target.value})} required />
                             </div>
                             <div className="space-y-2">
-                                <Label>Stanowisko</Label>
+                                <Label>{t('roleEditLabel')}</Label>
                                 <Input value={editingMember.role} onChange={e => setEditingMember({...editingMember, role: e.target.value})} />
                             </div>
                             {editError && (
@@ -664,8 +676,8 @@ export default function TeamDetailPage() {
                                 </div>
                             )}
                             <div className="flex justify-end gap-3 pt-4">
-                                <Button type="button" variant="outline" onClick={() => { setEditingMember(null); setEditError(''); }}>Anuluj</Button>
-                                <Button type="submit">Zapisz zmiany</Button>
+                                <Button type="button" variant="outline" onClick={() => { setEditingMember(null); setEditError(''); }}>{tCommon('cancel')}</Button>
+                                <Button type="submit">{t('saveChanges')}</Button>
                             </div>
                         </form>
                     )}
@@ -678,10 +690,10 @@ export default function TeamDetailPage() {
                     <DialogHeader>
                         <DialogTitle className="flex items-center gap-2">
                             <AlertTriangle className="h-5 w-5 text-amber-500" />
-                            Email jest już zajęty
+                            {t('emailConflictTitle')}
                         </DialogTitle>
                         <DialogDescription>
-                            Podany adres email należy do istniejącego użytkownika w systemie.
+                            {t('emailConflictDesc')}
                         </DialogDescription>
                     </DialogHeader>
                     {conflictData && (
@@ -698,18 +710,17 @@ export default function TeamDetailPage() {
                                 </div>
                             </div>
                             <p className="text-sm text-slate-600">
-                                Czy chcesz <strong>dodać tę osobę do zespołu</strong> i przenieść talenty z obecnego profilu ghost?
-                                Ghost user zostanie usunięty.
+                                {t('emailConflictBody')}
                             </p>
                             <div className="flex justify-end gap-3 pt-2">
                                 <Button variant="outline" onClick={() => setConflictData(null)} disabled={replacingMember}>
-                                    Anuluj
+                                    {tCommon('cancel')}
                                 </Button>
                                 <Button onClick={handleReplaceMember} disabled={replacingMember}>
                                     {replacingMember ? (
-                                        <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Przenoszenie...</>
+                                        <><Loader2 className="h-4 w-4 mr-2 animate-spin" />{t('moving')}</>
                                     ) : (
-                                        'Dodaj do zespołu'
+                                        t('addToTeam')
                                     )}
                                 </Button>
                             </div>
@@ -732,12 +743,12 @@ export default function TeamDetailPage() {
             <Dialog open={showPdfImport} onOpenChange={setShowPdfImport}>
                 <DialogContent className="max-w-md">
                     <DialogHeader>
-                        <DialogTitle>Importowanie raportów Gallup</DialogTitle>
+                        <DialogTitle>{t('importingPdf')}</DialogTitle>
                         <DialogDescription>
-                            Przetwarzanie wybranych plików PDF...
+                            {t('importingPdfDesc')}
                         </DialogDescription>
                     </DialogHeader>
-                    
+
                     <div className="mt-4 max-h-[60vh] overflow-y-auto space-y-3">
                         {pdfImportItems.map((item, idx) => (
                             <div key={idx} className={`p-3 rounded-xl border flex items-center gap-3 ${
@@ -759,10 +770,10 @@ export default function TeamDetailPage() {
                                     <p className={`text-xs ${
                                         item.status === 'error' ? 'text-rose-600' : 'text-slate-500'
                                     }`}>
-                                        {item.status === 'success' ? 'Zaimportowano pomyślnie' :
-                                         item.status === 'error' ? (item.error || 'Błąd przetwarzania') :
-                                         item.status === 'processing' ? 'Analizowanie raportu...' :
-                                         'Oczekuje w kolejce...'}
+                                        {item.status === 'success' ? t('importSuccess') :
+                                         item.status === 'error' ? (item.error || t('importError')) :
+                                         item.status === 'processing' ? t('importProcessing') :
+                                         t('importPending')}
                                     </p>
                                 </div>
                             </div>
@@ -770,11 +781,11 @@ export default function TeamDetailPage() {
                     </div>
 
                     <div className="mt-6 flex justify-end">
-                        <Button 
+                        <Button
                             onClick={() => setShowPdfImport(false)}
                             disabled={pdfImportItems.some(i => i.status === 'processing' || i.status === 'pending')}
                         >
-                            Zamknij
+                            {tCommon('close')}
                         </Button>
                     </div>
                 </DialogContent>

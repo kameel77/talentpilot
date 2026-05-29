@@ -1,7 +1,9 @@
 "use client";
 
 import { useState } from 'react';
+import { useTranslations } from 'next-intl';
 import { GALLUP_TALENTS, getDomainStyle, DOMAIN_LABELS, GallupDomain, getTalentsByDomain } from '@/lib/gallup-data';
+import { getLocaleFromCookie } from '@/lib/locale';
 import { teamTalentRanks, teamDomainScores } from '@/lib/team-algorithms';
 import { Grid3x3, PieChart, Search } from 'lucide-react';
 import {
@@ -29,6 +31,9 @@ interface MatrixDashboardProps {
 }
 
 export default function MatrixDashboard({ members }: MatrixDashboardProps) {
+    const t = useTranslations('teams');
+    const locale = getLocaleFromCookie();
+
     const [activeTab, setActiveTab] = useState<'matrix' | 'domains'>('matrix');
     const [matrixSearch, setMatrixSearch] = useState('');
     const [showTop15Domains, setShowTop15Domains] = useState(true);
@@ -69,7 +74,7 @@ export default function MatrixDashboard({ members }: MatrixDashboardProps) {
     const domainCountData = (Object.entries(domainCounts) as [GallupDomain, number][])
         .filter(([, count]) => count > 0)
         .map(([domain, count]) => ({
-            name: DOMAIN_LABELS[domain]?.pl || domain,
+            name: locale === 'en' ? DOMAIN_LABELS[domain]?.en : DOMAIN_LABELS[domain]?.pl,
             value: count,
             color: getDomainStyle(domain),
         }));
@@ -78,7 +83,7 @@ export default function MatrixDashboard({ members }: MatrixDashboardProps) {
         ? teamDomainScores(membersRankMaps, talentsByDomainMap)
         : [];
     const radarData = domainScores.map(ds => ({
-        domain: DOMAIN_LABELS[ds.domain]?.pl || ds.domain,
+        domain: locale === 'en' ? DOMAIN_LABELS[ds.domain]?.en : DOMAIN_LABELS[ds.domain]?.pl,
         value: Math.max(0, Math.round(ds.score * 10) / 10),
         score: ds.score,
         color: getDomainStyle(ds.domain),
@@ -97,24 +102,24 @@ export default function MatrixDashboard({ members }: MatrixDashboardProps) {
                 <button
                     onClick={() => setActiveTab('matrix')}
                     className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                        activeTab === 'matrix' 
-                        ? 'bg-slate-900 text-white' 
+                        activeTab === 'matrix'
+                        ? 'bg-slate-900 text-white'
                         : 'bg-white text-slate-600 hover:bg-slate-50 border border-slate-200'
                     }`}
                 >
                     <Grid3x3 className="w-4 h-4" />
-                    Matryca
+                    {t('matrix')}
                 </button>
                 <button
                     onClick={() => setActiveTab('domains')}
                     className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                        activeTab === 'domains' 
-                        ? 'bg-slate-900 text-white' 
+                        activeTab === 'domains'
+                        ? 'bg-slate-900 text-white'
                         : 'bg-white text-slate-600 hover:bg-slate-50 border border-slate-200'
                     }`}
                 >
                     <PieChart className="w-4 h-4" />
-                    Domeny
+                    {t('domains')}
                 </button>
 
                 {activeTab === 'matrix' && (
@@ -122,7 +127,7 @@ export default function MatrixDashboard({ members }: MatrixDashboardProps) {
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                         <input
                             type="text"
-                            placeholder="Szukaj osoby..."
+                            placeholder={t('searchPerson')}
                             value={matrixSearch}
                             onChange={e => setMatrixSearch(e.target.value)}
                             className="pl-9 pr-4 py-2 text-sm border border-slate-200 rounded-lg w-64 focus:outline-none focus:ring-2 focus:ring-slate-900 focus:border-transparent"
@@ -135,7 +140,7 @@ export default function MatrixDashboard({ members }: MatrixDashboardProps) {
                 <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
                     {membersWithResults.length === 0 ? (
                         <div className="p-12 text-center text-slate-500">
-                            Brak danych o talentach. Dodaj wyniki talentów członkom zespołu.
+                            {t('noTalentData')}
                         </div>
                     ) : (
                         <div className="overflow-x-auto">
@@ -143,7 +148,7 @@ export default function MatrixDashboard({ members }: MatrixDashboardProps) {
                                 <thead>
                                     <tr className="bg-slate-50">
                                         <th className="sticky left-0 bg-slate-50 z-10 px-4 py-3 font-semibold text-slate-900 min-w-[200px] border-b border-r border-slate-200">
-                                            Imię i nazwisko
+                                            {t('personColumn')}
                                         </th>
                                         {GALLUP_TALENTS.map(talent => (
                                             <th key={talent.code} className="px-2 py-4 border-b border-slate-200" style={{
@@ -155,7 +160,7 @@ export default function MatrixDashboard({ members }: MatrixDashboardProps) {
                                                 minWidth: '40px',
                                                 maxHeight: '160px',
                                             }}>
-                                                {talent.pl}
+                                                {locale === 'en' ? talent.en : talent.pl}
                                             </th>
                                         ))}
                                     </tr>
@@ -195,12 +200,12 @@ export default function MatrixDashboard({ members }: MatrixDashboardProps) {
                                             </tr>
                                         );
                                     })}
-                                    
+
                                     {/* Team Rank Row */}
                                     {teamRanks.length > 0 && (
                                         <tr className="bg-slate-50 border-t-2 border-slate-200">
                                             <td className="sticky left-0 bg-slate-50 z-10 px-4 py-3 font-bold text-slate-900 border-r border-slate-200 shadow-[1px_0_0_0_#e2e8f0]">
-                                                Ranking zespołu
+                                                {t('teamRanking')}
                                             </td>
                                             {GALLUP_TALENTS.map(talent => {
                                                 const rank = teamRankMap[talent.code];
@@ -230,7 +235,7 @@ export default function MatrixDashboard({ members }: MatrixDashboardProps) {
                                     {/* Summary Row */}
                                     <tr className="bg-white">
                                         <td className="sticky left-0 bg-white z-10 px-4 py-3 font-semibold text-xs text-slate-500 uppercase tracking-wider border-r border-slate-200 shadow-[1px_0_0_0_#e2e8f0]">
-                                            W Top 15
+                                            {t('inTop15')}
                                         </td>
                                         {GALLUP_TALENTS.map(talent => {
                                             const count = talentTop15Counts[talent.code] || 0;
@@ -258,7 +263,7 @@ export default function MatrixDashboard({ members }: MatrixDashboardProps) {
                     <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 flex flex-col">
                         <div className="flex justify-between items-center mb-6">
                             <h3 className="text-lg font-semibold text-slate-900">
-                                Reprezentacja w {showTop15Domains ? 'Top 15' : 'Top 5'}
+                                {t('representationIn', { range: showTop15Domains ? 'Top 15' : 'Top 5' })}
                             </h3>
                             <div className="flex bg-slate-100 p-1 rounded-lg">
                                 <button
@@ -275,7 +280,7 @@ export default function MatrixDashboard({ members }: MatrixDashboardProps) {
                                 </button>
                             </div>
                         </div>
-                        
+
                         {membersWithResults.length > 0 ? (
                             <div className="flex-1 min-h-[300px]">
                                 <ResponsiveContainer width="100%" height="100%">
@@ -292,12 +297,12 @@ export default function MatrixDashboard({ members }: MatrixDashboardProps) {
                                 </ResponsiveContainer>
                             </div>
                         ) : (
-                            <div className="flex-1 flex items-center justify-center text-slate-500">Brak danych</div>
+                            <div className="flex-1 flex items-center justify-center text-slate-500">{t('noData')}</div>
                         )}
                     </div>
 
                     <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 flex flex-col">
-                        <h3 className="text-lg font-semibold text-slate-900 mb-6">Potencjał Domenowy</h3>
+                        <h3 className="text-lg font-semibold text-slate-900 mb-6">{t('domainPotential')}</h3>
                         {membersWithResults.length > 0 ? (
                             <div className="flex-1 min-h-[300px]">
                                 <ResponsiveContainer width="100%" height="100%">
@@ -332,7 +337,7 @@ export default function MatrixDashboard({ members }: MatrixDashboardProps) {
                                 </ResponsiveContainer>
                             </div>
                         ) : (
-                            <div className="flex-1 flex items-center justify-center text-slate-500">Brak danych</div>
+                            <div className="flex-1 flex items-center justify-center text-slate-500">{t('noData')}</div>
                         )}
                     </div>
                 </div>

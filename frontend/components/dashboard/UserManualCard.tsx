@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { motion } from "framer-motion";
+import { useTranslations } from "next-intl";
 
 interface ManualData {
     superpowers?: string;
@@ -17,6 +18,8 @@ export default function UserManualCard({
     data: ManualData;
     onSave?: (updated: ManualData) => void;
 }) {
+    const t = useTranslations('myTalents');
+    const tCommon = useTranslations('common');
     const [editing, setEditing] = useState(false);
     const [formData, setFormData] = useState<ManualData>(data);
 
@@ -32,23 +35,23 @@ export default function UserManualCard({
     const fields: { key: keyof ManualData; label: string; placeholder: string }[] = [
         {
             key: "superpowers",
-            label: "Superpowers",
-            placeholder: "What are the natural strengths you bring to the team?",
+            label: t('superpowersTitle'),
+            placeholder: t('superpowersPlaceholder'),
         },
         {
             key: "motivators",
-            label: "Motivators",
-            placeholder: "What fuels your energy and engagement?",
+            label: t('motivatorsTitle'),
+            placeholder: t('motivatorsPlaceholder'),
         },
         {
             key: "blockers",
-            label: "Blockers",
-            placeholder: "What creates friction or drains you?",
+            label: t('blockersTitle'),
+            placeholder: t('blockersPlaceholder'),
         },
         {
             key: "feedback_style",
-            label: "Feedback Style",
-            placeholder: "How do you prefer to receive feedback?",
+            label: t('feedbackStyleTitle'),
+            placeholder: t('feedbackStylePlaceholder'),
         },
     ];
 
@@ -60,13 +63,13 @@ export default function UserManualCard({
         >
             <div className="flex items-center justify-between">
                 <h3 className="text-lg font-semibold text-slate-900">
-                    User Manual
+                    {t('userManual')}
                 </h3>
                 <button
                     onClick={() => setEditing((prev) => !prev)}
                     className="rounded-full border border-slate-200 px-4 py-1 text-xs font-semibold uppercase tracking-wide text-slate-600 transition hover:border-slate-300 hover:text-slate-800"
                 >
-                    {editing ? "Cancel" : "Edit"}
+                    {editing ? tCommon('cancel') : t('editManual')}
                 </button>
             </div>
 
@@ -87,7 +90,7 @@ export default function UserManualCard({
                             />
                         ) : (
                             <p className="text-sm text-slate-700">
-                                {formData[field.key] || "Not set yet"}
+                                {formData[field.key] || t('manualEmpty')}
                             </p>
                         )}
                     </div>
@@ -100,13 +103,13 @@ export default function UserManualCard({
                         onClick={() => setEditing(false)}
                         className="rounded-full border border-slate-200 px-4 py-2 text-xs font-semibold uppercase tracking-wide text-slate-600 hover:border-slate-300"
                     >
-                        Discard
+                        {tCommon('cancel')}
                     </button>
                     <button
                         onClick={handleSave}
                         className="rounded-full bg-indigo-600 px-4 py-2 text-xs font-semibold uppercase tracking-wide text-white shadow-sm transition hover:bg-indigo-700"
                     >
-                        Save changes
+                        {t('saveManual')}
                     </button>
                 </div>
             )}
