@@ -30,6 +30,9 @@ interface TeamMember {
     email?: string;
     role?: string;
     is_leader?: boolean;
+    is_ghost?: boolean;
+    invited_at?: string | null;
+    invitation_status?: string;
     results: MemberResult[];
 }
 
