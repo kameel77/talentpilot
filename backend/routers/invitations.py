@@ -9,6 +9,7 @@ from sqlalchemy.orm import Session
 
 from auth import hash_password, require_role, create_access_token, check_org_access
 from database import get_db
+from services.email_service import send_invitation_email
 from models import (
     InvitationStatus,
     Team,
@@ -29,6 +30,15 @@ from schemas import (
 router = APIRouter()
 
 INVITE_TTL_DAYS = 7
+
+
+def compute_invitation_status(user) -> str:
+    """Compute invitation_status from user fields. Pure function — no DB access."""
+    if user.is_active:
+        return "active"
+    if user.invited_at and user.invited_at < datetime.now(timezone.utc) - timedelta(days=7):
+        return "expired"
+    return "invited"
 
 
 def _hash_token(token: str) -> str:
@@ -150,6 +160,19 @@ def create_ghost_invite(
     db.add(invitation)
     db.commit()
     db.refresh(invitation)
+
+    # Send invitation email and record send time
+    org = team.organization
+    send_invitation_email(
+        to_email=user.email,
+        full_name=user.full_name,
+        invite_token=invite_token,
+        team_name=team.name,
+        org_name=org.name,
+        language=org.language if hasattr(org, "language") else "pl",
+    )
+    user.invited_at = datetime.now(timezone.utc)
+    db.commit()
 
     return GhostInviteResponse(
         invitation_id=invitation.id,
