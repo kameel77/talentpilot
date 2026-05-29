@@ -125,7 +125,15 @@
     "adminUsers": "Użytkownicy i dostępy",
     "adminKnowledge": "Baza wiedzy",
     "logout": "Wyloguj",
-    "myOrg": "Moja Organizacja"
+    "myOrg": "Moja Organizacja",
+    "closeMenu": "Zamknij menu",
+    "openMenu": "Otwórz menu",
+    "administration": "Administracja",
+    "availableOrgs": "Dostępne organizacje",
+    "orgFallback": "Organizacja",
+    "knowledgeFaq": "FAQ",
+    "knowledgeMerytoryka": "Merytoryka",
+    "knowledgeInstructions": "Instrukcje"
   },
   "dashboard": {
     "greeting": "Cześć, {name}!",

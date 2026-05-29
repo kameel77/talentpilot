@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useRef } from "react";
 import { useRouter, usePathname } from "next/navigation";
+import { useTranslations } from "next-intl";
 import Link from "next/link";
 import {
     LayoutDashboard,
@@ -30,6 +31,7 @@ export default function DashboardLayout({
 }) {
     const router = useRouter();
     const pathname = usePathname();
+    const t = useTranslations("nav");
     const [user, setUser] = useState<User | null>(null);
     const [loading, setLoading] = useState(true);
     const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -69,7 +71,7 @@ export default function DashboardLayout({
                     const orgs = await api.auth.getMyOrganizations();
                     setOrganizations(orgs);
                 } else if (currentUser) {
-                    setOrganizations([{id: currentUser.organization_id, name: "Moja Organizacja"}]);
+                    setOrganizations([{id: currentUser.organization_id, name: t('myOrg')}]);
                 }
                 
                 const savedOrgId = tokenManager.getActiveOrgId();
@@ -118,24 +120,24 @@ export default function DashboardLayout({
     }
 
     const navigation = [
-        { name: "Panel główny", href: "/dashboard", icon: LayoutDashboard },
-        { name: "Moje talenty", href: "/dashboard/my-talents", icon: Sparkles },
-        { name: "Q&A Copilot", href: "/dashboard/qa", icon: MessageSquare },
-        { name: "Zespół", href: "/dashboard/teams", icon: Users },
-        { name: "Porównanie 1:1", href: "/dashboard/compare", icon: GitCompare },
-        { name: "Dzienna wskazówka", href: "/dashboard/tips", icon: Zap },
+        { name: t("overview"), href: "/dashboard", icon: LayoutDashboard },
+        { name: t("myTalents"), href: "/dashboard/my-talents", icon: Sparkles },
+        { name: t("qa"), href: "/dashboard/qa", icon: MessageSquare },
+        { name: t("teams"), href: "/dashboard/teams", icon: Users },
+        { name: t("compare"), href: "/dashboard/compare", icon: GitCompare },
+        { name: t("tips"), href: "/dashboard/tips", icon: Zap },
     ];
 
     const knowledgeLinks = [
-        { name: "FAQ", href: "/dashboard/admin/knowledge/faq" },
-        { name: "Merytoryka", href: "/dashboard/admin/knowledge/merytoryka" },
-        { name: "Instrukcje", href: "/dashboard/admin/knowledge/instructions" },
+        { name: t('knowledgeFaq'), href: "/dashboard/admin/knowledge/faq" },
+        { name: t('knowledgeMerytoryka'), href: "/dashboard/admin/knowledge/merytoryka" },
+        { name: t('knowledgeInstructions'), href: "/dashboard/admin/knowledge/instructions" },
     ];
 
     const adminNavigation = [
-        { name: "Organizacje", href: "/dashboard/organizations", icon: Building },
-        { name: "Ustawienia AI", href: "/dashboard/admin/settings", icon: Shield },
-        { name: "Użytkownicy i dostępy", href: "/dashboard/admin/users", icon: Users },
+        { name: t("organizations"), href: "/dashboard/organizations", icon: Building },
+        { name: t("adminSettings"), href: "/dashboard/admin/settings", icon: Shield },
+        { name: t("adminUsers"), href: "/dashboard/admin/users", icon: Users },
     ];
 
     const sidebarContent = (
@@ -153,7 +155,7 @@ export default function DashboardLayout({
                 <button
                     onClick={() => setSidebarOpen(false)}
                     className="lg:hidden p-2 rounded-lg text-slate-400 hover:text-white hover:bg-white/10 transition-colors"
-                    aria-label="Zamknij menu"
+                    aria-label={t('closeMenu')}
                 >
                     <X className="h-5 w-5" />
                 </button>
@@ -187,7 +189,7 @@ export default function DashboardLayout({
                 {(user?.role === 'admin' || user?.role === 'coach') && (
                     <div className="mt-8">
                         <h3 className="px-4 text-[10px] font-bold uppercase tracking-widest text-slate-500 mb-2">
-                            Administracja
+                            {t('administration')}
                         </h3>
                         <div className="space-y-3">
                             {user?.role === 'admin' && (
@@ -207,7 +209,7 @@ export default function DashboardLayout({
                                                 ? "text-white"
                                                 : "text-slate-500 group-hover:text-white"
                                         )} />
-                                        Baza wiedzy
+                                        {t("adminKnowledge")}
                                     </Link>
                                     <div className="ml-8 space-y-1">
                                         {knowledgeLinks.map((item) => {
@@ -233,7 +235,7 @@ export default function DashboardLayout({
                             <div className="space-y-1">
                                 {adminNavigation.map((item) => {
                                     // Coach only sees Organizations
-                                    if (user?.role === 'coach' && item.name !== 'Organizacje') return null;
+                                    if (user?.role === 'coach' && item.href !== '/dashboard/organizations') return null;
                                     
                                     const isActive = pathname === item.href || pathname.startsWith(item.href + '/');
                                     return (
@@ -299,7 +301,7 @@ export default function DashboardLayout({
                         <button
                             onClick={() => setSidebarOpen(true)}
                             className="lg:hidden p-2 -ml-2 rounded-lg text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition-colors"
-                            aria-label="Otwórz menu"
+                            aria-label={t('openMenu')}
                         >
                             <Menu className="h-5 w-5" />
                         </button>
@@ -315,7 +317,7 @@ export default function DashboardLayout({
                                 >
                                     <Building className="h-4 w-4 text-slate-400" />
                                     <span className="max-w-[150px] truncate hidden sm:inline">
-                                        {organizations.find(o => o.id === activeOrgId)?.name || 'Organizacja'}
+                                        {organizations.find(o => o.id === activeOrgId)?.name || t('orgFallback')}
                                     </span>
                                     <ChevronDown className="h-4 w-4 text-slate-400" />
                                 </button>
@@ -323,7 +325,7 @@ export default function DashboardLayout({
                                 {orgMenuOpen && (
                                     <div className="absolute right-0 mt-2 w-56 origin-top-right rounded-xl bg-white shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none overflow-hidden flex flex-col z-50 animate-in fade-in slide-in-from-top-2 duration-150">
                                         <div className="px-3 py-2 text-xs font-semibold text-slate-500 uppercase tracking-wider bg-slate-50 border-b border-slate-100">
-                                            Dostępne organizacje
+                                            {t('availableOrgs')}
                                         </div>
                                         <div className="max-h-[300px] overflow-y-auto p-1">
                                             {organizations.map(org => (
@@ -383,7 +385,7 @@ export default function DashboardLayout({
                                             )}
                                         >
                                             <Settings className="h-4 w-4" />
-                                            Ustawienia
+                                            {t("settings")}
                                         </Link>
                                     </div>
                                     <div className="p-1 border-t border-slate-100">
@@ -395,7 +397,7 @@ export default function DashboardLayout({
                                             className="flex w-full items-center gap-2 px-3 py-2 rounded-lg text-sm text-red-600 hover:bg-red-50 transition-colors"
                                         >
                                             <LogOut className="h-4 w-4" />
-                                            Wyloguj się
+                                            {t("logout")}
                                         </button>
                                     </div>
                                 </div>
