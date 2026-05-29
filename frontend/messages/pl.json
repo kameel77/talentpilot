@@ -668,5 +668,32 @@
     "saving": "Zapisywanie...",
     "rank": "Pozycja",
     "talent": "Talent"
+  },
+  "invitations": {
+    "resend": "Wyślij ponownie",
+    "sending": "Wysyłanie...",
+    "resendSuccess": "Email wysłany ponownie",
+    "resendError": "Nie udało się wysłać emaila",
+    "status": {
+      "active": "Aktywny",
+      "invited": "Zaproszony",
+      "expired": "Wygasł"
+    },
+    "invitedDaysAgo": "{days, plural, one {# dzień temu} few {# dni temu} many {# dni temu} other {# dni temu}}",
+    "orgLanguage": {
+      "title": "Język zaproszeń",
+      "description": "Język w którym nowi członkowie otrzymają zaproszenie email."
+    }
+  },
+  "onboarding": {
+    "title": "Witaj w TalentPilot!",
+    "subtitle": "Twój zespół: {teamName}",
+    "step1Title": "Wgraj raport Gallup PDF",
+    "step1Cta": "Przejdź do Moich Talentów",
+    "step2Title": "Zobacz talenty swojego zespołu",
+    "step2Cta": "Przejdź do Zespołu",
+    "step3Title": "Zapytaj AI o swoje talenty",
+    "step3Cta": "Przejdź do Q&A",
+    "cta": "Zacznij"
   }
 }
