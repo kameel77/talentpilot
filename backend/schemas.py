@@ -38,6 +38,7 @@ class OrganizationUpdate(BaseModel):
     postal_code: Optional[str] = Field(default=None, max_length=20)
     city: Optional[str] = Field(default=None, max_length=120)
     tax_id: Optional[str] = Field(default=None, max_length=32)
+    language: Optional[str] = Field(default=None, pattern=r'^(pl|en)$')
 
 
 class OrganizationTeamSimple(BaseModel):
@@ -55,6 +56,7 @@ class OrganizationResponse(BaseModel):
     postal_code: Optional[str] = None
     city: Optional[str] = None
     tax_id: Optional[str] = None
+    language: str = "pl"
     created_at: datetime
     teams: Optional[List[OrganizationTeamSimple]] = None
 
@@ -730,6 +732,9 @@ class PresentationMember(BaseModel):
     email: Optional[str] = None
     role: Optional[str] = None
     is_leader: bool = False
+    is_ghost: bool = False
+    invited_at: Optional[datetime] = None
+    invitation_status: str = "active"
     results: List[PresentationTalentResult]
 
 
