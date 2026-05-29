@@ -164,7 +164,17 @@
     "compare": "1:1 Comparisons",
     "comingSoon": "Coming soon",
     "coverageOf": "of",
-    "noTalentsEmpty": "No imported talents. Start by adding talents for team members."
+    "noTalentsEmpty": "No imported talents. Start by adding talents for team members.",
+    "users": "users",
+    "askAboutTeam": "Ask about your team",
+    "aiCopilotHint": "Use the AI Copilot to learn more about your team's talents. Ask about a specific person, request meeting tips, or plan better collaboration.",
+    "openQA": "Open AI Assistant",
+    "yourTeam": "Your Team",
+    "noMembers": "No team members",
+    "inviteMembers": "Invite your first team members to get started with TalentPilot.",
+    "addUser": "Add user",
+    "active": "Active",
+    "viewProfile": "View profile"
   },
   "myTalents": {
     "title": "My Talents",

@@ -126,7 +126,7 @@ export default function DashboardPage() {
                     title={t("talentCoverage")}
                     value={totalUsers > 0 ? `${Math.round((usersWithTalents / totalUsers) * 100)}%` : "0%"}
                     icon={<TrendingUp className="h-5 w-5" />}
-                    description={`${usersWithTalents} ${t("coverageOf")} ${totalUsers} użytkowników`}
+                    description={`${usersWithTalents} ${t("coverageOf")} ${totalUsers} ${t("users")}`}
                 />
             </div>
 
@@ -176,13 +176,13 @@ export default function DashboardPage() {
                                 </span>
                             </div>
                             <h4 className="text-xl font-bold text-slate-900 font-heading tracking-tight">
-                                Zapytaj o swój zespół
+                                {t("askAboutTeam")}
                             </h4>
                         </div>
                     </div>
 
                     <p className="text-lg text-slate-600 leading-relaxed max-w-2xl">
-                        Użyj AI Copilota, aby dowiedzieć się więcej o talentach swojego zespołu. Zadaj pytanie o konkretną osobę, poproś o wskazówki do spotkania lub zaplanuj lepszą współpracę.
+                        {t("aiCopilotHint")}
                     </p>
 
                     <div className="mt-auto pt-8">
@@ -190,7 +190,7 @@ export default function DashboardPage() {
                             href="/dashboard/qa"
                             className="flex items-center gap-2 text-sm font-bold text-slate-900 hover:gap-3 transition-all"
                         >
-                            Otwórz Q&A Copilot
+                            {t("openQA")}
                             <ArrowRight className="h-4 w-4" />
                         </Link>
                     </div>
@@ -200,7 +200,7 @@ export default function DashboardPage() {
             {/* Team Section */}
             <div className="space-y-6">
                 <div className="flex items-center justify-between">
-                    <h3 className="text-2xl font-bold font-heading text-slate-900 tracking-tight">Twój zespół</h3>
+                    <h3 className="text-2xl font-bold font-heading text-slate-900 tracking-tight">{t("yourTeam")}</h3>
                     <Link href="/dashboard/users" className="text-sm font-bold text-primary hover:underline flex items-center gap-1">
                         {t("viewAll")}
                         <ChevronRight className="h-4 w-4" />
@@ -210,15 +210,15 @@ export default function DashboardPage() {
                 {totalUsers === 0 ? (
                     <div className="rounded-3xl border border-dashed border-slate-300 bg-slate-50/50 p-12 sm:p-16 text-center">
                         <Users className="h-12 w-12 text-slate-300 mx-auto mb-4" />
-                        <h4 className="text-lg font-semibold text-slate-700">Brak członków zespołu</h4>
+                        <h4 className="text-lg font-semibold text-slate-700">{t("noMembers")}</h4>
                         <p className="mt-2 text-sm text-slate-500">
-                            Zaproś pierwszych członków zespołu, aby rozpocząć pracę z TalentPilot.
+                            {t("inviteMembers")}
                         </p>
                         <Link
                             href="/dashboard/users"
                             className="mt-6 inline-flex items-center gap-2 rounded-xl bg-primary px-6 py-3 text-sm font-semibold text-white hover:bg-blue-700 transition-all shadow-sm"
                         >
-                            Dodaj użytkownika
+                            {t("addUser")}
                             <ArrowRight className="h-4 w-4" />
                         </Link>
                     </div>
@@ -232,6 +232,8 @@ export default function DashboardPage() {
                                 role={roleLabel(member.role, t)}
                                 email={member.email}
                                 initials={getInitials(member.full_name)}
+                                activeLabel={t("active")}
+                                viewProfileLabel={t("viewProfile")}
                             />
                         ))}
                     </div>
@@ -255,7 +257,7 @@ function DomainProgress({ label, value, color }: { label: string; value: number;
     );
 }
 
-function MemberCard({ id, name, role, email, initials }: { id: number; name: string; role: string; email: string; initials: string }) {
+function MemberCard({ id, name, role, email, initials, activeLabel, viewProfileLabel }: { id: number; name: string; role: string; email: string; initials: string; activeLabel: string; viewProfileLabel: string }) {
     return (
         <Link
             href={`/dashboard/users/${id}`}
@@ -275,10 +277,10 @@ function MemberCard({ id, name, role, email, initials }: { id: number; name: str
             <div className="flex items-center justify-between">
                 <div className="flex items-center gap-1.5">
                     <div className="h-2 w-2 rounded-full bg-emerald-500" />
-                    <span className="text-[11px] font-bold text-slate-500 uppercase tracking-tight">Aktywny</span>
+                    <span className="text-[11px] font-bold text-slate-500 uppercase tracking-tight">{activeLabel}</span>
                 </div>
                 <span className="text-xs font-semibold text-primary opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1">
-                    Zobacz profil
+                    {viewProfileLabel}
                     <ChevronRight className="h-3 w-3" />
                 </span>
             </div>

@@ -1,6 +1,9 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
+import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
+import { setLocale, getLocaleFromCookie, type Locale } from "@/lib/locale";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -43,6 +46,8 @@ import { api, tokenManager, type User as UserType, type Organization } from "@/l
 import { cn } from "@/lib/utils";
 
 export default function SettingsPage() {
+  const router = useRouter();
+  const t = useTranslations("settings");
   const [talentImportOpen, setTalentImportOpen] = useState(false);
   const [myTalents, setMyTalents] = useState<UserTalent[]>([]);
 
@@ -129,6 +134,10 @@ export default function SettingsPage() {
   const [shareFeedback, setShareFeedback] = useState(true);
   const [privacySaving, setPrivacySaving] = useState(false);
   const [privacyMsg, setPrivacyMsg] = useState<{ type: "success" | "error"; text: string } | null>(null);
+
+  // Language switcher
+  const [currentLang, setCurrentLang] = useState<Locale>(getLocaleFromCookie());
+  const [langSaving, setLangSaving] = useState(false);
 
   useEffect(() => {
     const user = tokenManager.getUser();
@@ -441,6 +450,21 @@ export default function SettingsPage() {
     setTimeout(() => setLinkCopied(false), 2000);
   };
 
+  const handleLanguageChange = async (lang: Locale) => {
+    if (lang === currentLang || !currentUser) return;
+    setLangSaving(true);
+    try {
+      await api.users.update(currentUser.id, { language: lang });
+      setCurrentLang(lang);
+      setLocale(lang);
+      router.refresh();
+    } catch {
+      // silent fail
+    } finally {
+      setLangSaving(false);
+    }
+  };
+
   const isManager = currentUser?.role === "manager";
   const canCreateOrg = currentUser?.role === "admin" || currentUser?.role === "coach";
   const publicToken = currentUser?.public_token;
@@ -582,6 +606,37 @@ export default function SettingsPage() {
                   onChange={(e) => setJobTitleEn(e.target.value)}
                   placeholder="e.g. Senior Developer"
                 />
+              </div>
+            </div>
+            {/* Language switcher */}
+            <div>
+              <p className="text-sm font-semibold text-slate-700 mb-2">{t("language.title")}</p>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => handleLanguageChange("pl")}
+                  disabled={langSaving}
+                  className={`px-4 py-2 rounded-lg text-sm font-medium border transition-all ${
+                    currentLang === "pl"
+                      ? "bg-primary text-white border-primary"
+                      : "bg-white text-slate-600 border-slate-200 hover:border-primary hover:text-primary"
+                  }`}
+                >
+                  {t("language.pl")}
+                </button>
+                <button
+                  onClick={() => handleLanguageChange("en")}
+                  disabled={langSaving}
+                  className={`px-4 py-2 rounded-lg text-sm font-medium border transition-all ${
+                    currentLang === "en"
+                      ? "bg-primary text-white border-primary"
+                      : "bg-white text-slate-600 border-slate-200 hover:border-primary hover:text-primary"
+                  }`}
+                >
+                  {t("language.en")}
+                </button>
+                {langSaving && (
+                  <span className="text-sm text-slate-500 self-center">{t("language.saving")}</span>
+                )}
               </div>
             </div>
             {profileMsg && (

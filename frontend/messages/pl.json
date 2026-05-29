@@ -164,7 +164,17 @@
     "compare": "Porównań 1:1",
     "comingSoon": "Wkrótce",
     "coverageOf": "z",
-    "noTalentsEmpty": "Brak zaimportowanych talentów. Zacznij od dodania talentów dla członków zespołu."
+    "noTalentsEmpty": "Brak zaimportowanych talentów. Zacznij od dodania talentów dla członków zespołu.",
+    "users": "użytkowników",
+    "askAboutTeam": "Zapytaj o swój zespół",
+    "aiCopilotHint": "Użyj AI Copilota, aby dowiedzieć się więcej o talentach swojego zespołu. Zadaj pytanie o konkretną osobę, poproś o wskazówki do spotkania lub zaplanuj lepszą współpracę.",
+    "openQA": "Otwórz Q&A Copilot",
+    "yourTeam": "Twój zespół",
+    "noMembers": "Brak członków zespołu",
+    "inviteMembers": "Zaproś pierwszych członków zespołu, aby rozpocząć pracę z TalentPilot.",
+    "addUser": "Dodaj użytkownika",
+    "active": "Aktywny",
+    "viewProfile": "Zobacz profil"
   },
   "myTalents": {
     "title": "Moje talenty",
