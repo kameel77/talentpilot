@@ -2,10 +2,12 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 import { api } from "@/lib/api";
 import { ArrowLeft, Mail, RefreshCw } from "lucide-react";
 
 export default function ForgotPasswordPage() {
+    const t = useTranslations("auth.forgotPassword");
     const [email, setEmail] = useState("");
     const [status, setStatus] = useState<"idle" | "loading" | "success" | "error">("idle");
     const [message, setMessage] = useState("");
@@ -18,9 +20,9 @@ export default function ForgotPasswordPage() {
             return detail;
         }
         if (Array.isArray(detail)) {
-            return detail.map((item) => item?.msg || "Błędne dane").join(", ");
+            return detail.map((item) => item?.msg || t("errorGeneric")).join(", ");
         }
-        return "Wystąpił nieoczekiwany błąd. Spróbuj powtórnie.";
+        return t("unexpectedError");
     };
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -31,7 +33,7 @@ export default function ForgotPasswordPage() {
         try {
             const res = await api.auth.forgotPassword(email);
             setStatus("success");
-            setMessage(res.message || "Wysłano link resetujący, sprawdź skrzynkę.");
+            setMessage(res.message || t("successFallback"));
         } catch (err) {
             setStatus("error");
             setMessage(getErrorMessage(err));
@@ -52,9 +54,9 @@ export default function ForgotPasswordPage() {
                     </div>
 
                     <div className="mb-8">
-                        <h1 className="text-headline mb-2">Zapomniałeś hasła?</h1>
+                        <h1 className="text-headline mb-2">{t("title")}</h1>
                         <p className="text-body">
-                            Podaj swój adres e-mail, a prześlemy Ci link do ustawienia nowego hasła.
+                            {t("subtitle")}
                         </p>
                     </div>
 
@@ -64,7 +66,7 @@ export default function ForgotPasswordPage() {
                                 <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-emerald-100 text-emerald-600">
                                     <Mail className="h-6 w-6" />
                                 </div>
-                                <h3 className="mb-2 font-bold text-emerald-900">Sprawdź swoją skrzynkę</h3>
+                                <h3 className="mb-2 font-bold text-emerald-900">{t("successTitle")}</h3>
                                 <p className="text-sm">{message}</p>
                             </div>
                             <Link 
@@ -72,7 +74,7 @@ export default function ForgotPasswordPage() {
                                 className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-slate-100 px-4 py-3 font-semibold text-slate-700 transition-colors hover:bg-slate-200"
                             >
                                 <ArrowLeft className="h-4 w-4" />
-                                Wróć do logowania
+                                {t("backToLogin")}
                             </Link>
                         </div>
                     ) : (
@@ -85,7 +87,7 @@ export default function ForgotPasswordPage() {
 
                             <div className="space-y-2">
                                 <label htmlFor="email" className="block text-sm font-semibold text-slate-700 ml-1">
-                                    Email
+                                    {t("emailLabel")}
                                 </label>
                                 <div className="relative">
                                     <Mail className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-400" />
@@ -109,10 +111,10 @@ export default function ForgotPasswordPage() {
                                 {status === "loading" ? (
                                     <>
                                         <RefreshCw className="h-5 w-5 animate-spin" />
-                                        Wysyłanie...
+                                        {t("loading")}
                                     </>
                                 ) : (
-                                    "Wyślij link"
+                                    t("submit")
                                 )}
                             </button>
 
@@ -122,7 +124,7 @@ export default function ForgotPasswordPage() {
                                     className="inline-flex items-center gap-2 text-sm font-medium text-slate-500 hover:text-slate-800 transition-colors"
                                 >
                                     <ArrowLeft className="h-4 w-4" />
-                                    Wróć do logowania
+                                    {t("backToLogin")}
                                 </Link>
                             </div>
                         </form>
@@ -137,12 +139,10 @@ export default function ForgotPasswordPage() {
                 <div className="relative z-10 flex flex-col justify-center p-12 text-white">
                     <div className="max-w-lg">
                         <h2 className="text-display mb-6">
-                            Nigdy nie trać{" "}
-                            <span className="text-domain-relationship">dostępu</span> do 
-                            swoich danych
+                            {t("heroTitle")}
                         </h2>
                         <p className="text-lg text-white/80 leading-relaxed mb-8">
-                            Dzięki szybkiemu odzyskiwaniu hasła znowu będziesz mógł analizować oraz wzmacniać kompetencje swojego zespołu w krótkim czasie.
+                            {t("heroSubtitle")}
                         </p>
                     </div>
 

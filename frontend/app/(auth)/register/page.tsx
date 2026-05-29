@@ -3,10 +3,12 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 import { api, tokenManager } from "@/lib/api";
 
 export default function RegisterPage() {
     const router = useRouter();
+    const t = useTranslations("auth.register");
     const [formData, setFormData] = useState({
         email: "",
         password: "",
@@ -97,7 +99,7 @@ export default function RegisterPage() {
 
                         <div className="space-y-1.5">
                             <label htmlFor="full_name" className="block text-sm font-semibold text-slate-700 ml-1">
-                                Your Full Name
+                                {t("nameLabel")}
                             </label>
                             <input
                                 id="full_name"
@@ -113,7 +115,7 @@ export default function RegisterPage() {
 
                         <div className="space-y-1.5">
                             <label htmlFor="email" className="block text-sm font-semibold text-slate-700 ml-1">
-                                Email
+                                {t("emailLabel")}
                             </label>
                             <input
                                 id="email"
@@ -129,7 +131,7 @@ export default function RegisterPage() {
 
                         <div className="space-y-1.5">
                             <label htmlFor="password" className="block text-sm font-semibold text-slate-700 ml-1">
-                                Password
+                                {t("passwordLabel")}
                             </label>
                             <input
                                 id="password"
@@ -150,14 +152,14 @@ export default function RegisterPage() {
                             disabled={loading}
                             className="w-full bg-primary text-white py-3.5 mt-2 rounded-xl font-bold hover:bg-blue-700 transition-all shadow-lg shadow-blue-500/10 disabled:opacity-50 disabled:cursor-not-allowed active:scale-[0.98]"
                         >
-                            {loading ? "Creating account..." : "Create Account"}
+                            {loading ? t("loading") : t("submit")}
                         </button>
                     </form>
 
                     <div className="mt-8 text-center text-sm text-slate-500 font-medium">
-                        Already have an account?{" "}
+                        {t("alreadyHaveAccount")}{" "}
                         <Link href="/login" className="text-primary hover:text-blue-700 font-bold transition-colors">
-                            Sign in
+                            {t("signIn")}
                         </Link>
                     </div>
                 </div>

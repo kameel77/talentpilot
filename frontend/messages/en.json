@@ -55,7 +55,12 @@
       "loading": "Sending...",
       "successTitle": "Check your inbox",
       "successMessage": "If the account exists, we sent a password reset link.",
-      "backToLogin": "Back to login"
+      "backToLogin": "Back to login",
+      "heroTitle": "Reset Password",
+      "heroSubtitle": "Secure access to your account",
+      "errorGeneric": "Invalid credentials",
+      "unexpectedError": "An unexpected error occurred. Please try again.",
+      "successFallback": "Reset link sent, check your inbox."
     },
     "resetPassword": {
       "title": "New password",
@@ -65,7 +70,24 @@
       "submit": "Set password",
       "loading": "Setting...",
       "successMessage": "Password changed. You can now sign in.",
-      "backToLogin": "Back to login"
+      "backToLogin": "Back to login",
+      "heroTitle": "New Password",
+      "heroSubtitle": "Set a new, secure password",
+      "missingToken": "Missing reset link from your email.",
+      "missingTokenOnSubmit": "Missing valid token.",
+      "invalidToken": "The reset link is invalid or has expired.",
+      "invalidLinkTitle": "Invalid link",
+      "backToLoginLink": "Back to login",
+      "passwordMismatch": "Passwords must be identical.",
+      "passwordMinLength": "Password must be at least 8 characters.",
+      "successFallback": "Password changed successfully.",
+      "successTitle": "Password Changed",
+      "loginNow": "Sign in now",
+      "errorGeneric": "Invalid credentials",
+      "tokenExpired": "Password reset failed, the link may have expired.",
+      "heroHeadingPart1": "Security",
+      "heroHeadingHighlight": "confirmed",
+      "heroBody": "To protect sensitive data about your entire team's strengths, we only store hashed versions of passwords and never share them with anyone."
     },
     "join": {
       "title": "Accept invitation",
@@ -74,7 +96,20 @@
       "passwordLabel": "Password",
       "submit": "Join team",
       "loading": "Joining...",
-      "invalidToken": "The invitation link is invalid or has expired."
+      "invalidToken": "The invitation link is invalid or has expired.",
+      "passwordMismatch": "Passwords do not match.",
+      "backToLogin": "Go to login",
+      "alreadyHaveAccount": "Already have an account?",
+      "signIn": "Sign in",
+      "passwordMinLength": "Min. 8 characters",
+      "invalidTokenTitle": "Invalid link",
+      "confirmPasswordLabel": "Confirm password",
+      "heroWelcome": "Welcome to",
+      "heroSubtitle": "Your team invites you to a platform that will help you understand your Gallup talents and use them to build stronger relationships at work.",
+      "heroTalents": "Gallup Talents",
+      "heroDomains": "Domains",
+      "heroOpportunities": "Opportunities",
+      "missingToken": "Missing invitation token in the link."
     }
   },
   "nav": {

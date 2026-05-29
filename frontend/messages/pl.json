@@ -55,7 +55,12 @@
       "loading": "Wysyłanie...",
       "successTitle": "Sprawdź skrzynkę",
       "successMessage": "Jeśli konto istnieje, wysłaliśmy link do resetowania hasła.",
-      "backToLogin": "Wróć do logowania"
+      "backToLogin": "Wróć do logowania",
+      "heroTitle": "Resetowanie hasła",
+      "heroSubtitle": "Bezpieczny dostęp do Twojego konta",
+      "errorGeneric": "Błędne dane",
+      "unexpectedError": "Wystąpił nieoczekiwany błąd. Spróbuj powtórnie.",
+      "successFallback": "Wysłano link resetujący, sprawdź skrzynkę."
     },
     "resetPassword": {
       "title": "Nowe hasło",
@@ -65,7 +70,24 @@
       "submit": "Ustaw hasło",
       "loading": "Ustawianie...",
       "successMessage": "Hasło zostało zmienione. Możesz się zalogować.",
-      "backToLogin": "Wróć do logowania"
+      "backToLogin": "Wróć do logowania",
+      "heroTitle": "Nowe hasło",
+      "heroSubtitle": "Ustaw nowe, bezpieczne hasło",
+      "missingToken": "Brakujący link do resetowania hasła z Twojego adresu e-mail.",
+      "missingTokenOnSubmit": "Brak prawidłowego tokenu.",
+      "invalidToken": "Link resetowania jest nieprawidłowy lub wygasł.",
+      "invalidLinkTitle": "Nieprawidłowy link",
+      "backToLoginLink": "Wróć do logowania",
+      "passwordMismatch": "Wprowadzone hasła muszą być identyczne.",
+      "passwordMinLength": "Hasło musi mieć co najmniej 8 znaków.",
+      "successFallback": "Hasło zostało pomyślnie zmienione.",
+      "successTitle": "Hasło Zmienione",
+      "loginNow": "Zaloguj się teraz",
+      "errorGeneric": "Błędne dane",
+      "tokenExpired": "Resetowanie hasła nie powiodło się, link mógł stracić ważność.",
+      "heroHeadingPart1": "Bezpieczeństwo",
+      "heroHeadingHighlight": "potwierdzone",
+      "heroBody": "Dla ochrony wrażliwych danych na temat mocnych stron całego Twojego zespołu, przechowujemy tylko zhashowane wersje haseł, nie udostępniając ich nikomu innemu."
     },
     "join": {
       "title": "Przyjmij zaproszenie",
@@ -74,7 +96,20 @@
       "passwordLabel": "Hasło",
       "submit": "Dołącz do zespołu",
       "loading": "Dołączanie...",
-      "invalidToken": "Link zaproszenia jest nieprawidłowy lub wygasł."
+      "invalidToken": "Link zaproszenia jest nieprawidłowy lub wygasł.",
+      "passwordMismatch": "Hasła nie są takie same.",
+      "backToLogin": "Przejdź do logowania",
+      "alreadyHaveAccount": "Masz już aktywne konto?",
+      "signIn": "Zaloguj się",
+      "passwordMinLength": "Min. 8 znaków",
+      "invalidTokenTitle": "Nieprawidłowy link",
+      "confirmPasswordLabel": "Potwierdź hasło",
+      "heroWelcome": "Witamy w",
+      "heroSubtitle": "Twój zespół zaprasza Cię do platformy, która pomoże Ci zrozumieć swoje talenty Gallupa i wykorzystać je do budowania silniejszych relacji w pracy.",
+      "heroTalents": "Talenty Gallupa",
+      "heroDomains": "Domeny",
+      "heroOpportunities": "Możliwości",
+      "missingToken": "Brak tokenu zaproszenia w linku."
     }
   },
   "nav": {
