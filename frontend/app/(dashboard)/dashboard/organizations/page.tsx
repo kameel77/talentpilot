@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 import { api } from "@/lib/api";
 import { Building, Plus, Loader2, Save } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -28,6 +29,7 @@ interface Organization {
 }
 
 export default function OrganizationsPage() {
+    const t = useTranslations('organizations');
     const [organizations, setOrganizations] = useState<Organization[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState("");
@@ -52,7 +54,7 @@ export default function OrganizationsPage() {
             const orgsData = await api.organizations.list();
             setOrganizations(orgsData as Organization[]);
         } catch {
-            setError("Nie udało się pobrać organizacji.");
+            setError(t('fetchError'));
         } finally {
             setLoading(false);
         }
@@ -86,7 +88,7 @@ export default function OrganizationsPage() {
         } catch (err: unknown) {
             const error = err as { response?: { data?: { detail?: unknown } } };
             const detail = error?.response?.data?.detail;
-            setCreateError(typeof detail === "string" ? detail : "Nie udało się utworzyć organizacji.");
+            setCreateError(typeof detail === "string" ? detail : t('createError'));
         } finally {
             setCreating(false);
         }
@@ -97,7 +99,7 @@ export default function OrganizationsPage() {
             <div className="flex h-[400px] items-center justify-center">
                 <div className="flex flex-col items-center gap-2">
                     <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
-                    <p className="text-sm font-medium text-slate-500">Pobieranie organizacji…</p>
+                    <p className="text-sm font-medium text-slate-500">{t('loading')}</p>
                 </div>
             </div>
         );
@@ -107,14 +109,14 @@ export default function OrganizationsPage() {
         <div className="space-y-10">
             <div className="flex flex-wrap items-center justify-between gap-6">
                 <div>
-                    <h1 className="text-3xl font-bold font-heading text-slate-900 tracking-tight">Organizacje</h1>
+                    <h1 className="text-3xl font-bold font-heading text-slate-900 tracking-tight">{t('title')}</h1>
                     <p className="mt-2 text-slate-500 max-w-2xl">
-                        Zarządzaj organizacjami, w ramach których działają zespoły.
+                        {t('subtitle')}
                     </p>
                 </div>
                 <Button onClick={openModal}>
                     <Plus className="h-4 w-4 mr-2" />
-                    Dodaj organizację
+                    {t('create')}
                 </Button>
             </div>
 
@@ -129,13 +131,13 @@ export default function OrganizationsPage() {
                     <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-white shadow-sm">
                         <Building className="h-8 w-8 text-slate-400" />
                     </div>
-                    <h3 className="text-lg font-semibold text-slate-900">Brak organizacji</h3>
+                    <h3 className="text-lg font-semibold text-slate-900">{t('noOrgs')}</h3>
                     <p className="mt-2 text-slate-500 max-w-xs mx-auto">
-                        Nie masz jeszcze dostępu do żadnych organizacji. Stwórz swoją pierwszą organizację.
+                        {t('noOrgsMessage')}
                     </p>
                     <Button onClick={openModal} className="mt-6">
                         <Plus className="h-4 w-4 mr-2" />
-                        Dodaj organizację
+                        {t('create')}
                     </Button>
                 </div>
             ) : (
@@ -169,16 +171,16 @@ export default function OrganizationsPage() {
                     <DialogHeader>
                         <DialogTitle className="flex items-center gap-2 text-xl">
                             <Building className="h-5 w-5 text-blue-600" />
-                            Dodaj organizację
+                            {t('addOrgTitle')}
                         </DialogTitle>
                         <DialogDescription>
-                            Podaj dane nowej organizacji. Tylko nazwa jest polem obowiązkowym.
+                            {t('addOrgDesc')}
                         </DialogDescription>
                     </DialogHeader>
 
                     <form onSubmit={handleCreate} className="space-y-4 py-2">
                         <div className="space-y-2">
-                            <Label htmlFor="org-name">Nazwa organizacji *</Label>
+                            <Label htmlFor="org-name">{t('orgNameLabel')}</Label>
                             <Input
                                 id="org-name"
                                 value={name}
@@ -190,7 +192,7 @@ export default function OrganizationsPage() {
                         </div>
 
                         <div className="space-y-2">
-                            <Label htmlFor="org-tax">NIP (opcjonalnie)</Label>
+                            <Label htmlFor="org-tax">{t('orgTaxLabel')}</Label>
                             <Input
                                 id="org-tax"
                                 value={taxId}
@@ -200,7 +202,7 @@ export default function OrganizationsPage() {
                         </div>
 
                         <div className="space-y-2">
-                            <Label htmlFor="org-city">Miasto (opcjonalnie)</Label>
+                            <Label htmlFor="org-city">{t('orgCityLabel')}</Label>
                             <Input
                                 id="org-city"
                                 value={city}
@@ -210,7 +212,7 @@ export default function OrganizationsPage() {
                         </div>
 
                         <div className="space-y-2">
-                            <Label htmlFor="org-street">Ulica i numer (opcjonalnie)</Label>
+                            <Label htmlFor="org-street">{t('orgStreetLabel')}</Label>
                             <Input
                                 id="org-street"
                                 value={street}
@@ -220,7 +222,7 @@ export default function OrganizationsPage() {
                         </div>
 
                         <div className="space-y-2">
-                            <Label htmlFor="org-postal">Kod pocztowy (opcjonalnie)</Label>
+                            <Label htmlFor="org-postal">{t('orgPostalLabel')}</Label>
                             <Input
                                 id="org-postal"
                                 value={postalCode}
@@ -241,9 +243,9 @@ export default function OrganizationsPage() {
                             </DialogClose>
                             <Button type="submit" disabled={creating}>
                                 {creating ? (
-                                    <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Tworzenie…</>
+                                    <><Loader2 className="h-4 w-4 mr-2 animate-spin" />{t('creating')}</>
                                 ) : (
-                                    <><Save className="h-4 w-4 mr-2" />Utwórz organizację</>
+                                    <><Save className="h-4 w-4 mr-2" />{t('createOrg')}</>
                                 )}
                             </Button>
                         </DialogFooter>

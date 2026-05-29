@@ -1,6 +1,8 @@
 "use client";
 
 import { useState, useMemo } from 'react';
+import { useTranslations } from 'next-intl';
+import { getLocaleFromCookie } from '@/lib/locale';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -21,6 +23,8 @@ const DOMAINS: GallupDomain[] = ['executing', 'influencing', 'relationship_build
 type RankingView = '5' | '15' | '34';
 
 export function ManualTalentInput({ onSave, initialTalents = [] }: ManualTalentInputProps) {
+    const t = useTranslations('talentImport');
+    const locale = getLocaleFromCookie();
     const [searchQuery, setSearchQuery] = useState('');
     const [selectedTalents, setSelectedTalents] = useState<UserTalent[]>(initialTalents);
     const [activeTab, setActiveTab] = useState<GallupDomain | 'all'>('all');
@@ -221,8 +225,8 @@ export function ManualTalentInput({ onSave, initialTalents = [] }: ManualTalentI
                                         </div>
 
                                         <div className="flex-1 min-w-0">
-                                            <p className="font-medium text-sm truncate">{talent.pl}</p>
-                                            <p className="text-[10px] text-muted-foreground truncate">{talent.en}</p>
+                                            <p className="font-medium text-sm truncate">{locale === 'en' ? talent.en : talent.pl}</p>
+                                            <p className="text-[10px] text-muted-foreground truncate">{locale === 'en' ? talent.pl : talent.en}</p>
                                         </div>
                                         <div className="shrink-0">
                                             <DomainBadge domain={talent.domain} size="sm" />
@@ -311,8 +315,8 @@ export function ManualTalentInput({ onSave, initialTalents = [] }: ManualTalentI
                                             />
                                         </div>
                                         <div className="flex-1 min-w-0">
-                                            <p className="font-medium text-sm truncate">{talent.pl}</p>
-                                            <p className="text-[10px] text-muted-foreground truncate">{talent.en}</p>
+                                            <p className="font-medium text-sm truncate">{locale === 'en' ? talent.en : talent.pl}</p>
+                                            <p className="text-[10px] text-muted-foreground truncate">{locale === 'en' ? talent.pl : talent.en}</p>
                                         </div>
                                         <div className="shrink-0">
                                             <DomainBadge domain={talent.domain} size="sm" />
@@ -349,7 +353,7 @@ export function ManualTalentInput({ onSave, initialTalents = [] }: ManualTalentI
                     onClick={handleSave}
                     disabled={selectedTalents.length === 0}
                 >
-                    Zapisz ranking talentów ({selectedTalents.length})
+                    {t('save')} ({selectedTalents.length})
                 </Button>
             </div>
         </div>

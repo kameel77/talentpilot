@@ -1,13 +1,15 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { KnowledgeEntryManager } from "@/components/knowledge/KnowledgeEntryManager";
 
 export default function KnowledgeInstructionsPage() {
+    const t = useTranslations('admin.knowledge');
     return (
         <KnowledgeEntryManager
             section="instructions"
-            title="Instrukcje odpowiedzi"
-            description="Definiuj formaty odpowiedzi AI dla różnych typów pytań. Kategoria = klasa intencji (np. shadow_sides, action_plan)."
+            title={t('instructionsTitle')}
+            description={t('instructionsDesc')}
         />
     );
 }

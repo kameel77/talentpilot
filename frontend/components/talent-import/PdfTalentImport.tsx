@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect } from 'react';
+import { useTranslations } from 'next-intl';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { DomainBadge } from '@/components/ui/DomainBadge';
@@ -36,6 +37,7 @@ interface ParsedRankings {
 }
 
 export function PdfTalentImport({ userId, onUsersChange, onImportComplete, onSwitchToManual }: PdfTalentImportProps) {
+    const t = useTranslations('talentImport');
     const [status, setStatus] = useState<ImportStatus>('idle');
     const [progress, setProgress] = useState(0);
     const [fileName, setFileName] = useState<string | null>(null);
@@ -259,7 +261,7 @@ export function PdfTalentImport({ userId, onUsersChange, onImportComplete, onSwi
                                 <Upload className="h-8 w-8 text-primary" />
                             </div>
                             <div className="space-y-2">
-                                <p className="text-lg font-semibold">Przeciągnij plik PDF lub kliknij</p>
+                                <p className="text-lg font-semibold">{t('dropzone')}</p>
                                 <p className="text-sm text-muted-foreground">
                                     Obsługujemy oficjalne raporty CliftonStrengths (Gallup)
                                 </p>
@@ -288,7 +290,7 @@ export function PdfTalentImport({ userId, onUsersChange, onImportComplete, onSwi
                         <Loader2 className="h-8 w-8 text-primary animate-spin" />
                     </div>
                     <div className="space-y-2">
-                        <p className="font-semibold">Przesyłanie pliku...</p>
+                        <p className="font-semibold">{t('uploading')}</p>
                         <p className="text-sm text-muted-foreground">{fileName}</p>
                     </div>
                     <Progress value={progress} className="w-full max-w-xs mx-auto" />
@@ -301,7 +303,7 @@ export function PdfTalentImport({ userId, onUsersChange, onImportComplete, onSwi
                         <RefreshCw className="h-8 w-8 text-primary animate-spin" />
                     </div>
                     <div className="space-y-2">
-                        <p className="font-semibold">Analizowanie raportu...</p>
+                        <p className="font-semibold">{t('processing')}</p>
                         <p className="text-sm text-muted-foreground">
                             Rozpoznajemy talenty z Twojego raportu Gallup
                         </p>
@@ -318,7 +320,7 @@ export function PdfTalentImport({ userId, onUsersChange, onImportComplete, onSwi
                                 <CheckCircle2 className="h-6 w-6 text-green-500" />
                             </div>
                             <div className="flex-1">
-                                <p className="font-semibold text-green-600">Import zakończony pomyślnie!</p>
+                                <p className="font-semibold text-green-600">{t('success')}</p>
                                 <p className="text-sm text-muted-foreground">
                                     Rozpoznano {Object.keys(parsedData.rankings).length} talentów z pliku {fileName}
                                 </p>
@@ -378,7 +380,7 @@ export function PdfTalentImport({ userId, onUsersChange, onImportComplete, onSwi
                             <AlertCircle className="h-6 w-6 text-destructive" />
                         </div>
                         <div className="flex-1 space-y-2">
-                            <p className="font-semibold text-destructive">Błąd importu</p>
+                            <p className="font-semibold text-destructive">{t('error')}</p>
                             <p className="text-sm text-muted-foreground">{errorMessage}</p>
                         </div>
                     </div>

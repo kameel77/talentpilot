@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 import { api, type Team } from "@/lib/api";
 import { Building, Users, MapPin, FileText, Calendar, ArrowLeft, Plus, Pencil, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -27,6 +28,7 @@ interface Organization {
 }
 
 export default function OrganizationDetailsPage() {
+    const t = useTranslations('organizations');
     const params = useParams();
     const id = Number(params.id);
 
@@ -66,7 +68,7 @@ export default function OrganizationDetailsPage() {
                 setTeams(orgTeams);
             } catch (err) {
                 console.error(err);
-                setError("Nie udało się pobrać szczegółów organizacji.");
+                setError(t('fetchDetailsError'));
             } finally {
                 setLoading(false);
             }
@@ -137,7 +139,7 @@ export default function OrganizationDetailsPage() {
             <div className="flex h-[400px] items-center justify-center">
                 <div className="flex flex-col items-center gap-2">
                     <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
-                    <p className="text-sm font-medium text-slate-500">Pobieranie szczegółów…</p>
+                    <p className="text-sm font-medium text-slate-500">{t('loadingDetails')}</p>
                 </div>
             </div>
         );
@@ -147,11 +149,11 @@ export default function OrganizationDetailsPage() {
         return (
             <div className="space-y-6">
                 <div className="rounded-2xl border border-rose-200 bg-rose-50 px-6 py-4 text-sm font-medium text-rose-700">
-                    {error || "Organizacja nie istnieje."}
+                    {error || t('notFound')}
                 </div>
                 <Link href="/dashboard/organizations" className="inline-flex items-center text-sm font-medium text-blue-600 hover:text-blue-700">
                     <ArrowLeft className="mr-2 h-4 w-4" />
-                    Powrót do listy
+                    {t('backToList')}
                 </Link>
             </div>
         );
@@ -166,7 +168,7 @@ export default function OrganizationDetailsPage() {
                     className="inline-flex items-center text-sm font-medium text-slate-500 hover:text-slate-900 mb-6 transition-colors"
                 >
                     <ArrowLeft className="mr-2 h-4 w-4" />
-                    Organizacje
+                    {t('title')}
                 </Link>
                 
                 <div className="flex items-start justify-between">
@@ -193,7 +195,7 @@ export default function OrganizationDetailsPage() {
                                 )}
                                 <div className="flex items-center gap-1.5">
                                     <Calendar className="h-4 w-4" />
-                                    Utworzono: {new Date(org.created_at).toLocaleDateString("pl-PL")}
+                                    {t('createdAt')} {new Date(org.created_at).toLocaleDateString("pl-PL")}
                                 </div>
                             </div>
                         </div>
@@ -208,7 +210,7 @@ export default function OrganizationDetailsPage() {
                         <div className="flex items-center justify-between mb-4">
                             <h2 className="text-lg font-bold text-slate-900 flex items-center gap-2">
                                 <FileText className="h-5 w-5 text-slate-400" />
-                                Dane firmy
+                                {t('companyData')}
                             </h2>
                             <Button
                                 variant="ghost"
@@ -217,25 +219,25 @@ export default function OrganizationDetailsPage() {
                                 onClick={openEditDialog}
                             >
                                 <Pencil className="h-3.5 w-3.5" />
-                                Edytuj
+                                {t('editCompany')}
                             </Button>
                         </div>
                         
                         <div className="space-y-4">
                             <div>
-                                <p className="text-sm font-medium text-slate-500">Nazwa</p>
+                                <p className="text-sm font-medium text-slate-500">{t('fieldName')}</p>
                                 <p className="text-base text-slate-900">{org.name}</p>
                             </div>
-                            
+
                             <div>
-                                <p className="text-sm font-medium text-slate-500">NIP</p>
+                                <p className="text-sm font-medium text-slate-500">{t('fieldTaxId')}</p>
                                 <p className="text-base text-slate-900">
-                                    {org.tax_id || <span className="text-slate-400 italic">Nie podano</span>}
+                                    {org.tax_id || <span className="text-slate-400 italic">{t('fieldNotProvided')}</span>}
                                 </p>
                             </div>
 
                             <div>
-                                <p className="text-sm font-medium text-slate-500">Adres</p>
+                                <p className="text-sm font-medium text-slate-500">{t('fieldAddress')}</p>
                                 {(org.street || org.postal_code || org.city) ? (
                                     <p className="text-base text-slate-900">
                                         {org.street && <span className="block">{org.street}</span>}
@@ -244,7 +246,7 @@ export default function OrganizationDetailsPage() {
                                         )}
                                     </p>
                                 ) : (
-                                    <p className="text-base text-slate-400 italic">Nie podano</p>
+                                    <p className="text-base text-slate-400 italic">{t('fieldNotProvided')}</p>
                                 )}
                             </div>
                         </div>
@@ -256,12 +258,12 @@ export default function OrganizationDetailsPage() {
                     <div className="flex items-center justify-between">
                         <h2 className="text-xl font-bold text-slate-900 flex items-center gap-2">
                             <Users className="h-6 w-6 text-blue-600" />
-                            Zespoły w organizacji
+                            {t('teamsInOrg')}
                         </h2>
                         {teams.length > 0 && (
                             <Button size="sm" className="gap-1.5" onClick={() => setShowNewTeam(true)}>
                                 <Plus className="h-4 w-4" />
-                                Dodaj zespół
+                                {t('addTeam')}
                             </Button>
                         )}
                     </div>
@@ -269,14 +271,14 @@ export default function OrganizationDetailsPage() {
                     {teams.length === 0 ? (
                         <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50/50 p-12 text-center">
                             <Users className="mx-auto h-8 w-8 text-slate-400 mb-3" />
-                            <h3 className="text-sm font-medium text-slate-900">Brak zespołów</h3>
+                            <h3 className="text-sm font-medium text-slate-900">{t('noTeams')}</h3>
                             <p className="mt-1 text-sm text-slate-500">
-                                W tej organizacji nie ma jeszcze żadnych zespołów. Dodaj pierwszy zespół.
+                                {t('noTeamsDesc')}
                             </p>
                             <div className="mt-4">
                                 <Button size="sm" className="gap-1.5" onClick={() => setShowNewTeam(true)}>
                                     <Plus className="h-4 w-4" />
-                                    Dodaj zespół
+                                    {t('addTeam')}
                                 </Button>
                             </div>
                         </div>
@@ -298,7 +300,7 @@ export default function OrganizationDetailsPage() {
                                     )}
                                     <div className="mt-4 flex items-center gap-2 text-xs font-medium text-slate-500 bg-slate-50 rounded-lg px-2.5 py-1.5 w-fit border border-slate-100">
                                         <Users className="h-3.5 w-3.5" />
-                                        {team.members_count} członków
+                                        {team.members_count} {t('members')}
                                     </div>
                                 </Link>
                             ))}
@@ -311,27 +313,27 @@ export default function OrganizationDetailsPage() {
             <Dialog open={showNewTeam} onOpenChange={setShowNewTeam}>
                 <DialogContent>
                     <DialogHeader>
-                        <DialogTitle>Nowy zespół</DialogTitle>
+                        <DialogTitle>{t('newTeamTitle')}</DialogTitle>
                         <DialogDescription>
-                            Utwórz nowy zespół w organizacji <strong>{org.name}</strong>.
+                            {t('newTeamDesc')} <strong>{org.name}</strong>.
                         </DialogDescription>
                     </DialogHeader>
                     <div className="space-y-4 pt-2">
                         <div className="space-y-2">
-                            <Label htmlFor="team-name">Nazwa zespołu *</Label>
+                            <Label htmlFor="team-name">{t('teamNameLabel')}</Label>
                             <Input
                                 id="team-name"
-                                placeholder="np. Zespół Sprzedaży"
+                                placeholder={t('teamNamePlaceholder')}
                                 value={newTeamName}
                                 onChange={e => setNewTeamName(e.target.value)}
                                 onKeyDown={e => e.key === "Enter" && handleCreateTeam()}
                             />
                         </div>
                         <div className="space-y-2">
-                            <Label htmlFor="team-desc">Opis (opcjonalnie)</Label>
+                            <Label htmlFor="team-desc">{t('teamDescLabel')}</Label>
                             <Input
                                 id="team-desc"
-                                placeholder="Krótki opis zespołu"
+                                placeholder={t('teamDescPlaceholder')}
                                 value={newTeamDesc}
                                 onChange={e => setNewTeamDesc(e.target.value)}
                             />
@@ -341,7 +343,7 @@ export default function OrganizationDetailsPage() {
                                 Anuluj
                             </Button>
                             <Button onClick={handleCreateTeam} disabled={!newTeamName.trim() || creating}>
-                                {creating ? "Tworzenie…" : "Utwórz zespół"}
+                                {creating ? t('teamCreating') : t('createTeam')}
                             </Button>
                         </div>
                     </div>
@@ -352,14 +354,14 @@ export default function OrganizationDetailsPage() {
             <Dialog open={showEditOrg} onOpenChange={setShowEditOrg}>
                 <DialogContent className="sm:max-w-lg">
                     <DialogHeader>
-                        <DialogTitle>Edytuj dane firmy</DialogTitle>
+                        <DialogTitle>{t('editOrgTitle')}</DialogTitle>
                         <DialogDescription>
-                            Zaktualizuj informacje o organizacji.
+                            {t('editOrgDesc')}
                         </DialogDescription>
                     </DialogHeader>
                     <div className="space-y-4 pt-2">
                         <div className="space-y-2">
-                            <Label htmlFor="edit-name">Nazwa firmy *</Label>
+                            <Label htmlFor="edit-name">{t('editNameLabel')}</Label>
                             <Input
                                 id="edit-name"
                                 placeholder="Nazwa organizacji"
@@ -368,7 +370,7 @@ export default function OrganizationDetailsPage() {
                             />
                         </div>
                         <div className="space-y-2">
-                            <Label htmlFor="edit-tax-id">NIP</Label>
+                            <Label htmlFor="edit-tax-id">{t('editTaxLabel')}</Label>
                             <Input
                                 id="edit-tax-id"
                                 placeholder="np. 7017011122"
@@ -377,7 +379,7 @@ export default function OrganizationDetailsPage() {
                             />
                         </div>
                         <div className="space-y-2">
-                            <Label htmlFor="edit-street">Ulica</Label>
+                            <Label htmlFor="edit-street">{t('editStreetLabel')}</Label>
                             <Input
                                 id="edit-street"
                                 placeholder="np. ul. Główna 10"
@@ -387,7 +389,7 @@ export default function OrganizationDetailsPage() {
                         </div>
                         <div className="grid grid-cols-3 gap-3">
                             <div className="space-y-2">
-                                <Label htmlFor="edit-postal">Kod pocztowy</Label>
+                                <Label htmlFor="edit-postal">{t('editPostalLabel')}</Label>
                                 <Input
                                     id="edit-postal"
                                     placeholder="00-000"
@@ -396,7 +398,7 @@ export default function OrganizationDetailsPage() {
                                 />
                             </div>
                             <div className="col-span-2 space-y-2">
-                                <Label htmlFor="edit-city">Miasto</Label>
+                                <Label htmlFor="edit-city">{t('editCityLabel')}</Label>
                                 <Input
                                     id="edit-city"
                                     placeholder="np. Warszawa"
@@ -415,11 +417,11 @@ export default function OrganizationDetailsPage() {
                                 className={saveSuccess ? "bg-emerald-600 hover:bg-emerald-600" : ""}
                             >
                                 {saveSuccess ? (
-                                    <><Check className="h-4 w-4 mr-1.5" /> Zapisano</>
+                                    <><Check className="h-4 w-4 mr-1.5" /> {t('saved')}</>
                                 ) : saving ? (
-                                    "Zapisywanie…"
+                                    t('saving')
                                 ) : (
-                                    "Zapisz zmiany"
+                                    t('saveChanges')
                                 )}
                             </Button>
                         </div>

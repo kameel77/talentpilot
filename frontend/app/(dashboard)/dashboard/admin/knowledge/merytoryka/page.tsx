@@ -1,13 +1,15 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { KnowledgeEntryManager } from "@/components/knowledge/KnowledgeEntryManager";
 
 export default function KnowledgeMerytorykaPage() {
+    const t = useTranslations('admin.knowledge');
     return (
         <KnowledgeEntryManager
             section="merytoryka"
-            title="Merytoryka"
-            description="Kuratoruj wiedzę ekspercką o talentach, kompetencjach i działaniach managerskich. To główne źródło jakościowych odpowiedzi."
+            title={t('merytorykaTitle')}
+            description={t('merytorykaDesc')}
         />
     );
 }
