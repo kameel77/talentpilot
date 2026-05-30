@@ -301,7 +301,7 @@ export default function MyTalentsPage() {
         try {
             const rankings: Record<string, number> = {};
             talents.forEach(t => { rankings[t.talentId] = t.rank; });
-            await api.gallup.saveTalents(currentUser.id, rankings, 'pl');
+            await api.gallup.saveTalents(currentUser.id, rankings, locale === 'en' ? 'en' : 'pl');
             setMyTalents(talents);
         } catch (error) {
             console.error('Error saving talents:', error);
@@ -310,11 +310,12 @@ export default function MyTalentsPage() {
     };
 
     const startEditing = () => {
+        const isEn = locale === 'en';
         setEditFields({
-            superpowers: userDetail?.superpowers || '',
-            motivators: userDetail?.motivators || '',
-            blockers: userDetail?.blockers || '',
-            feedback_style: userDetail?.feedback_style || '',
+            superpowers: (isEn ? userDetail?.superpowers_en : userDetail?.superpowers) || '',
+            motivators: (isEn ? userDetail?.motivators_en : userDetail?.motivators) || '',
+            blockers: (isEn ? userDetail?.blockers_en : userDetail?.blockers) || '',
+            feedback_style: (isEn ? userDetail?.feedback_style_en : userDetail?.feedback_style) || '',
         });
         setEditingManual(true);
         setGenerateError(null);
@@ -329,13 +330,20 @@ export default function MyTalentsPage() {
         if (!currentUser || !userDetail) return;
         setSavingManual(true);
         try {
-            await api.users.update(currentUser.id, {
+            const isEn = locale === 'en';
+            const payload = isEn ? {
+                superpowers_en: editFields.superpowers,
+                motivators_en: editFields.motivators,
+                blockers_en: editFields.blockers,
+                feedback_style_en: editFields.feedback_style,
+            } : {
                 superpowers: editFields.superpowers,
                 motivators: editFields.motivators,
                 blockers: editFields.blockers,
                 feedback_style: editFields.feedback_style,
-            });
-            setUserDetail({ ...userDetail, ...editFields });
+            };
+            await api.users.update(currentUser.id, payload);
+            setUserDetail({ ...userDetail, ...payload });
             setEditingManual(false);
         } catch (error) {
             console.error('Error saving manual:', error);
@@ -349,7 +357,7 @@ export default function MyTalentsPage() {
         setGenerating(true);
         setGenerateError(null);
         try {
-            const result = await api.users.generateManual(currentUser.id);
+            const result = await api.users.generateManual(currentUser.id, locale);
             // Fill edit fields with generated content and switch to edit mode
             setEditFields({
                 superpowers: result.superpowers || '',

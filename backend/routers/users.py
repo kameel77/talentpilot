@@ -235,6 +235,7 @@ def update_user(
 @router.post("/{user_id}/generate-manual", response_model=dict)
 def generate_user_manual(
     user_id: int,
+    language: Optional[str] = None,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
@@ -249,40 +250,83 @@ def generate_user_manual(
     from services.assistant_service import get_openrouter_client, get_user_talents
     from services.settings_service import get_setting
 
-    talents = get_user_talents(db, user_id, language="pl")
+    language = language or current_user.language or "pl"
+    language = language.lower()
+    if language not in ("pl", "en"):
+        language = "pl"
+    talents = get_user_talents(db, user_id, language=language)
     if not talents:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="User has no talents imported. Import Gallup talents first."
-        )
+        # Fallback to pl if no talents in selected language
+        talents = get_user_talents(db, user_id, language="pl")
+        if not talents:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="User has no talents imported. Import Gallup talents first."
+            )
 
     top5 = [t for t in talents if t["rank"] <= 5]
     talent_list = ", ".join(f"{t['name']} (#{t['rank']})" for t in top5)
 
     DOMAIN_MAP = {
-        "executing": "Realizowanie",
-        "influencing": "Wywieranie wpływu",
-        "relationship_building": "Budowanie relacji",
-        "strategic_thinking": "Myślenie strategiczne",
+        "pl": {
+            "executing": "Realizowanie",
+            "influencing": "Wywieranie wpływu",
+            "relationship_building": "Budowanie relacji",
+            "strategic_thinking": "Myślenie strategiczne",
+        },
+        "en": {
+            "executing": "Executing",
+            "influencing": "Influencing",
+            "relationship_building": "Relationship Building",
+            "strategic_thinking": "Strategic Thinking",
+        }
     }
+    
+    lang_key = "en" if language == "en" else "pl"
+    domain_map = DOMAIN_MAP[lang_key]
     domain_summary = {}
     for t in talents[:15]:
-        d = DOMAIN_MAP.get(t["domain"], t["domain"])
+        d = domain_map.get(t["domain"], t["domain"])
         domain_summary[d] = domain_summary.get(d, 0) + 1
     domain_str = ", ".join(f"{d}: {c}" for d, c in sorted(domain_summary.items(), key=lambda x: -x[1]))
 
-    # Try to load system prompt from KB "Instrukcja odpowiedzi" (category: user_manual_generation)
+    # Try to load system prompt from KB "Instrukcja odpowiedzi"
     from services.assistant_service import retrieve_instruction
-    kb_instruction, _ = retrieve_instruction(db, "user_manual_generation", "pl")
+    kb_instruction, _ = retrieve_instruction(db, "user_manual_generation", language)
 
-    system_content = kb_instruction or (
-        "Jesteś ekspertem od metodologii Gallup CliftonStrengths. "
-        "Piszesz 'Instrukcję obsługi' użytkownika — zwięzły, praktyczny opis jak z nim współpracować. "
-        "Pisz w pierwszej osobie liczby pojedynczej (np. 'Moja naturalna siła to...'). "
-        "Język polski. Odpowiadaj WYŁĄCZNIE poprawnym JSON-em, bez komentarzy, bez markdown."
-    )
+    if language == "en":
+        default_system = (
+            "You are an expert in the Gallup CliftonStrengths methodology. "
+            "You are writing a 'User Manual' for a team member — a concise, practical description of how to work with them. "
+            "Write in the first-person singular (e.g., 'My natural strength is...'). "
+            "Respond ONLY with a valid JSON object, without comments, without markdown blocks. "
+            "Write in English."
+        )
+    else:
+        default_system = (
+            "Jesteś ekspertem od metodologii Gallup CliftonStrengths. "
+            "Piszesz 'Instrukcję obsługi' użytkownika — zwięzły, praktyczny opis jak z nim współpracować. "
+            "Pisz w pierwszej osobie liczby pojedynczej (np. 'Moja naturalna siła to...'). "
+            "Język polski. Odpowiadaj WYŁĄCZNIE poprawnym JSON-em, bez komentarzy, bez markdown."
+        )
 
-    user_content = f"""Na podstawie profilu talentów wygeneruj instrukcję obsługi.
+    system_content = kb_instruction or default_system
+
+    if language == "en":
+        user_content = f"""Based on the CliftonStrengths talent profile, generate the User Manual.
+
+TOP 5 TALENTS: {talent_list}
+DOMAIN DISTRIBUTION (top 15): {domain_str}
+
+Generate EXACTLY 4 sections in JSON format:
+{{
+  "superpowers": "3-5 sentences about natural strengths and unique value this person brings to the team. Concrete, based on talents.",
+  "motivators": "3-5 sentences about what gives this person energy, what motivates them, under what conditions they work best.",
+  "blockers": "3-5 sentences about what slows down, frustrates, or irritates this person — what to avoid in collaboration.",
+  "feedback_style": "2-4 sentences on how to give this person feedback — form, timing, communication style."
+}}"""
+    else:
+        user_content = f"""Na podstawie profilu talentów wygeneruj instrukcję obsługi.
 
 TOP 5 TALENTÓW: {talent_list}
 ROZKŁAD DOMEN (top 15): {domain_str}

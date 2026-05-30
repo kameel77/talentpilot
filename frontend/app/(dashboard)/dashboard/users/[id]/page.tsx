@@ -380,7 +380,7 @@ export default function UserProfilePage() {
         if (!user) return;
         setGenerating(true);
         try {
-            const generated = await api.users.generateManual(userId);
+            const generated = await api.users.generateManual(userId, locale);
             const updatedUser = await api.users.update(userId, {
                 superpowers: generated.superpowers,
                 motivators: generated.motivators,

@@ -552,8 +552,8 @@ export const api = {
             return response.data;
         },
 
-        generateManual: async (userId: number): Promise<{ superpowers: string; motivators: string; blockers: string; feedback_style: string }> => {
-            const response = await apiClient.post(`/api/users/${userId}/generate-manual`);
+        generateManual: async (userId: number, language?: string): Promise<{ superpowers: string; motivators: string; blockers: string; feedback_style: string }> => {
+            const response = await apiClient.post(`/api/users/${userId}/generate-manual`, null, { params: language ? { language } : undefined });
             return response.data;
         },
 
