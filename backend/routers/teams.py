@@ -7,8 +7,8 @@ from database import get_db
 from models import User, Team, UserRole, OrganizationAccess, Organization, UserTalent
 from services.email_service import send_team_added_email
 from schemas import (
-    TeamCreate, 
-    TeamUpdate, 
+    TeamCreate,
+    TeamUpdate,
     TeamResponse,
     PublicTeamPresentationResponse,
     PresentationOrg,
@@ -16,6 +16,7 @@ from schemas import (
     PresentationTalentResult
 )
 from auth import get_current_user, require_role, get_current_active_org_id
+from routers.invitations import compute_invitation_status
 from config import settings
 import httpx
 from pydantic import BaseModel
@@ -272,6 +273,9 @@ def get_team_matrix(
             email=member.email,
             role=member.role.value if hasattr(member.role, "value") else member.role,
             is_leader=(team.manager_id == member.id),
+            is_ghost=member.is_ghost,
+            invited_at=member.invited_at,
+            invitation_status=compute_invitation_status(member),
             results=results
         ))
 

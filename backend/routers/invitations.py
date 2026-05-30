@@ -31,6 +31,20 @@ router = APIRouter()
 INVITE_TTL_DAYS = 7
 
 
+def compute_invitation_status(user) -> str:
+    """Compute invitation_status from user fields. Pure function — no DB access."""
+    if user.is_active:
+        return "active"
+    if user.invited_at is None:
+        return "not_invited"
+    invited = user.invited_at
+    if invited.tzinfo is None:
+        invited = invited.replace(tzinfo=timezone.utc)
+    if invited < datetime.now(timezone.utc) - timedelta(days=INVITE_TTL_DAYS):
+        return "expired"
+    return "invited"
+
+
 def _hash_token(token: str) -> str:
     return hashlib.sha256(token.encode("utf-8")).hexdigest()
 

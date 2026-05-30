@@ -64,8 +64,9 @@ function JoinForm() {
                 setLocale(user.language as "pl" | "en");
             }
 
-            // Redirect to dashboard
-            router.push("/dashboard");
+            // Set one-time onboarding cookie and redirect to onboarding
+            document.cookie = "onboarding=1; path=/; max-age=300; SameSite=Lax";
+            router.push("/dashboard/onboarding");
         } catch (err) {
             setError(getErrorMessage(err));
         } finally {

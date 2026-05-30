@@ -37,6 +37,7 @@ export interface Organization {
     postal_code?: string;
     city?: string;
     tax_id?: string;
+    language?: string;
     created_at: string;
 }
 
@@ -55,6 +56,7 @@ export interface OrganizationUpdateData {
     postal_code?: string;
     city?: string;
     tax_id?: string;
+    language?: string;
 }
 
 export interface UserUpdateData {
@@ -609,6 +611,11 @@ export const api = {
 
         acceptInvite: async (token: string, password: string): Promise<AuthResponse> => {
             const response = await apiClient.post<AuthResponse>('/api/invitations/accept', { token, password });
+            return response.data;
+        },
+
+        resendInvitation: async (userId: number): Promise<{ ok: boolean }> => {
+            const response = await apiClient.post<{ ok: boolean }>(`/api/users/${userId}/resend-invitation`);
             return response.data;
         },
     },

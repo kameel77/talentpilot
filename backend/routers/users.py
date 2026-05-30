@@ -6,7 +6,7 @@ from typing import List, Optional
 
 from database import get_db
 from models import User, UserRole, user_teams, Team, UserTalent
-from services.email_service import send_team_added_email
+from services.email_service import send_team_added_email, send_invitation_email
 from schemas import UserCreate, UserUpdate, UserResponse, UserDetailResponse, PasswordChangeRequest, AdminRoleUpdate
 from auth import get_current_user, require_role, hash_password, verify_password, get_current_active_org_id, check_org_access, check_user_access
 
@@ -605,3 +605,56 @@ def replace_user(
         "talents_transferred": len(ghost_talents) if ghost_talents else 0,
         "teams_joined": team_names,
     }
+
+
+@router.post("/{user_id}/resend-invitation", status_code=status.HTTP_200_OK)
+def resend_invitation(
+    user_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_role(["admin", "manager", "coach"])),
+):
+    """Resend invitation email to a ghost user. Resets invited_at."""
+    import secrets
+    import hashlib
+    from datetime import datetime, timezone, timedelta
+    from models import TeamInvitation, InvitationStatus, Team
+
+    ghost = db.query(User).filter(User.id == user_id).first()
+    if not ghost:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+    if not ghost.is_ghost or ghost.is_active:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="User is not a pending ghost invite")
+    if not check_org_access(db, current_user, ghost.organization_id):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied")
+
+    invitation = (
+        db.query(TeamInvitation)
+        .filter(
+            TeamInvitation.user_id == ghost.id,
+            TeamInvitation.status == InvitationStatus.ACTIVE,
+        )
+        .first()
+    )
+    if not invitation:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="No active invitation found")
+
+    team = db.query(Team).filter(Team.id == invitation.team_id).first()
+    org = team.organization if team else None
+
+    new_token = secrets.token_urlsafe(32)
+    invitation.token_hash = hashlib.sha256(new_token.encode("utf-8")).hexdigest()
+    invitation.expires_at = datetime.now(timezone.utc) + timedelta(days=7)
+
+    ghost.invited_at = datetime.now(timezone.utc)
+    db.commit()
+
+    send_invitation_email(
+        to_email=ghost.email,
+        full_name=ghost.full_name,
+        invite_token=new_token,
+        team_name=team.name if team else "",
+        org_name=org.name if org else "",
+        language=org.language if org else "pl",
+    )
+
+    return {"ok": True}

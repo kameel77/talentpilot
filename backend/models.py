@@ -69,6 +69,7 @@ class Organization(Base):
     tax_id = Column(String(32), nullable=True)  # NIP
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+    language = Column(String(10), nullable=False, default="pl")
 
     # Relationships
     users = relationship("User", back_populates="organization", cascade="all, delete-orphan")
@@ -109,6 +110,7 @@ class User(Base):
 
     # User language preference
     language = Column(String(10), nullable=False, default="pl")
+    invited_at = Column(DateTime(timezone=True), nullable=True)
 
     # Public profile (wizytówka)
     public_token = Column(String(64), unique=True, nullable=True, index=True)

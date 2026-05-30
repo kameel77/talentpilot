@@ -30,6 +30,9 @@ interface TeamMember {
     email?: string;
     role?: string;
     is_leader?: boolean;
+    is_ghost?: boolean;
+    invited_at?: string | null;
+    invitation_status?: string;
     results: MemberResult[];
 }
 
@@ -63,7 +66,9 @@ interface Team {
 export default function TeamDetailPage() {
     const t = useTranslations('teams');
     const tCommon = useTranslations('common');
+    const tInv = useTranslations('invitations');
     const locale = getLocaleFromCookie();
+    const [resendingId, setResendingId] = useState<string | number | null>(null);
 
     const params = useParams();
     const teamId = parseInt(params.id as string);
@@ -312,6 +317,18 @@ export default function TeamDetailPage() {
         }
     };
 
+    const handleResend = async (memberId: string | number) => {
+        setResendingId(memberId);
+        try {
+            await api.invitations.resendInvitation(parseInt(memberId as string));
+            await loadTeamData();
+        } catch (err) {
+            console.error("Failed to resend invitation", err);
+        } finally {
+            setResendingId(null);
+        }
+    };
+
     const handleTalentChange = (index: number, talentId: number) => {
         const newTalents = [...selectedTalents];
         newTalents[index] = talentId;
@@ -322,6 +339,21 @@ export default function TeamDetailPage() {
         m.name.toLowerCase().includes(membersSearch.toLowerCase()) ||
         (m.role || '').toLowerCase().includes(membersSearch.toLowerCase())
     );
+
+    const getStatusBadge = (member: TeamMember) => {
+        const status = member.invitation_status ?? 'active';
+        const colorMap: Record<string, string> = {
+            active: 'bg-green-100 text-green-700',
+            not_invited: 'bg-slate-100 text-slate-400',
+            invited: 'bg-yellow-100 text-yellow-700',
+            expired: 'bg-gray-100 text-gray-500',
+        };
+        return (
+            <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${colorMap[status] ?? colorMap.active}`}>
+                {tInv(`status.${status}`)}
+            </span>
+        );
+    };
 
     if (loading) {
         return <div className="text-gray-600">{tCommon('loading')}</div>;
@@ -561,7 +593,10 @@ export default function TeamDetailPage() {
                                                                 </span>
                                                             )}
                                                         </div>
-                                                        <div className="text-sm text-slate-500">{member.email || t('noEmailAddress')}</div>
+                                                        <div className="flex items-center gap-2 mt-0.5">
+                                                            <div className="text-sm text-slate-500">{member.email || t('noEmailAddress')}</div>
+                                                            {member.is_ghost && getStatusBadge(member)}
+                                                        </div>
                                                     </div>
                                                 </Link>
                                             </td>
@@ -611,6 +646,22 @@ export default function TeamDetailPage() {
                                             </td>
                                             <td className="py-4 px-6 text-right">
                                                 <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                    {member.is_ghost && member.invitation_status !== 'active' && (
+                                                        <button
+                                                            onClick={() => handleResend(member.id)}
+                                                            disabled={resendingId === member.id}
+                                                            className="p-2 text-slate-400 hover:text-purple-600 hover:bg-purple-50 rounded-lg transition-colors disabled:opacity-50"
+                                                            title={member.invitation_status === 'not_invited' ? tInv('invite') : tInv('resend')}
+                                                        >
+                                                            {resendingId === member.id ? (
+                                                                <Loader2 className="w-4 h-4 animate-spin" />
+                                                            ) : (
+                                                                <span className="text-xs font-medium px-1">
+                                                                    {member.invitation_status === 'not_invited' ? tInv('invite') : tInv('resend')}
+                                                                </span>
+                                                            )}
+                                                        </button>
+                                                    )}
                                                     <button
                                                         onClick={() => toggleLeader(member)}
                                                         className={`p-2 rounded-lg transition-colors ${member.is_leader ? 'text-amber-600 bg-amber-50 hover:bg-amber-100' : 'text-slate-400 hover:text-slate-600 hover:bg-slate-100'}`}
