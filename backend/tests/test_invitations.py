@@ -126,6 +126,18 @@ def test_compute_invitation_status_no_invited_at():
     assert compute_invitation_status(FakeUser()) == "invited"
 
 
+def test_compute_invitation_status_naive_datetime():
+    """Timezone-naive invited_at (as returned by SQLite) must not raise TypeError."""
+    from routers.invitations import compute_invitation_status
+
+    class FakeUser:
+        is_active = False
+        # naive datetime — SQLite strips tzinfo on read
+        invited_at = datetime.utcnow() - timedelta(days=8)
+
+    assert compute_invitation_status(FakeUser()) == "expired"
+
+
 @patch("routers.users.send_invitation_email")
 def test_resend_invitation(mock_send, client, db_session, test_org, test_team, coach_headers):
     """Resend endpoint re-sends email and resets invited_at."""

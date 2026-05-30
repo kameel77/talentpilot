@@ -687,6 +687,7 @@
   },
   "onboarding": {
     "title": "Welcome to TalentPilot!",
+    "titlePersonalized": "Welcome, {name}!",
     "subtitle": "Your team: {teamName}",
     "step1Title": "Upload your Gallup PDF report",
     "step1Cta": "Go to My Talents",

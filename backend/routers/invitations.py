@@ -36,8 +36,12 @@ def compute_invitation_status(user) -> str:
     """Compute invitation_status from user fields. Pure function — no DB access."""
     if user.is_active:
         return "active"
-    if user.invited_at and user.invited_at < datetime.now(timezone.utc) - timedelta(days=7):
-        return "expired"
+    invited = user.invited_at
+    if invited is not None:
+        if invited.tzinfo is None:
+            invited = invited.replace(tzinfo=timezone.utc)
+        if invited < datetime.now(timezone.utc) - timedelta(days=INVITE_TTL_DAYS):
+            return "expired"
     return "invited"
 
 
@@ -169,7 +173,7 @@ def create_ghost_invite(
         invite_token=invite_token,
         team_name=team.name,
         org_name=org.name,
-        language=org.language if hasattr(org, "language") else "pl",
+        language=org.language,
     )
     user.invited_at = datetime.now(timezone.utc)
     db.commit()

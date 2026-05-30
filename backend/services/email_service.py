@@ -117,6 +117,8 @@ def send_invitation_email(
     """,
     }
 
+    if language not in html_bodies:
+        logger.warning("Unsupported invitation language %r, falling back to 'pl'", language)
     lang = language if language in html_bodies else "pl"
     email_service.send_email(to_email, subjects[lang], html_bodies[lang])
 

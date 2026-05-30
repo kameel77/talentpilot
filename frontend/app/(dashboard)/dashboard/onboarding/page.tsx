@@ -23,6 +23,7 @@ export default function OnboardingPage() {
     const t = useTranslations("onboarding");
     const router = useRouter();
     const [teamName, setTeamName] = useState("");
+    const [userName, setUserName] = useState("");
 
     useEffect(() => {
         if (!getOnboardingCookie()) {
@@ -31,7 +32,7 @@ export default function OnboardingPage() {
         }
 
         const user = tokenManager.getUser();
-        void user; // userName not shown in title but available
+        if (user?.full_name) setUserName(user.full_name);
 
         api.teams.list().then((teams) => {
             if (teams.length > 0) setTeamName(teams[0].name);
@@ -69,7 +70,7 @@ export default function OnboardingPage() {
             <div className="w-full max-w-lg">
                 <div className="text-center mb-8">
                     <h1 className="text-3xl font-bold text-slate-900 mb-2">
-                        {t("title")}
+                        {userName ? t("titlePersonalized", { name: userName }) : t("title")}
                     </h1>
                     {teamName && (
                         <p className="text-slate-500 text-lg">

@@ -654,7 +654,7 @@ def resend_invitation(
         invite_token=new_token,
         team_name=team.name if team else "",
         org_name=org.name if org else "",
-        language=org.language if org and hasattr(org, "language") else "pl",
+        language=org.language if org else "pl",
     )
 
     return {"ok": True}
