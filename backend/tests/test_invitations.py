@@ -47,9 +47,8 @@ def coach_headers(coach):
     return {"Authorization": f"Bearer {token}"}
 
 
-@patch("routers.invitations.send_invitation_email")
-def test_ghost_invite_sends_email(mock_send, client, coach_headers, test_team, db_session):
-    """Ghost invite endpoint sends an email and sets invited_at."""
+def test_ghost_invite_does_not_send_email(client, coach_headers, test_team, db_session):
+    """Ghost invite creation does NOT send email — coach sends invitation manually."""
     response = client.post(
         "/api/invitations/ghost",
         json={
@@ -60,30 +59,48 @@ def test_ghost_invite_sends_email(mock_send, client, coach_headers, test_team, d
         headers=coach_headers,
     )
     assert response.status_code == 201
-    mock_send.assert_called_once()
-    call_kwargs = mock_send.call_args
-    assert call_kwargs.kwargs["to_email"] == "newmember@example.com"
-    assert call_kwargs.kwargs["language"] in ("pl", "en")
-
     data = response.json()
     user = db_session.query(User).filter(User.id == data["user_id"]).first()
-    assert user.invited_at is not None
+    assert user.invited_at is None
 
 
-@patch("routers.invitations.send_invitation_email")
-def test_ghost_invite_uses_org_language(mock_send, client, coach_headers, test_team, db_session):
-    """Email is sent in the organization's language."""
-    org = db_session.query(Organization).filter(Organization.id == test_team.organization_id).first()
-    org.language = "en"
+@patch("routers.users.send_invitation_email")
+def test_resend_uses_org_language(mock_send, client, db_session, test_org, test_team, coach_headers):
+    """Resend invitation uses the org's language setting."""
+    import secrets
+    import hashlib
+    from models import TeamInvitation, InvitationStatus
+
+    test_org.language = "en"
     db_session.commit()
 
-    client.post(
-        "/api/invitations/ghost",
-        json={"email": "en@example.com", "full_name": "EN User", "team_id": test_team.id},
-        headers=coach_headers,
+    ghost = User(
+        email="lang@example.com",
+        hashed_password="x",
+        full_name="Lang User",
+        role=UserRole.USER,
+        is_active=False,
+        is_ghost=True,
+        organization_id=test_org.id,
     )
-    call_kwargs = mock_send.call_args
-    assert call_kwargs.kwargs["language"] == "en"
+    db_session.add(ghost)
+    db_session.flush()
+    test_team.members.append(ghost)
+
+    token = secrets.token_urlsafe(32)
+    inv = TeamInvitation(
+        user_id=ghost.id,
+        team_id=test_team.id,
+        token_hash=hashlib.sha256(token.encode()).hexdigest(),
+        status=InvitationStatus.ACTIVE,
+        expires_at=datetime.now(timezone.utc) + timedelta(days=7),
+        created_by=None,
+    )
+    db_session.add(inv)
+    db_session.commit()
+
+    client.post(f"/api/users/{ghost.id}/resend-invitation", headers=coach_headers)
+    assert mock_send.call_args.kwargs["language"] == "en"
 
 
 def test_compute_invitation_status_active():
@@ -116,14 +133,15 @@ def test_compute_invitation_status_expired():
     assert compute_invitation_status(FakeUser()) == "expired"
 
 
-def test_compute_invitation_status_no_invited_at():
+def test_compute_invitation_status_not_invited():
+    """Ghost user with no invited_at is 'not_invited' — email not sent yet."""
     from routers.invitations import compute_invitation_status
 
     class FakeUser:
         is_active = False
         invited_at = None
 
-    assert compute_invitation_status(FakeUser()) == "invited"
+    assert compute_invitation_status(FakeUser()) == "not_invited"
 
 
 def test_compute_invitation_status_naive_datetime():

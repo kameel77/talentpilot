@@ -344,6 +344,7 @@ export default function TeamDetailPage() {
         const status = member.invitation_status ?? 'active';
         const colorMap: Record<string, string> = {
             active: 'bg-green-100 text-green-700',
+            not_invited: 'bg-slate-100 text-slate-400',
             invited: 'bg-yellow-100 text-yellow-700',
             expired: 'bg-gray-100 text-gray-500',
         };
@@ -645,17 +646,19 @@ export default function TeamDetailPage() {
                                             </td>
                                             <td className="py-4 px-6 text-right">
                                                 <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                                                    {member.is_ghost && (member.invitation_status === 'invited' || member.invitation_status === 'expired') && (
+                                                    {member.is_ghost && member.invitation_status !== 'active' && (
                                                         <button
                                                             onClick={() => handleResend(member.id)}
                                                             disabled={resendingId === member.id}
                                                             className="p-2 text-slate-400 hover:text-purple-600 hover:bg-purple-50 rounded-lg transition-colors disabled:opacity-50"
-                                                            title={tInv('resend')}
+                                                            title={member.invitation_status === 'not_invited' ? tInv('invite') : tInv('resend')}
                                                         >
                                                             {resendingId === member.id ? (
                                                                 <Loader2 className="w-4 h-4 animate-spin" />
                                                             ) : (
-                                                                <span className="text-xs font-medium px-1">{tInv('resend')}</span>
+                                                                <span className="text-xs font-medium px-1">
+                                                                    {member.invitation_status === 'not_invited' ? tInv('invite') : tInv('resend')}
+                                                                </span>
                                                             )}
                                                         </button>
                                                     )}

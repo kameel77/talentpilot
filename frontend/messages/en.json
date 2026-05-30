@@ -670,12 +670,14 @@
     "talent": "Talent"
   },
   "invitations": {
+    "invite": "Send invitation",
     "resend": "Resend",
     "sending": "Sending...",
     "resendSuccess": "Email resent successfully",
     "resendError": "Failed to resend email",
     "status": {
       "active": "Active",
+      "not_invited": "Not invited",
       "invited": "Invited",
       "expired": "Expired"
     },
