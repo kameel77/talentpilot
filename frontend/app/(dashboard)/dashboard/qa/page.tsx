@@ -40,17 +40,29 @@ export default function QACopilotPage() {
     const [myTalents, setMyTalents] = useState<string[]>([]);
     const [teamMembers, setTeamMembers] = useState<User[]>([]);
     const [selectedMember, setSelectedMember] = useState<User | null>(null);
+    const [teamNames, setTeamNames] = useState<string[]>([]);
 
     useEffect(() => {
         const loadInitialData = async () => {
             try {
                 const user = api.tokenManager.getUser();
+                const names: string[] = [];
                 if (user) {
+                    const firstName = user.full_name.split(" ")[0];
+                    if (firstName) names.push(firstName);
                     const talents = await api.talents.getUserTalents(user.id);
                     setMyTalents(talents.map((t: UserTalentResponse) => t.talent.translation.name));
                 }
                 const members = await api.users.list();
                 setTeamMembers(members.filter((m: User) => m.id !== api.tokenManager.getUser()?.id));
+
+                members.forEach((m: User) => {
+                    const firstName = m.full_name.split(" ")[0];
+                    if (firstName && !names.includes(firstName)) {
+                        names.push(firstName);
+                    }
+                });
+                setTeamNames(names);
 
                 try {
                     const history = await api.qa.getHistory();
@@ -206,6 +218,7 @@ export default function QACopilotPage() {
                                                 <Renderer
                                                     answer={msg.answer}
                                                     answerRaw={msg.answer_raw || ""}
+                                                    teamNames={teamNames}
                                                 />
 
                                                 {!msg.feedback_sent && (

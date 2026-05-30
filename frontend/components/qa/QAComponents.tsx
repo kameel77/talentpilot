@@ -41,15 +41,21 @@ interface ResponseBlockProps {
 
 export function ResponseBlock({ title, value, tone, children }: ResponseBlockProps) {
     const toneStyles = {
-        indigo: "bg-indigo-50 text-indigo-700 border-indigo-100",
-        blue: "bg-blue-50 text-blue-700 border-blue-100",
-        emerald: "bg-emerald-50 text-emerald-700 border-emerald-100",
+        indigo: "bg-indigo-50/50 text-indigo-950 border-indigo-100/80",
+        blue: "bg-blue-50/50 text-blue-950 border-blue-100/80",
+        emerald: "bg-emerald-50/40 text-emerald-950 border-emerald-100/70",
+    };
+
+    const titleColor = {
+        indigo: "text-indigo-600/90",
+        blue: "text-blue-600/90",
+        emerald: "text-emerald-700/90",
     };
 
     return (
-        <div className={cn("rounded-2xl border px-4 py-3 text-sm transition-all", toneStyles[tone])}>
-            <p className="text-xs font-semibold uppercase tracking-widest">{title}</p>
-            {value && <p className="mt-1 text-base font-semibold text-slate-900">{value}</p>}
+        <div className={cn("rounded-2xl border px-4 py-3.5 text-sm transition-all shadow-sm/5", toneStyles[tone])}>
+            <p className={cn("text-[10px] font-bold uppercase tracking-wider", titleColor[tone])}>{title}</p>
+            {value && <p className="mt-1 text-sm font-bold text-slate-900 leading-tight">{value}</p>}
             {children}
         </div>
     );

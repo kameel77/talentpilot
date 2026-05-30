@@ -23,16 +23,18 @@ export default function OnboardingPage() {
     const t = useTranslations("onboarding");
     const router = useRouter();
     const [teamName, setTeamName] = useState("");
-    const [userName, setUserName] = useState("");
+    const [userName] = useState(() => {
+        if (typeof window !== "undefined") {
+            return tokenManager.getUser()?.full_name || "";
+        }
+        return "";
+    });
 
     useEffect(() => {
         if (!getOnboardingCookie()) {
             router.replace("/dashboard");
             return;
         }
-
-        const user = tokenManager.getUser();
-        if (user?.full_name) setUserName(user.full_name);
 
         api.teams.list().then((teams) => {
             if (teams.length > 0) setTeamName(teams[0].name);
