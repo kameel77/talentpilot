@@ -51,6 +51,36 @@ def parse_structured_answer(text: str) -> QAAnswer:
 
     try:
         logger.info(f"--- PARSING LLM TEXT ---\n{text}")
+        
+        # Proactively detect and parse JSON response format
+        cleaned_text = text.strip()
+        if cleaned_text.startswith("```"):
+            lines = cleaned_text.split("\n")
+            if lines[0].startswith("```"):
+                lines = lines[1:]
+            if lines[-1].startswith("```"):
+                lines = lines[:-1]
+            cleaned_text = "\n".join(lines).strip()
+            
+        try:
+            data = json.loads(cleaned_text)
+            if isinstance(data, dict):
+                msg_content = ""
+                if "response" in data:
+                    res_val = data["response"]
+                    if isinstance(res_val, dict) and "message" in res_val:
+                        msg_content = res_val["message"]
+                    elif isinstance(res_val, str):
+                        msg_content = res_val
+                if not msg_content and "message" in data:
+                    msg_content = data["message"]
+                
+                if msg_content:
+                    text = msg_content
+                    logger.info(f"--- EXTRACTED JSON MESSAGE ---\n{text}")
+        except Exception:
+            pass
+
         # Simple regex-based parsing
         talent_match = re.search(r"Talent:\s*(.*)", text, re.IGNORECASE)
         if talent_match:

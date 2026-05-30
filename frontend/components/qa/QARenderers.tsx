@@ -77,17 +77,18 @@ function parseTextSegment(segmentText: string, isBold: boolean, teamNames?: stri
                                         `domain-${talent.cssKey}`
                                     )}
                                 >
-                                    {part}
+                                    {talent.name}
                                 </span>
                             );
                         }
                         if (isUser) {
+                            const capitalizedUser = part.charAt(0).toUpperCase() + part.slice(1);
                             return (
                                 <span
                                     key={index}
                                     className="inline-flex items-center px-1.5 py-0.5 mx-0.5 rounded-md text-[11px] font-bold bg-blue-50/70 text-blue-950 border border-blue-100/60 shadow-sm/5 transition-all"
                                 >
-                                    {part}
+                                    {capitalizedUser}
                                 </span>
                             );
                         }
@@ -150,10 +151,11 @@ export function StructuredRenderer({ answer, teamNames }: RendererProps) {
 // --- Freeform Renderer (Markdown-like rendering of raw text) ---
 
 export function FreeformRenderer({ answerRaw, teamNames }: RendererProps) {
+    const normalizedText = (answerRaw || "").replace(/\\n/g, "\n");
     return (
         <div className="mt-3 border-t border-slate-100/80 pt-3.5 text-slate-700 leading-relaxed">
             <div className="prose prose-sm prose-slate max-w-none text-sm font-medium space-y-2">
-                {answerRaw.split("\n").map((line, i) => {
+                {normalizedText.split("\n").map((line, i) => {
                     const trimmed = line.trim();
                     if (!trimmed) return <div key={i} className="h-2" />;
 
