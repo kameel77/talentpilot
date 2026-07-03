@@ -2,7 +2,7 @@
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 
-from auth import get_current_user
+from auth import get_current_user, check_user_access
 from database import get_db
 from models import AITip, User
 from schemas import DailyTipResponse, SynergyTipResponse, TipFeedbackRequest
@@ -56,6 +56,14 @@ def get_synergy_tip(
     ).first()
 
     if not target_user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Użytkownik nie został znaleziony w Twojej organizacji.",
+        )
+
+    # Restricts USER-role callers to teammates only, even within the same
+    # coach-workspace organization (see check_user_access docstring).
+    if not check_user_access(db, current_user, target_user):
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Użytkownik nie został znaleziony w Twojej organizacji.",

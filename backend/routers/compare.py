@@ -4,7 +4,7 @@ from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.orm import Session
 
-from auth import get_current_user
+from auth import get_current_user, check_user_access
 from database import get_db
 from models import User
 from schemas import CompareResponse, UserResponse
@@ -54,6 +54,15 @@ def compare_two_users(
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Użytkownik B (id={user_b_id}) nie został znaleziony w Twojej organizacji.",
+        )
+
+    # Both users must be individually accessible to the caller — restricts
+    # USER-role callers to self/teammates even within the same coach-workspace
+    # organization, where unrelated individual clients can otherwise collide.
+    if not check_user_access(db, current_user, user_a) or not check_user_access(db, current_user, user_b):
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Użytkownik nie został znaleziony w Twojej organizacji.",
         )
 
     result = compare_users(db, user_a, user_b, language=language)

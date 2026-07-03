@@ -229,12 +229,39 @@ def check_org_access(db: Session, user: User, organization_id: int) -> bool:
     return False
 
 
+def shares_team(db: Session, user_a_id: int, user_b_id: int) -> bool:
+    """
+    Check if two users share at least one team.
+
+    Used to scope USER-role visibility in coach workspaces, where
+    multiple unrelated individual clients (strangers) can share the
+    same organization but must not see each other.
+    """
+    from models import Team, user_teams
+
+    my_team_ids = db.query(user_teams.c.team_id).filter(
+        user_teams.c.user_id == user_a_id
+    )
+    shared = db.query(Team).join(
+        user_teams, Team.id == user_teams.c.team_id
+    ).filter(
+        user_teams.c.user_id == user_b_id,
+        user_teams.c.team_id.in_(my_team_ids)
+    ).first()
+
+    return shared is not None
+
+
 def check_user_access(db: Session, current_user: User, target_user: User) -> bool:
     """
     Check if current_user can access target_user's profile.
 
     Returns True if:
     - current_user is ADMIN
+    - target_user is current_user (self)
+    - current_user is a USER: only self or a teammate (shared team) is visible.
+      This prevents strangers sharing a coach workspace organization from
+      seeing each other.
     - target_user is in an org that current_user has access to (home or guest)
     - target_user shares a team in any org that current_user has access to
 
@@ -244,6 +271,16 @@ def check_user_access(db: Session, current_user: User, target_user: User) -> boo
 
     if current_user.role == UserRole.ADMIN:
         return True
+
+    if current_user.id == target_user.id:
+        return True
+
+    # USER role: restrict to teammates only, even within the same org
+    # (coach-workspace orgs can contain unrelated individual clients).
+    if current_user.role == UserRole.USER:
+        if current_user.organization_id != target_user.organization_id:
+            return False
+        return shares_team(db, current_user.id, target_user.id)
 
     # Check home org match
     if check_org_access(db, current_user, target_user.organization_id):
