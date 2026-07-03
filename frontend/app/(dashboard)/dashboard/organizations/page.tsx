@@ -3,9 +3,10 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
-import { api } from "@/lib/api";
+import { api, tokenManager } from "@/lib/api";
 import { Building, Plus, Loader2, Save } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import IndividualClientsTab from "@/components/clients/IndividualClientsTab";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -30,6 +31,9 @@ interface Organization {
 
 export default function OrganizationsPage() {
     const t = useTranslations('organizations');
+    const tClients = useTranslations('clients');
+    const isCoach = tokenManager.getUser()?.role === "coach";
+    const [activeTab, setActiveTab] = useState<"orgs" | "individuals">("orgs");
     const [organizations, setOrganizations] = useState<Organization[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState("");
@@ -120,50 +124,74 @@ export default function OrganizationsPage() {
                 </Button>
             </div>
 
-            {error && (
-                <div className="rounded-2xl border border-rose-200 bg-rose-50 px-6 py-4 text-sm font-medium text-rose-700">
-                    {error}
-                </div>
-            )}
-
-            {organizations.length === 0 ? (
-                <div className="rounded-3xl border border-dashed border-slate-300 bg-slate-50/50 p-16 text-center">
-                    <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-white shadow-sm">
-                        <Building className="h-8 w-8 text-slate-400" />
-                    </div>
-                    <h3 className="text-lg font-semibold text-slate-900">{t('noOrgs')}</h3>
-                    <p className="mt-2 text-slate-500 max-w-xs mx-auto">
-                        {t('noOrgsMessage')}
-                    </p>
-                    <Button onClick={openModal} className="mt-6">
-                        <Plus className="h-4 w-4 mr-2" />
-                        {t('create')}
-                    </Button>
-                </div>
-            ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {organizations.map((org) => (
-                        <Link
-                            key={org.id}
-                            href={`/dashboard/organizations/${org.id}`}
-                            className="group flex flex-col justify-between rounded-2xl border border-slate-200 bg-white p-6 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:border-blue-100 hover:shadow-xl hover:shadow-blue-500/5"
+            {isCoach && (
+                <div className="flex gap-2 border-b border-slate-200 mb-6">
+                    {(["orgs", "individuals"] as const).map((tab) => (
+                        <button
+                            key={tab}
+                            onClick={() => setActiveTab(tab)}
+                            className={
+                                activeTab === tab
+                                    ? "px-4 py-2 text-sm font-semibold text-primary border-b-2 border-primary"
+                                    : "px-4 py-2 text-sm font-medium text-slate-500 hover:text-slate-700"
+                            }
                         >
-                            <div>
-                                <h3 className="text-lg font-bold text-slate-900 group-hover:text-primary transition-colors mb-1">
-                                    {org.name}
-                                </h3>
-                                {org.city && (
-                                    <p className="text-sm text-slate-500 line-clamp-1">{org.city}</p>
-                                )}
-                            </div>
-                            <div className="mt-8 flex items-center gap-2 text-sm text-slate-500">
-                                <Building className="h-4 w-4" />
-                                <span>{org.tax_id ? `NIP: ${org.tax_id}` : "Brak NIP"}</span>
-                            </div>
-                        </Link>
+                            {tab === "orgs" ? tClients("tabOrgs") : tClients("tabIndividuals")}
+                        </button>
                     ))}
                 </div>
             )}
+
+            {(!isCoach || activeTab === "orgs") && (
+                <>
+                    {error && (
+                        <div className="rounded-2xl border border-rose-200 bg-rose-50 px-6 py-4 text-sm font-medium text-rose-700">
+                            {error}
+                        </div>
+                    )}
+
+                    {organizations.length === 0 ? (
+                        <div className="rounded-3xl border border-dashed border-slate-300 bg-slate-50/50 p-16 text-center">
+                            <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-white shadow-sm">
+                                <Building className="h-8 w-8 text-slate-400" />
+                            </div>
+                            <h3 className="text-lg font-semibold text-slate-900">{t('noOrgs')}</h3>
+                            <p className="mt-2 text-slate-500 max-w-xs mx-auto">
+                                {t('noOrgsMessage')}
+                            </p>
+                            <Button onClick={openModal} className="mt-6">
+                                <Plus className="h-4 w-4 mr-2" />
+                                {t('create')}
+                            </Button>
+                        </div>
+                    ) : (
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                            {organizations.map((org) => (
+                                <Link
+                                    key={org.id}
+                                    href={`/dashboard/organizations/${org.id}`}
+                                    className="group flex flex-col justify-between rounded-2xl border border-slate-200 bg-white p-6 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:border-blue-100 hover:shadow-xl hover:shadow-blue-500/5"
+                                >
+                                    <div>
+                                        <h3 className="text-lg font-bold text-slate-900 group-hover:text-primary transition-colors mb-1">
+                                            {org.name}
+                                        </h3>
+                                        {org.city && (
+                                            <p className="text-sm text-slate-500 line-clamp-1">{org.city}</p>
+                                        )}
+                                    </div>
+                                    <div className="mt-8 flex items-center gap-2 text-sm text-slate-500">
+                                        <Building className="h-4 w-4" />
+                                        <span>{org.tax_id ? `NIP: ${org.tax_id}` : "Brak NIP"}</span>
+                                    </div>
+                                </Link>
+                            ))}
+                        </div>
+                    )}
+                </>
+            )}
+
+            {isCoach && activeTab === "individuals" && <IndividualClientsTab />}
 
             {/* Create Organization Modal */}
             <Dialog open={open} onOpenChange={setOpen}>

@@ -572,6 +572,22 @@
     "talentImport": "Import talentów",
     "importButton": "Importuj talenty"
   },
+  "clients": {
+    "tabOrgs": "Organizacje",
+    "tabIndividuals": "Indywidualni",
+    "empty": "Brak klientów indywidualnych. Dodaj ich w kreatorze lub zaproś bezpośrednio.",
+    "pin": "Przypnij do organizacji",
+    "pinTitle": "Przypnij {name} do organizacji",
+    "pinExisting": "Wybierz organizację",
+    "pinNew": "Lub utwórz nową",
+    "pinNewName": "Nazwa nowej organizacji",
+    "pinTeam": "Zespół (opcjonalnie)",
+    "pinNoTeam": "Bez zespołu",
+    "pinConfirm": "Przypnij",
+    "pinning": "Przypinanie...",
+    "cancel": "Anuluj",
+    "error": "Nie udało się przypiąć klienta. Spróbuj ponownie."
+  },
   "organizations": {
     "title": "Organizacje",
     "create": "Dodaj organizację",

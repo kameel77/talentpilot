@@ -572,6 +572,22 @@
     "talentImport": "Import talents",
     "importButton": "Import talents"
   },
+  "clients": {
+    "tabOrgs": "Organizations",
+    "tabIndividuals": "Individuals",
+    "empty": "No individual clients yet. Add them in the wizard or invite directly.",
+    "pin": "Pin to organization",
+    "pinTitle": "Pin {name} to an organization",
+    "pinExisting": "Choose an organization",
+    "pinNew": "Or create a new one",
+    "pinNewName": "New organization name",
+    "pinTeam": "Team (optional)",
+    "pinNoTeam": "No team",
+    "pinConfirm": "Pin",
+    "pinning": "Pinning...",
+    "cancel": "Cancel",
+    "error": "Failed to pin the client. Please try again."
+  },
   "organizations": {
     "title": "Organizations",
     "create": "Add organization",
