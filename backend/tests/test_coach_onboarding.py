@@ -48,3 +48,28 @@ def test_register_coach_token_authenticates_as_coach(client):
     me = client.get("/api/auth/me", headers=headers)
     assert me.status_code == 200
     assert me.json()["role"] == "coach"
+
+
+def test_my_organizations_excludes_coach_workspace(client):
+    _, headers = _register_coach(client, email="wcoach@example.com", full_name="W Coach")
+
+    client.post("/api/organizations", json={"name": "Client A"}, headers=headers)
+    client.post("/api/organizations", json={"name": "Client B"}, headers=headers)
+
+    response = client.get("/api/auth/me/organizations", headers=headers)
+    assert response.status_code == 200
+    names = sorted(o["name"] for o in response.json())
+    assert names == ["Client A", "Client B"]
+
+
+def test_my_organizations_coach_with_no_clients_gets_empty_list(client):
+    _, headers = _register_coach(client, email="empty@example.com", full_name="Empty Coach")
+    response = client.get("/api/auth/me/organizations", headers=headers)
+    assert response.json() == []
+
+
+def test_my_organizations_regular_user_unchanged(client, auth_headers_user, test_organization):
+    response = client.get("/api/auth/me/organizations", headers=auth_headers_user)
+    assert response.json() == [
+        {"id": test_organization.id, "name": test_organization.name}
+    ]

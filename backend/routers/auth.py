@@ -182,25 +182,27 @@ def get_my_organizations(
     """
     Get all organizations accessible by the current user.
     - Admin: all organizations in the system
-    - Coach: home organization + organizations granted via OrganizationAccess
+    - Coach: client organizations granted via OrganizationAccess (home workspace excluded)
     - Manager/User: home organization only
     """
     if current_user.role.value == "admin":
         all_orgs = db.query(Organization).order_by(Organization.name).all()
         return [{"id": o.id, "name": o.name} for o in all_orgs]
 
-    orgs = [{"id": current_user.organization.id, "name": current_user.organization.name}]
-
     if current_user.role.value == "coach":
+        # Coach: client orgs only. The home org is a private workspace and
+        # must never appear in the client switcher.
         from models import OrganizationAccess
         access_list = db.query(OrganizationAccess).filter(
             OrganizationAccess.user_id == current_user.id
         ).all()
-        for access in access_list:
-            if access.organization and access.organization_id != current_user.organization_id:
-                orgs.append({"id": access.organization.id, "name": access.organization.name})
+        return [
+            {"id": a.organization.id, "name": a.organization.name}
+            for a in access_list
+            if a.organization and a.organization_id != current_user.organization_id
+        ]
 
-    return orgs
+    return [{"id": current_user.organization.id, "name": current_user.organization.name}]
 
 
 @router.post("/forgot-password", status_code=status.HTTP_200_OK)
