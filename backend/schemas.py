@@ -187,6 +187,11 @@ class GhostInviteResponse(BaseModel):
     status: str
 
 
+class MoveOrganizationRequest(BaseModel):
+    organization_id: int
+    team_id: Optional[int] = None
+
+
 class InvitationAcceptRequest(BaseModel):
     token: str = Field(..., min_length=1)
     password: str = Field(..., min_length=8, max_length=72)

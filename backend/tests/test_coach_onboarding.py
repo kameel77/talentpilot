@@ -127,3 +127,83 @@ def test_ghost_invite_org_access_denied(client, db_session):
         headers=headers,
     )
     assert response.status_code == 403
+
+
+def _create_individual(client, headers, org_id, email="pin@example.com"):
+    r = client.post(
+        "/api/invitations/ghost",
+        json={"email": email, "full_name": "Pin Me", "organization_id": org_id},
+        headers=headers,
+    )
+    assert r.status_code == 201, r.text
+    return r.json()["user_id"]
+
+
+def test_move_individual_to_client_org_with_team(client, db_session):
+    _, headers = _register_coach(client, email="mcoach@example.com", full_name="M Coach")
+    me = _me(client, headers)
+    user_id = _create_individual(client, headers, me["organization_id"])
+
+    org = client.post("/api/organizations", json={"name": "Client X"}, headers=headers).json()
+    team = client.post(
+        "/api/teams",
+        json={"name": "Team X", "organization_id": org["id"]},
+        headers=headers,
+    ).json()
+
+    response = client.post(
+        f"/api/users/{user_id}/move-organization",
+        json={"organization_id": org["id"], "team_id": team["id"]},
+        headers=headers,
+    )
+    assert response.status_code == 200, response.text
+
+    moved = db_session.query(User).filter(User.id == user_id).first()
+    db_session.refresh(moved)
+    assert moved.organization_id == org["id"]
+    assert [t.id for t in moved.teams] == [team["id"]]
+
+
+def test_move_denied_without_target_access(client, db_session, test_organization):
+    _, headers = _register_coach(client, email="ncoach@example.com", full_name="N Coach")
+    me = _me(client, headers)
+    user_id = _create_individual(client, headers, me["organization_id"], email="pin2@example.com")
+
+    # test_organization belongs to nobody the coach knows — no OrganizationAccess
+    response = client.post(
+        f"/api/users/{user_id}/move-organization",
+        json={"organization_id": test_organization.id},
+        headers=headers,
+    )
+    assert response.status_code == 403
+
+
+def test_move_rejects_non_user_roles(client, db_session, test_admin):
+    _, headers = _register_coach(client, email="rcoach@example.com", full_name="R Coach")
+    response = client.post(
+        f"/api/users/{test_admin.id}/move-organization",
+        json={"organization_id": test_admin.organization_id},
+        headers=headers,
+    )
+    assert response.status_code in (400, 403)  # role guard or access guard — both acceptable
+
+
+def test_move_team_must_belong_to_target_org(client, db_session):
+    _, headers = _register_coach(client, email="tcoach@example.com", full_name="T Coach")
+    me = _me(client, headers)
+    user_id = _create_individual(client, headers, me["organization_id"], email="pin3@example.com")
+
+    org_a = client.post("/api/organizations", json={"name": "Org A"}, headers=headers).json()
+    org_b = client.post("/api/organizations", json={"name": "Org B"}, headers=headers).json()
+    team_b = client.post(
+        "/api/teams",
+        json={"name": "Team B", "organization_id": org_b["id"]},
+        headers=headers,
+    ).json()
+
+    response = client.post(
+        f"/api/users/{user_id}/move-organization",
+        json={"organization_id": org_a["id"], "team_id": team_b["id"]},
+        headers=headers,
+    )
+    assert response.status_code == 400

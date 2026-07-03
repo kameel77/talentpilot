@@ -7,7 +7,7 @@ from typing import List, Optional
 from database import get_db
 from models import User, UserRole, user_teams, Team, UserTalent
 from services.email_service import send_team_added_email, send_invitation_email
-from schemas import UserCreate, UserUpdate, UserResponse, UserDetailResponse, PasswordChangeRequest, AdminRoleUpdate
+from schemas import UserCreate, UserUpdate, UserResponse, UserDetailResponse, PasswordChangeRequest, AdminRoleUpdate, MoveOrganizationRequest
 from auth import get_current_user, require_role, hash_password, verify_password, get_current_active_org_id, check_org_access, check_user_access
 
 router = APIRouter()
@@ -701,4 +701,63 @@ def resend_invitation(
         language=org.language if org else "pl",
     )
 
+    return {"ok": True}
+
+
+@router.post("/{user_id}/move-organization", status_code=status.HTTP_200_OK)
+def move_user_organization(
+    user_id: int,
+    payload: MoveOrganizationRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_role(["admin", "coach"])),
+):
+    """Move a user to another organization (pin an individual client to a client org).
+
+    Caller must have access to BOTH the user's current organization and the target.
+    Team memberships are cleared (they reference the old org); team-bound active
+    invitations are revoked, team-less ones stay valid.
+    """
+    from datetime import datetime, timezone
+    from models import Team, TeamInvitation, InvitationStatus, Organization
+
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+    if user.role != UserRole.USER:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Only regular users can be moved between organizations",
+        )
+    if not check_org_access(db, current_user, user.organization_id):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied to user's organization")
+    if not check_org_access(db, current_user, payload.organization_id):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Access denied to target organization")
+    if not db.query(Organization).filter(Organization.id == payload.organization_id).first():
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Target organization not found")
+
+    team = None
+    if payload.team_id is not None:
+        team = db.query(Team).filter(Team.id == payload.team_id).first()
+        if not team or team.organization_id != payload.organization_id:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Team does not belong to the target organization",
+            )
+
+    user.teams.clear()
+    db.query(TeamInvitation).filter(
+        TeamInvitation.user_id == user.id,
+        TeamInvitation.status == InvitationStatus.ACTIVE,
+        TeamInvitation.team_id.isnot(None),
+    ).update(
+        {
+            TeamInvitation.status: InvitationStatus.REVOKED,
+            TeamInvitation.revoked_at: datetime.now(timezone.utc),
+        },
+        synchronize_session=False,
+    )
+    user.organization_id = payload.organization_id
+    if team is not None:
+        team.members.append(user)
+    db.commit()
     return {"ok": True}
