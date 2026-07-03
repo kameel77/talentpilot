@@ -132,7 +132,8 @@ export interface GhostInviteRequest {
     email: string;
     full_name: string;
     job_title?: string;
-    team_id: number;
+    team_id?: number;
+    organization_id?: number;
     talents?: GhostInviteTalent[];
 }
 
@@ -352,7 +353,7 @@ apiClient.interceptors.request.use(
             config.headers.Authorization = `Bearer ${token}`;
         }
         const activeOrgId = tokenManager.getActiveOrgId();
-        if (activeOrgId && config.headers) {
+        if (activeOrgId && config.headers && !config.headers['X-Organization-Id']) {
             config.headers['X-Organization-Id'] = activeOrgId.toString();
         }
         return config;
@@ -415,6 +416,11 @@ export const api = {
             return response.data;
         },
 
+        registerCoach: async (data: { email: string; password: string; full_name: string }): Promise<AuthResponse> => {
+            const response = await apiClient.post<AuthResponse>('/api/auth/register-coach', data);
+            return response.data;
+        },
+
         getCurrentUser: async (): Promise<User> => {
             const response = await apiClient.get<User>('/api/auth/me');
             return response.data;
@@ -465,8 +471,9 @@ export const api = {
 
     // Teams
     teams: {
-        list: async (): Promise<Team[]> => {
-            const response = await apiClient.get<Team[]>('/api/teams');
+        list: async (orgIdOverride?: number): Promise<Team[]> => {
+            const headers = orgIdOverride ? { 'X-Organization-Id': String(orgIdOverride) } : undefined;
+            const response = await apiClient.get<Team[]>('/api/teams', { headers });
             return response.data;
         },
 
@@ -519,9 +526,10 @@ export const api = {
 
     // Users
     users: {
-        list: async (teamId?: number) => {
+        list: async (teamId?: number, orgIdOverride?: number) => {
             const params = teamId ? { team_id: teamId } : {};
-            const response = await apiClient.get('/api/users', { params });
+            const headers = orgIdOverride ? { 'X-Organization-Id': String(orgIdOverride) } : undefined;
+            const response = await apiClient.get('/api/users', { params, headers });
             return response.data;
         },
 
@@ -616,6 +624,11 @@ export const api = {
 
         resendInvitation: async (userId: number): Promise<{ ok: boolean }> => {
             const response = await apiClient.post<{ ok: boolean }>(`/api/users/${userId}/resend-invitation`);
+            return response.data;
+        },
+
+        moveOrganization: async (userId: number, data: { organization_id: number; team_id?: number }): Promise<{ ok: boolean }> => {
+            const response = await apiClient.post<{ ok: boolean }>(`/api/users/${userId}/move-organization`, data);
             return response.data;
         },
     },
