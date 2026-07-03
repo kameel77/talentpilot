@@ -200,6 +200,12 @@ def provision_org_team(
         db.flush()
         org_created = True
 
+    if org.is_workspace:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Cannot create teams in a private workspace",
+        )
+
     if data.team_id is not None:
         team = db.query(Team).filter(
             Team.id == data.team_id,

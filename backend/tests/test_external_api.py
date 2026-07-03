@@ -145,3 +145,31 @@ def test_parse_gallup_external_no_results(mock_extract, client, api_key):
     data = response.json()
     assert data["talents"] == []
     assert data["language"] == "pl+en"
+
+
+from schemas import ExternalProvisionOrgTeamRequest
+from models import Organization
+
+def test_provision_org_team_blocks_workspace_org(db_session, client, api_key):
+    """Provisioning a team into a private workspace org must return 400."""
+    # Create a workspace organization (is_workspace=True)
+    workspace_org = Organization(name="Workspace Org", is_workspace=True)
+    db_session.add(workspace_org)
+    db_session.commit()
+
+    # Attempt to provision a team into the workspace org
+    payload = ExternalProvisionOrgTeamRequest(
+        org_id=workspace_org.id,
+        org_name="Dummy Name",
+        team_id=None,
+        team_name="Test Team",
+    )
+
+    response = client.post(
+        "/api/external/v1/provision/org-team",
+        json=payload.model_dump(),
+        headers={"X-API-Key": api_key.key},
+    )
+
+    assert response.status_code == 400
+    assert "Cannot create teams in a private workspace" in response.json()["detail"]
