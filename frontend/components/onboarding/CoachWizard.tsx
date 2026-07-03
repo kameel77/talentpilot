@@ -63,12 +63,13 @@ export default function CoachWizard() {
                 setClientOrgId(firstClient.id);
                 tokenManager.setActiveOrgId(firstClient.id);
                 const teams = await api.teams.list(firstClient.id);
-                if (teams.length === 0) {
+                const clientTeams = teams.filter((team) => team.organization_id === firstClient.id);
+                if (clientTeams.length === 0) {
                     setStep("team");
                     return;
                 }
-                setTeamId(teams[0].id);
-                const members = await api.users.list(teams[0].id, firstClient.id);
+                setTeamId(clientTeams[0].id);
+                const members = await api.users.list(clientTeams[0].id, firstClient.id);
                 if (members.length === 0) {
                     setStep("people");
                     return;

@@ -50,11 +50,29 @@ export default function IndividualClientsTab() {
     useEffect(() => {
         setSelectedTeamId("");
         if (typeof selectedOrgId === "number") {
-            api.teams.list(selectedOrgId).then((ts) => setTeams(ts));
+            api.teams.list(selectedOrgId).then((ts) =>
+                setTeams(ts.filter((team) => team.organization_id === selectedOrgId))
+            );
         } else {
             setTeams([]);
         }
     }, [selectedOrgId]);
+
+    const openPinModal = (u: User) => {
+        setPinTarget(u);
+        setSelectedOrgId("");
+        setNewOrgName("");
+        setSelectedTeamId("");
+        setError("");
+    };
+
+    const closePinModal = () => {
+        setPinTarget(null);
+        setSelectedOrgId("");
+        setNewOrgName("");
+        setSelectedTeamId("");
+        setError("");
+    };
 
     const handlePin = async () => {
         if (!pinTarget) return;
@@ -64,6 +82,9 @@ export default function IndividualClientsTab() {
             let orgId: number;
             if (selectedOrgId === "new") {
                 const org = await api.organizations.create({ name: newOrgName });
+                setClientOrgs((prev) => [...prev, { id: org.id, name: org.name }]);
+                setSelectedOrgId(org.id);
+                setNewOrgName("");
                 orgId = org.id;
             } else if (typeof selectedOrgId === "number") {
                 orgId = selectedOrgId;
@@ -75,9 +96,7 @@ export default function IndividualClientsTab() {
                 organization_id: orgId,
                 team_id: typeof selectedTeamId === "number" ? selectedTeamId : undefined,
             });
-            setPinTarget(null);
-            setSelectedOrgId("");
-            setNewOrgName("");
+            closePinModal();
             await load();
         } catch {
             setError(t("error"));
@@ -114,7 +133,7 @@ export default function IndividualClientsTab() {
                             <p className="text-xs text-slate-500 truncate">{u.email}</p>
                         </div>
                     </div>
-                    <Button variant="outline" size="sm" onClick={() => setPinTarget(u)}>
+                    <Button variant="outline" size="sm" onClick={() => openPinModal(u)}>
                         {t("pin")}
                     </Button>
                 </div>
@@ -166,7 +185,7 @@ export default function IndividualClientsTab() {
                         )}
                         {error && <p className="text-sm text-rose-600">{error}</p>}
                         <div className="flex justify-end gap-2 pt-2">
-                            <Button variant="outline" onClick={() => setPinTarget(null)}>{t("cancel")}</Button>
+                            <Button variant="outline" onClick={closePinModal}>{t("cancel")}</Button>
                             <Button
                                 onClick={handlePin}
                                 disabled={pinning || selectedOrgId === "" || (selectedOrgId === "new" && !newOrgName)}
