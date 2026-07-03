@@ -45,7 +45,21 @@
       "submit": "Utwórz konto",
       "loading": "Tworzenie konta...",
       "alreadyHaveAccount": "Masz już konto?",
-      "signIn": "Zaloguj się"
+      "signIn": "Zaloguj się",
+      "coachCta": "Jesteś coachem?",
+      "coachLink": "Załóż konto coacha"
+    },
+    "registerCoach": {
+      "title": "Konto coacha",
+      "subtitle": "Pracuj ze swoimi klientami w oparciu o talenty Gallupa",
+      "fullName": "Imię i nazwisko",
+      "email": "Email",
+      "password": "Hasło",
+      "submit": "Załóż konto coacha",
+      "submitting": "Tworzenie konta...",
+      "haveAccount": "Masz już konto?",
+      "login": "Zaloguj się",
+      "memberHint": "Jesteś członkiem zespołu? Poproś swojego coacha lub lidera o zaproszenie."
     },
     "forgotPassword": {
       "title": "Nie pamiętam hasła",

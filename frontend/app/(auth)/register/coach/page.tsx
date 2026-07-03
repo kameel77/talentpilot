@@ -6,15 +6,10 @@ import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { api, tokenManager } from "@/lib/api";
 
-export default function RegisterPage() {
+export default function RegisterCoachPage() {
+    const t = useTranslations("auth.registerCoach");
     const router = useRouter();
-    const t = useTranslations("auth.register");
-    const [formData, setFormData] = useState({
-        email: "",
-        password: "",
-        full_name: "",
-        organization_name: "",
-    });
+    const [formData, setFormData] = useState({ full_name: "", email: "", password: "" });
     const [error, setError] = useState("");
     const [loading, setLoading] = useState(false);
 
@@ -47,15 +42,16 @@ export default function RegisterPage() {
         setLoading(true);
 
         try {
-            const { access_token } = await api.auth.register(formData);
+            const { access_token } = await api.auth.registerCoach(formData);
             tokenManager.setToken(access_token);
 
             // Get user info and store
             const user = await api.auth.getCurrentUser();
             tokenManager.setUser(user);
 
-            // Redirect to dashboard
-            router.push("/dashboard");
+            // One-time cookie routes the coach into the onboarding wizard
+            document.cookie = "onboarding=1; path=/; max-age=3600; SameSite=Lax";
+            router.push("/dashboard/onboarding");
         } catch (err) {
             setError(getErrorMessage(err));
         } finally {
@@ -70,10 +66,11 @@ export default function RegisterPage() {
                     <h1 className="text-4xl font-bold font-heading text-primary tracking-tight">
                         TalentPilot
                     </h1>
-                    <p className="text-slate-500 mt-2 font-medium">Build a strength-based culture</p>
+                    <p className="text-slate-500 mt-2 font-medium">{t("subtitle")}</p>
                 </div>
 
                 <div className="bg-white rounded-3xl shadow-xl shadow-blue-500/5 border border-slate-200 p-10 animate-fade-up">
+                    <h2 className="text-xl font-bold text-slate-900 mb-6">{t("title")}</h2>
                     <form onSubmit={handleSubmit} className="space-y-5">
                         {error && (
                             <div className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-medium text-rose-700">
@@ -82,24 +79,8 @@ export default function RegisterPage() {
                         )}
 
                         <div className="space-y-1.5">
-                            <label htmlFor="organization_name" className="block text-sm font-semibold text-slate-700 ml-1">
-                                Organization Name
-                            </label>
-                            <input
-                                id="organization_name"
-                                name="organization_name"
-                                type="text"
-                                value={formData.organization_name}
-                                onChange={handleChange}
-                                required
-                                className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-primary focus:bg-white focus:border-transparent transition-all outline-none text-slate-900"
-                                placeholder="Acme Inc."
-                            />
-                        </div>
-
-                        <div className="space-y-1.5">
                             <label htmlFor="full_name" className="block text-sm font-semibold text-slate-700 ml-1">
-                                {t("nameLabel")}
+                                {t("fullName")}
                             </label>
                             <input
                                 id="full_name"
@@ -115,7 +96,7 @@ export default function RegisterPage() {
 
                         <div className="space-y-1.5">
                             <label htmlFor="email" className="block text-sm font-semibold text-slate-700 ml-1">
-                                {t("emailLabel")}
+                                {t("email")}
                             </label>
                             <input
                                 id="email"
@@ -131,7 +112,7 @@ export default function RegisterPage() {
 
                         <div className="space-y-1.5">
                             <label htmlFor="password" className="block text-sm font-semibold text-slate-700 ml-1">
-                                {t("passwordLabel")}
+                                {t("password")}
                             </label>
                             <input
                                 id="password"
@@ -152,22 +133,17 @@ export default function RegisterPage() {
                             disabled={loading}
                             className="w-full bg-primary text-white py-3.5 mt-2 rounded-xl font-bold hover:bg-blue-700 transition-all shadow-lg shadow-blue-500/10 disabled:opacity-50 disabled:cursor-not-allowed active:scale-[0.98]"
                         >
-                            {loading ? t("loading") : t("submit")}
+                            {loading ? t("submitting") : t("submit")}
                         </button>
                     </form>
 
                     <div className="mt-8 text-center text-sm text-slate-500 font-medium">
-                        {t("alreadyHaveAccount")}{" "}
+                        {t("haveAccount")}{" "}
                         <Link href="/login" className="text-primary hover:text-blue-700 font-bold transition-colors">
-                            {t("signIn")}
+                            {t("login")}
                         </Link>
                     </div>
-                    <p className="mt-3 text-center text-sm text-slate-500">
-                        {t("coachCta")}{" "}
-                        <Link href="/register/coach" className="font-semibold text-primary hover:underline">
-                            {t("coachLink")}
-                        </Link>
-                    </p>
+                    <p className="mt-3 text-center text-xs text-slate-400">{t("memberHint")}</p>
                 </div>
             </div>
         </div>

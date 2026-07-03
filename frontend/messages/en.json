@@ -45,7 +45,21 @@
       "submit": "Create account",
       "loading": "Creating account...",
       "alreadyHaveAccount": "Already have an account?",
-      "signIn": "Sign in"
+      "signIn": "Sign in",
+      "coachCta": "Are you a coach?",
+      "coachLink": "Create a coach account"
+    },
+    "registerCoach": {
+      "title": "Coach account",
+      "subtitle": "Work with your clients using Gallup talents",
+      "fullName": "Full name",
+      "email": "Email",
+      "password": "Password",
+      "submit": "Create coach account",
+      "submitting": "Creating account...",
+      "haveAccount": "Already have an account?",
+      "login": "Log in",
+      "memberHint": "Are you a team member? Ask your coach or leader for an invitation."
     },
     "forgotPassword": {
       "title": "Forgot password",
