@@ -304,3 +304,39 @@ def test_move_team_must_belong_to_target_org(client, db_session):
         headers=headers,
     )
     assert response.status_code == 400
+
+
+def test_register_coach_workspace_flagged(client, db_session):
+    _, headers = _register_coach(client, email="flagcoach@example.com", full_name="Flag Coach")
+    me = _me(client, headers)
+
+    workspace = (
+        db_session.query(Organization)
+        .filter(Organization.id == me["organization_id"])
+        .first()
+    )
+    assert workspace.is_workspace is True
+
+
+def test_cannot_create_team_in_workspace(client):
+    _, headers = _register_coach(client, email="wteamcoach@example.com", full_name="W Team Coach")
+    me = _me(client, headers)
+
+    response = client.post(
+        "/api/teams",
+        json={"name": "Sneaky Team", "organization_id": me["organization_id"]},
+        headers=headers,
+    )
+    assert response.status_code == 400
+
+
+def test_can_still_create_team_in_client_org(client):
+    _, headers = _register_coach(client, email="cteamcoach@example.com", full_name="C Team Coach")
+
+    org = client.post("/api/organizations", json={"name": "Client Org Team Test"}, headers=headers).json()
+    response = client.post(
+        "/api/teams",
+        json={"name": "Client Team", "organization_id": org["id"]},
+        headers=headers,
+    )
+    assert response.status_code == 201, response.text

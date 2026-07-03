@@ -70,6 +70,7 @@ class Organization(Base):
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
     language = Column(String(10), nullable=False, default="pl")
+    is_workspace = Column(Boolean, nullable=False, default=False, server_default='false')
 
     # Relationships
     users = relationship("User", back_populates="organization", cascade="all, delete-orphan")

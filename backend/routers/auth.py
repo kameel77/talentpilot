@@ -90,7 +90,7 @@ def register_coach(
             detail="Email already registered"
         )
 
-    workspace = Organization(name=f"{data.full_name} — Coaching")
+    workspace = Organization(name=f"{data.full_name} — Coaching", is_workspace=True)
     db.add(workspace)
     db.flush()  # get workspace.id
 

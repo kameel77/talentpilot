@@ -57,6 +57,7 @@ class OrganizationResponse(BaseModel):
     city: Optional[str] = None
     tax_id: Optional[str] = None
     language: str = "pl"
+    is_workspace: bool = False
     created_at: datetime
     teams: Optional[List[OrganizationTeamSimple]] = None
 

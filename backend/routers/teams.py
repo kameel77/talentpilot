@@ -75,8 +75,15 @@ def create_team(
             detail="You do not have access to this organization"
         )
 
-    if not db.query(Organization).filter(Organization.id == target_org_id).first():
+    organization = db.query(Organization).filter(Organization.id == target_org_id).first()
+    if not organization:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Organization not found")
+
+    if organization.is_workspace:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Cannot create teams in a private workspace",
+        )
 
     team = Team(
         name=data.name,

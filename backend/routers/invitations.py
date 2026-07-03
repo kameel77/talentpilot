@@ -107,6 +107,11 @@ def create_ghost_invite(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="Team not found",
             )
+        if team.organization.is_workspace:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Cannot invite into a workspace team",
+            )
         target_org_id = team.organization_id
     else:
         target_org_id = data.organization_id
