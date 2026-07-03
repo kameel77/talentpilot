@@ -1,5 +1,5 @@
 """Pydantic schemas for request/response validation."""
-from pydantic import BaseModel, EmailStr, Field
+from pydantic import BaseModel, EmailStr, Field, model_validator
 from typing import List, Optional
 from datetime import datetime
 from enum import Enum
@@ -168,8 +168,15 @@ class GhostInviteCreate(BaseModel):
     email: EmailStr
     full_name: str = Field(..., min_length=1, max_length=255)
     job_title: Optional[str] = None
-    team_id: int
+    team_id: Optional[int] = None
+    organization_id: Optional[int] = None
     talents: Optional[List[GhostInviteTalent]] = None
+
+    @model_validator(mode="after")
+    def require_team_or_organization(self):
+        if self.team_id is None and self.organization_id is None:
+            raise ValueError("Either team_id or organization_id is required")
+        return self
 
 
 class GhostInviteResponse(BaseModel):

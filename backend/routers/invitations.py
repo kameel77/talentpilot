@@ -11,6 +11,7 @@ from auth import hash_password, require_role, create_access_token, check_org_acc
 from database import get_db
 from models import (
     InvitationStatus,
+    Organization,
     Team,
     TeamInvitation,
     Talent,
@@ -98,20 +99,31 @@ def create_ghost_invite(
     db: Session = Depends(get_db),
     current_user: User = Depends(require_role(["admin", "manager", "coach"])),
 ):
-    team = db.query(Team).filter(Team.id == data.team_id).first()
-    if not team:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Team not found",
-        )
-    if not check_org_access(db, current_user, team.organization_id):
+    team = None
+    if data.team_id is not None:
+        team = db.query(Team).filter(Team.id == data.team_id).first()
+        if not team:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Team not found",
+            )
+        target_org_id = team.organization_id
+    else:
+        target_org_id = data.organization_id
+        if not db.query(Organization).filter(Organization.id == target_org_id).first():
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Organization not found",
+            )
+
+    if not check_org_access(db, current_user, target_org_id):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Access denied to this team",
+            detail="Access denied to this organization",
         )
 
     existing_user = db.query(User).filter(User.email == data.email).first()
-    if existing_user and existing_user.organization_id != team.organization_id:
+    if existing_user and existing_user.organization_id != target_org_id:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="User belongs to a different organization",
@@ -129,23 +141,27 @@ def create_ghost_invite(
             role=UserRole.USER,
             is_active=False,
             is_ghost=True,
-            organization_id=team.organization_id,
+            organization_id=target_org_id,
         )
         db.add(user)
         db.flush()
 
-    if user not in team.members:
+    if team is not None and user not in team.members:
         team.members.append(user)
 
     if data.talents:
         _validate_talents(data.talents, db)
         _assign_talents(db, user.id, data.talents)
 
-    db.query(TeamInvitation).filter(
+    revoke_q = db.query(TeamInvitation).filter(
         TeamInvitation.user_id == user.id,
-        TeamInvitation.team_id == team.id,
         TeamInvitation.status == InvitationStatus.ACTIVE,
-    ).update(
+    )
+    if team is not None:
+        revoke_q = revoke_q.filter(TeamInvitation.team_id == team.id)
+    else:
+        revoke_q = revoke_q.filter(TeamInvitation.team_id.is_(None))
+    revoke_q.update(
         {
             TeamInvitation.status: InvitationStatus.REVOKED,
             TeamInvitation.revoked_at: datetime.now(timezone.utc),
@@ -155,7 +171,7 @@ def create_ghost_invite(
     invite_token = secrets.token_urlsafe(32)
     invitation = TeamInvitation(
         user_id=user.id,
-        team_id=team.id,
+        team_id=team.id if team is not None else None,
         token_hash=_hash_token(invite_token),
         status=InvitationStatus.ACTIVE,
         expires_at=datetime.now(timezone.utc) + timedelta(days=INVITE_TTL_DAYS),

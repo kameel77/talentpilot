@@ -189,7 +189,7 @@ class TeamInvitation(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     user_id = Column(Integer, ForeignKey('users.id', ondelete='CASCADE'), nullable=False)
-    team_id = Column(Integer, ForeignKey('teams.id', ondelete='CASCADE'), nullable=False)
+    team_id = Column(Integer, ForeignKey('teams.id', ondelete='CASCADE'), nullable=True)
     token_hash = Column(String(64), unique=True, nullable=False)
     status = Column(INVITATION_STATUS_ENUM, nullable=False, default=InvitationStatus.ACTIVE)
     expires_at = Column(DateTime(timezone=True), nullable=False)

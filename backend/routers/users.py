@@ -682,8 +682,8 @@ def resend_invitation(
     if not invitation:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="No active invitation found")
 
-    team = db.query(Team).filter(Team.id == invitation.team_id).first()
-    org = team.organization if team else None
+    team = db.query(Team).filter(Team.id == invitation.team_id).first() if invitation.team_id else None
+    org = team.organization if team else ghost.organization
 
     new_token = secrets.token_urlsafe(32)
     invitation.token_hash = hashlib.sha256(new_token.encode("utf-8")).hexdigest()
