@@ -9,6 +9,7 @@ from database import get_db
 from models import User, Organization, UserRole, PasswordResetToken
 from schemas import (
     RegisterRequest,
+    RegisterCoachRequest,
     Token,
     UserResponse,
     UserDetailResponse,
@@ -66,7 +67,46 @@ def register(
     
     # Create access token
     access_token = create_access_token(data={"sub": user.id})
-    
+
+    return Token(access_token=access_token)
+
+
+@router.post("/register-coach", response_model=Token, status_code=status.HTTP_201_CREATED)
+def register_coach(
+    data: RegisterCoachRequest,
+    db: Session = Depends(get_db)
+):
+    """
+    Self-serve coach registration.
+
+    - Creates a private workspace organization (default container for individual clients)
+    - Creates the coach user inside that workspace
+    - Returns JWT token
+    """
+    existing_user = db.query(User).filter(User.email == data.email).first()
+    if existing_user:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Email already registered"
+        )
+
+    workspace = Organization(name=f"{data.full_name} — Coaching")
+    db.add(workspace)
+    db.flush()  # get workspace.id
+
+    user = User(
+        email=data.email,
+        hashed_password=hash_password(data.password),
+        full_name=data.full_name,
+        role=UserRole.COACH,
+        organization_id=workspace.id,
+        public_token=str(uuid.uuid4()).replace("-", ""),
+    )
+    db.add(user)
+    db.commit()
+    db.refresh(user)
+
+    access_token = create_access_token(data={"sub": user.id})
     return Token(access_token=access_token)
 
 

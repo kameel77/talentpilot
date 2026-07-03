@@ -271,6 +271,12 @@ class RegisterRequest(BaseModel):
     organization_name: str = Field(..., min_length=1, max_length=255)
 
 
+class RegisterCoachRequest(BaseModel):
+    email: EmailStr
+    password: str = Field(..., min_length=8, max_length=72)
+    full_name: str = Field(..., min_length=1, max_length=255)
+
+
 class ForgotPasswordRequest(BaseModel):
     email: EmailStr
 
