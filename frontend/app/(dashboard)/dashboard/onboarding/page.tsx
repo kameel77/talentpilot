@@ -7,6 +7,7 @@ import { useTranslations } from "next-intl";
 import { api, tokenManager } from "@/lib/api";
 import { ArrowRight, FileText, Users, MessageSquare } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import CoachWizard from "@/components/onboarding/CoachWizard";
 
 const ONBOARDING_COOKIE = "onboarding";
 
@@ -20,6 +21,12 @@ function clearOnboardingCookie() {
 }
 
 export default function OnboardingPage() {
+    const isCoach = typeof window !== "undefined" && tokenManager.getUser()?.role === "coach";
+    if (isCoach) return <CoachWizard />;
+    return <MemberOnboarding />;
+}
+
+function MemberOnboarding() {
     const t = useTranslations("onboarding");
     const router = useRouter();
     const [teamName, setTeamName] = useState("");

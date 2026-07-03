@@ -714,6 +714,37 @@
     "step2Cta": "Go to Team",
     "step3Title": "Ask AI about your talents",
     "step3Cta": "Go to Q&A",
-    "cta": "Get started"
+    "cta": "Get started",
+    "coach": {
+      "title": "Welcome to TalentPilot, {name}!",
+      "subtitle": "Set up your coaching workspace in a few steps",
+      "skip": "Skip — go to the app",
+      "stepClientType": "Who do you want to add as your first client?",
+      "clientPerson": "Person",
+      "clientPersonDesc": "Individual client — talent profile and 1:1 work",
+      "clientOrg": "Organization",
+      "clientOrgDesc": "Client team — talent matrix and group work",
+      "personFullName": "Full name",
+      "personEmail": "Email",
+      "talentSource": "Where do the talents come from?",
+      "talentPdf": "I'll upload the Gallup PDF now",
+      "talentInvite": "Send an invitation — the client uploads it",
+      "talentNone": "No talents for now",
+      "pdfFile": "Gallup report (PDF)",
+      "addPerson": "Add person",
+      "adding": "Adding...",
+      "orgName": "Client organization name",
+      "createOrg": "Create client",
+      "teamName": "Team name",
+      "createTeam": "Create team",
+      "peopleTitle": "Add people to the team",
+      "peopleAdded": "People added",
+      "finishToMatrix": "Finish — open the team matrix",
+      "finishToProfile": "Finish — open the client profile",
+      "addAnother": "Add another person",
+      "resumeBanner": "Finish setting up your coach account",
+      "resumeCta": "Continue",
+      "error": "Something went wrong. Please try again."
+    }
   }
 }

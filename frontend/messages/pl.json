@@ -714,6 +714,37 @@
     "step2Cta": "Przejdź do Zespołu",
     "step3Title": "Zapytaj AI o swoje talenty",
     "step3Cta": "Przejdź do Q&A",
-    "cta": "Zacznij"
+    "cta": "Zacznij",
+    "coach": {
+      "title": "Witaj w TalentPilot, {name}!",
+      "subtitle": "Skonfiguruj swój warsztat pracy w kilku krokach",
+      "skip": "Pomiń — przejdź do aplikacji",
+      "stepClientType": "Kogo chcesz dodać jako pierwszego klienta?",
+      "clientPerson": "Osoba",
+      "clientPersonDesc": "Klient indywidualny — profil talentów i praca 1:1",
+      "clientOrg": "Organizacja",
+      "clientOrgDesc": "Zespół klienta — matryca talentów i praca grupowa",
+      "personFullName": "Imię i nazwisko",
+      "personEmail": "Email",
+      "talentSource": "Skąd wziąć talenty?",
+      "talentPdf": "Wgram raport Gallup PDF teraz",
+      "talentInvite": "Wyślij zaproszenie — klient wgra sam",
+      "talentNone": "Na razie bez talentów",
+      "pdfFile": "Raport Gallup (PDF)",
+      "addPerson": "Dodaj osobę",
+      "adding": "Dodawanie...",
+      "orgName": "Nazwa organizacji klienta",
+      "createOrg": "Utwórz klienta",
+      "teamName": "Nazwa zespołu",
+      "createTeam": "Utwórz zespół",
+      "peopleTitle": "Dodaj osoby do zespołu",
+      "peopleAdded": "Dodane osoby",
+      "finishToMatrix": "Zakończ — otwórz matrycę zespołu",
+      "finishToProfile": "Zakończ — otwórz profil klienta",
+      "addAnother": "Dodaj kolejną osobę",
+      "resumeBanner": "Dokończ konfigurację konta coacha",
+      "resumeCta": "Kontynuuj",
+      "error": "Coś poszło nie tak. Spróbuj ponownie."
+    }
   }
 }
