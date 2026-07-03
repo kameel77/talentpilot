@@ -1,6 +1,6 @@
 # TalentPilot — Mapa Funkcjonalności
 
-> Ostatnia aktualizacja: 2026-03-19
+> Ostatnia aktualizacja: 2026-07-03
 
 ## Legenda
 - ✅ Zrealizowane  
@@ -21,6 +21,10 @@
 | ✅ | Ghost Invite | Zaproszenie usera z gotowym profilem talentów |
 | ✅ | Invite Accept (/join) | Akceptacja zaproszenia z ustawieniem hasła |
 | ✅ | Deaktywacja usera | Admin toggle active/inactive z poziomu listy |
+| ✅ | Rejestracja coacha (self-serve) | `/register/coach` — konto COACH + prywatny workspace |
+| ✅ | Onboarding coacha (kreator) | Klient indywidualny lub organizacja → zespół → osoby → matryca |
+| ✅ | Klienci indywidualni coacha | Zakładka Indywidualni + przypinanie do organizacji (move) |
+| ✅ | UI zawężone dla roli COACH | Ukryte Moje Talenty / Mój Ruch; selektor klienta |
 
 ---
 
