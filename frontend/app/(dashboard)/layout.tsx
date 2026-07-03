@@ -349,6 +349,24 @@ export default function DashboardLayout({
                                                 </button>
                                             ))}
                                         </div>
+                                        {isCoach && user && (
+                                            <div className="border-t border-slate-100 p-1">
+                                                <button
+                                                    onClick={() => handleOrgChange(user.organization_id)}
+                                                    className={cn(
+                                                        "flex w-full items-center gap-2 px-3 py-2 rounded-lg text-sm transition-colors text-left",
+                                                        activeOrgId === user.organization_id
+                                                            ? "bg-blue-50 text-blue-700 font-medium"
+                                                            : "text-slate-500 hover:bg-slate-50"
+                                                    )}
+                                                >
+                                                    <span className="truncate">{t('myWorkspace')}</span>
+                                                    {activeOrgId === user.organization_id && (
+                                                        <span className="ml-auto flex h-2 w-2 rounded-full bg-blue-600"></span>
+                                                    )}
+                                                </button>
+                                            </div>
+                                        )}
                                     </div>
                                 )}
                             </div>
