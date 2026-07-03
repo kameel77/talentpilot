@@ -147,7 +147,9 @@
     "orgFallback": "Organization",
     "knowledgeFaq": "FAQ",
     "knowledgeMerytoryka": "Content",
-    "knowledgeInstructions": "Instructions"
+    "knowledgeInstructions": "Instructions",
+    "clients": "Clients",
+    "myWorkspace": "My workspace"
   },
   "dashboard": {
     "greeting": "Hi, {name}!",
@@ -445,6 +447,7 @@
   "qa": {
     "title": "Q&A Copilot",
     "subtitle": "Turn talent → competency → action. Ask about your challenges or team collaboration.",
+    "subtitleCoach": "Ask about the talents of the people and teams you work with",
     "placeholder": "Describe your problem...",
     "placeholderTeam": "How to collaborate with {name}?",
     "send": "Send",

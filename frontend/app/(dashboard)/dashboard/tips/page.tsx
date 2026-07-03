@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
-import { api, User, DailyTipResponse, SynergyTipResponse } from "@/lib/api";
+import { api, tokenManager, User, DailyTipResponse, SynergyTipResponse } from "@/lib/api";
 import { cn } from "@/lib/utils";
 import {
     Zap,
@@ -133,6 +133,7 @@ function TipContent({ content }: { content: string }) {
 
 export default function TipsPage() {
     const t = useTranslations("tips");
+    const isCoach = tokenManager.getUser()?.role === 'coach';
 
     const CONTEXTS = [
         { key: "general", label: t("context.general"), icon: CONTEXT_ICONS.general },
@@ -235,7 +236,8 @@ export default function TipsPage() {
             </div>
 
             {/* ─── SECTION 1: DAILY TIP ─── */}
-            <div className="space-y-4">
+            {!isCoach && (
+                <div className="space-y-4">
                 <div className="flex items-center gap-3">
                     <div className="h-10 w-10 rounded-2xl bg-gradient-to-br from-indigo-500 to-blue-600 flex items-center justify-center shadow-lg shadow-indigo-500/20">
                         <Zap className="h-5 w-5 text-white" />
@@ -310,7 +312,8 @@ export default function TipsPage() {
                         </p>
                     </div>
                 )}
-            </div>
+                </div>
+            )}
 
             {/* ─── SECTION 2: SYNERGY ─── */}
             <div className="space-y-4">

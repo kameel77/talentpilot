@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { Button } from '@/components/ui/button';
 import { TalentImportDialog } from '@/components/talent-import/TalentImportDialog';
@@ -251,6 +252,13 @@ function ManualSection({
 export default function MyTalentsPage() {
     const t = useTranslations('myTalents');
     const locale = getLocaleFromCookie();
+    const router = useRouter();
+
+    useEffect(() => {
+        if (tokenManager.getUser()?.role === 'coach') {
+            router.replace('/dashboard');
+        }
+    }, [router]);
 
     const [talentImportOpen, setTalentImportOpen] = useState(false);
     const [myTalents, setMyTalents] = useState<UserTalent[]>([]);

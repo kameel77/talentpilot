@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
-import { api, QAAnswer, User, UserTalentResponse } from "@/lib/api";
+import { api, tokenManager, QAAnswer, User, UserTalentResponse } from "@/lib/api";
 import { getLocaleFromCookie } from "@/lib/locale";
 import { ChatBubble, ContextCard, TeamMemberCard } from "@/components/qa/QAComponents";
 import { getRenderer } from "@/components/qa/QARenderers";
@@ -25,6 +25,7 @@ interface ChatMessage {
 
 export default function QACopilotPage() {
     const t = useTranslations("qa");
+    const isCoach = tokenManager.getUser()?.role === 'coach';
 
     const quickPrompts = [
         t("prompt1"),
@@ -154,7 +155,7 @@ export default function QACopilotPage() {
                 <div>
                     <h1 className="text-3xl font-bold font-heading text-slate-900 tracking-tight">{t("title")}</h1>
                     <p className="mt-1 text-slate-500 font-medium">
-                        {t("subtitle")}
+                        {isCoach ? t("subtitleCoach") : t("subtitle")}
                     </p>
                 </div>
                 <Button variant="outline" onClick={() => setMessages([])} className="gap-2">

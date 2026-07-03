@@ -119,9 +119,12 @@ export default function DashboardLayout({
         );
     }
 
+    const isCoach = user?.role === 'coach';
+
     const navigation = [
         { name: t("overview"), href: "/dashboard", icon: LayoutDashboard },
-        { name: t("myTalents"), href: "/dashboard/my-talents", icon: Sparkles },
+        // Self-as-member features are hidden for coaches — they work on clients, not on themselves
+        ...(!isCoach ? [{ name: t("myTalents"), href: "/dashboard/my-talents", icon: Sparkles }] : []),
         { name: t("qa"), href: "/dashboard/qa", icon: MessageSquare },
         { name: t("teams"), href: "/dashboard/teams", icon: Users },
         { name: t("compare"), href: "/dashboard/compare", icon: GitCompare },
@@ -135,7 +138,7 @@ export default function DashboardLayout({
     ];
 
     const adminNavigation = [
-        { name: t("organizations"), href: "/dashboard/organizations", icon: Building },
+        { name: isCoach ? t("clients") : t("organizations"), href: "/dashboard/organizations", icon: Building },
         { name: t("adminSettings"), href: "/dashboard/admin/settings", icon: Shield },
         { name: t("adminUsers"), href: "/dashboard/admin/users", icon: Users },
     ];
@@ -309,7 +312,7 @@ export default function DashboardLayout({
                     </div>
 
                     <div className="flex items-center gap-4">
-                        {organizations.length > 1 && (
+                        {(organizations.length > 1 || (isCoach && organizations.length >= 1)) && (
                             <div className="relative" ref={orgMenuRef}>
                                 <button
                                     onClick={() => setOrgMenuOpen(!orgMenuOpen)}
@@ -317,7 +320,7 @@ export default function DashboardLayout({
                                 >
                                     <Building className="h-4 w-4 text-slate-400" />
                                     <span className="max-w-[150px] truncate hidden sm:inline">
-                                        {organizations.find(o => o.id === activeOrgId)?.name || t('orgFallback')}
+                                        {organizations.find(o => o.id === activeOrgId)?.name || (isCoach ? t('myWorkspace') : t('orgFallback'))}
                                     </span>
                                     <ChevronDown className="h-4 w-4 text-slate-400" />
                                 </button>
