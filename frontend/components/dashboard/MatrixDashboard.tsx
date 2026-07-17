@@ -4,13 +4,22 @@ import { useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { GALLUP_TALENTS, getDomainStyle, DOMAIN_LABELS, GallupDomain, getTalentsByDomain } from '@/lib/gallup-data';
 import { getLocaleFromCookie } from '@/lib/locale';
-import { teamTalentRanks, teamDomainScores } from '@/lib/team-algorithms';
-import { Grid3x3, PieChart, Search } from 'lucide-react';
+import {
+    teamTalentRanks, teamDomainScores, findTeamWeaknesses, findSPOF,
+    teamResilience, uniqueContributions, complementaryPairs,
+} from '@/lib/team-algorithms';
+import { Grid3x3, PieChart, Search, BarChart3 } from 'lucide-react';
 import {
     PieChart as RePieChart, Pie, Cell, ResponsiveContainer,
     RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar, Legend,
     Tooltip,
 } from 'recharts';
+import TeamRankList from '@/components/dashboard/TeamRankList';
+import TalentHeatmap from '@/components/dashboard/TalentHeatmap';
+import TeamRisks from '@/components/dashboard/TeamRisks';
+import UniqueContributions from '@/components/dashboard/UniqueContributions';
+import ComplementaryPairs from '@/components/dashboard/ComplementaryPairs';
+import MemberProfileCards from '@/components/dashboard/MemberProfileCards';
 
 interface TalentResult {
     id: string | number;
@@ -28,15 +37,17 @@ interface Member {
 
 interface MatrixDashboardProps {
     members: Member[];
+    canSeeRisks?: boolean;
 }
 
-export default function MatrixDashboard({ members }: MatrixDashboardProps) {
+export default function MatrixDashboard({ members, canSeeRisks = false }: MatrixDashboardProps) {
     const t = useTranslations('teams');
     const locale = getLocaleFromCookie();
 
-    const [activeTab, setActiveTab] = useState<'matrix' | 'domains'>('matrix');
+    const [activeTab, setActiveTab] = useState<'matrix' | 'domains' | 'profiles'>('matrix');
     const [matrixSearch, setMatrixSearch] = useState('');
     const [showTop15Domains, setShowTop15Domains] = useState(true);
+    const [showTop15Profiles, setShowTop15Profiles] = useState(true);
 
     const membersWithResults = members.filter(m => m.results.length > 0);
 
@@ -96,6 +107,13 @@ export default function MatrixDashboard({ members }: MatrixDashboardProps) {
         });
     });
 
+    const memberNames = membersWithResults.map(m => m.name);
+    const weaknesses = membersRankMaps.length >= 2 ? findTeamWeaknesses(membersRankMaps, talentCodes) : [];
+    const spofList = membersRankMaps.length >= 2 ? findSPOF(membersRankMaps, talentCodes) : [];
+    const resilience = teamResilience(membersRankMaps, talentCodes);
+    const contributions = membersRankMaps.length >= 2 ? uniqueContributions(membersRankMaps, talentCodes) : [];
+    const pairs = membersRankMaps.length >= 2 ? complementaryPairs(membersRankMaps, talentCodes) : [];
+
     return (
         <div className="space-y-6">
             <div className="flex items-center gap-4 flex-wrap">
@@ -120,6 +138,17 @@ export default function MatrixDashboard({ members }: MatrixDashboardProps) {
                 >
                     <PieChart className="w-4 h-4" />
                     {t('domains')}
+                </button>
+                <button
+                    onClick={() => setActiveTab('profiles')}
+                    className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                        activeTab === 'profiles'
+                        ? 'bg-slate-900 text-white'
+                        : 'bg-white text-slate-600 hover:bg-slate-50 border border-slate-200'
+                    }`}
+                >
+                    <BarChart3 className="w-4 h-4" />
+                    {t('profilesTab')}
                 </button>
 
                 {activeTab === 'matrix' && (
@@ -259,87 +288,144 @@ export default function MatrixDashboard({ members }: MatrixDashboardProps) {
             )}
 
             {activeTab === 'domains' && (
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                    <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 flex flex-col">
-                        <div className="flex justify-between items-center mb-6">
-                            <h3 className="text-lg font-semibold text-slate-900">
-                                {t('representationIn', { range: showTop15Domains ? 'Top 15' : 'Top 5' })}
-                            </h3>
-                            <div className="flex bg-slate-100 p-1 rounded-lg">
-                                <button
-                                    onClick={() => setShowTop15Domains(false)}
-                                    className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${!showTop15Domains ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-600 hover:text-slate-900'}`}
-                                >
-                                    Top 5
-                                </button>
-                                <button
-                                    onClick={() => setShowTop15Domains(true)}
-                                    className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${showTop15Domains ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-600 hover:text-slate-900'}`}
-                                >
-                                    Top 15
-                                </button>
+                <div className="space-y-6">
+                    <div className="grid grid-cols-1 lg:grid-cols-[4fr_2fr_4fr] gap-6">
+                        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 flex flex-col">
+                            <div className="flex justify-between items-center mb-6">
+                                <h3 className="text-lg font-semibold text-slate-900">
+                                    {t('representationIn', { range: showTop15Domains ? 'Top 15' : 'Top 5' })}
+                                </h3>
+                                <div className="flex bg-slate-100 p-1 rounded-lg">
+                                    <button
+                                        onClick={() => setShowTop15Domains(false)}
+                                        className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${!showTop15Domains ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-600 hover:text-slate-900'}`}
+                                    >
+                                        Top 5
+                                    </button>
+                                    <button
+                                        onClick={() => setShowTop15Domains(true)}
+                                        className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${showTop15Domains ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-600 hover:text-slate-900'}`}
+                                    >
+                                        Top 15
+                                    </button>
+                                </div>
                             </div>
+
+                            {membersWithResults.length > 0 ? (
+                                <div className="flex-1 min-h-[300px]">
+                                    <ResponsiveContainer width="100%" height="100%">
+                                        <RePieChart>
+                                            <Pie data={domainCountData} dataKey="value" nameKey="name" cx="50%" cy="50%"
+                                                outerRadius={100} innerRadius={60} paddingAngle={2} strokeWidth={0}>
+                                                {domainCountData.map((entry, i) => (
+                                                    <Cell key={i} fill={entry.color} />
+                                                ))}
+                                            </Pie>
+                                            <Tooltip contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1)' }} />
+                                            <Legend iconType="circle" wrapperStyle={{ paddingTop: '20px' }} />
+                                        </RePieChart>
+                                    </ResponsiveContainer>
+                                </div>
+                            ) : (
+                                <div className="flex-1 flex items-center justify-center text-slate-500">{t('noData')}</div>
+                            )}
                         </div>
 
-                        {membersWithResults.length > 0 ? (
-                            <div className="flex-1 min-h-[300px]">
-                                <ResponsiveContainer width="100%" height="100%">
-                                    <RePieChart>
-                                        <Pie data={domainCountData} dataKey="value" nameKey="name" cx="50%" cy="50%"
-                                            outerRadius={100} innerRadius={60} paddingAngle={2} strokeWidth={0}>
-                                            {domainCountData.map((entry, i) => (
-                                                <Cell key={i} fill={entry.color} />
-                                            ))}
-                                        </Pie>
-                                        <Tooltip contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1)' }} />
-                                        <Legend iconType="circle" wrapperStyle={{ paddingTop: '20px' }} />
-                                    </RePieChart>
-                                </ResponsiveContainer>
-                            </div>
-                        ) : (
-                            <div className="flex-1 flex items-center justify-center text-slate-500">{t('noData')}</div>
-                        )}
+                        <TeamRankList teamRanks={teamRanks} topN={showTop15Domains ? 15 : 5} />
+
+                        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 flex flex-col">
+                            <h3 className="text-lg font-semibold text-slate-900 mb-6">{t('domainPotential')}</h3>
+                            {membersWithResults.length > 0 ? (
+                                <div className="flex-1 min-h-[300px]">
+                                    <ResponsiveContainer width="100%" height="100%">
+                                        <RadarChart data={radarData} cx="50%" cy="50%" outerRadius={100}>
+                                            <PolarGrid stroke="#e2e8f0" />
+                                            <PolarAngleAxis
+                                                dataKey="domain"
+                                                tick={(props: { payload?: { value: string }, x?: string | number, y?: string | number, textAnchor?: "end" | "inherit" | "middle" | "start" }) => {
+                                                    if (!props.payload) return <text></text>;
+                                                    const item = radarData.find(d => d.domain === props.payload!.value);
+                                                    return (
+                                                        <text x={props.x} y={props.y} textAnchor={props.textAnchor} fill={item?.color || '#64748b'} fontSize={12} fontWeight={600} dy={typeof props.y === 'number' && props.y > 150 ? 12 : -4}>
+                                                            {props.payload.value}
+                                                        </text>
+                                                    );
+                                                }}
+                                            />
+                                            <PolarRadiusAxis tick={false} axisLine={false} />
+                                            <Radar dataKey="value" stroke="#94a3b8" fill="#cbd5e1" fillOpacity={0.3} strokeWidth={2} />
+                                            {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+                                            <Tooltip content={({ active, payload }: any) => {
+                                                if (!active || !payload?.[0]) return null;
+                                                const p = payload[0].payload;
+                                                return (
+                                                    <div className="bg-white border border-slate-200 shadow-md rounded-lg p-3 text-slate-900">
+                                                        <div className="font-semibold mb-1">{p.domain}</div>
+                                                        <div className="text-slate-600">{p.score} pkt</div>
+                                                    </div>
+                                                );
+                                            }} />
+                                        </RadarChart>
+                                    </ResponsiveContainer>
+                                </div>
+                            ) : (
+                                <div className="flex-1 flex items-center justify-center text-slate-500">{t('noData')}</div>
+                            )}
+                        </div>
                     </div>
 
-                    <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 flex flex-col">
-                        <h3 className="text-lg font-semibold text-slate-900 mb-6">{t('domainPotential')}</h3>
-                        {membersWithResults.length > 0 ? (
-                            <div className="flex-1 min-h-[300px]">
-                                <ResponsiveContainer width="100%" height="100%">
-                                    <RadarChart data={radarData} cx="50%" cy="50%" outerRadius={100}>
-                                        <PolarGrid stroke="#e2e8f0" />
-                                        <PolarAngleAxis
-                                            dataKey="domain"
-                                            tick={(props: { payload?: { value: string }, x?: string | number, y?: string | number, textAnchor?: "end" | "inherit" | "middle" | "start" }) => {
-                                                if (!props.payload) return <text></text>;
-                                                const item = radarData.find(d => d.domain === props.payload!.value);
-                                                return (
-                                                    <text x={props.x} y={props.y} textAnchor={props.textAnchor} fill={item?.color || '#64748b'} fontSize={12} fontWeight={600} dy={typeof props.y === 'number' && props.y > 150 ? 12 : -4}>
-                                                        {props.payload.value}
-                                                    </text>
-                                                );
-                                            }}
-                                        />
-                                        <PolarRadiusAxis tick={false} axisLine={false} />
-                                        <Radar dataKey="value" stroke="#94a3b8" fill="#cbd5e1" fillOpacity={0.3} strokeWidth={2} />
-                                        {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
-                                        <Tooltip content={({ active, payload }: any) => {
-                                            if (!active || !payload?.[0]) return null;
-                                            const p = payload[0].payload;
-                                            return (
-                                                <div className="bg-white border border-slate-200 shadow-md rounded-lg p-3 text-slate-900">
-                                                    <div className="font-semibold mb-1">{p.domain}</div>
-                                                    <div className="text-slate-600">{p.score} pkt</div>
-                                                </div>
-                                            );
-                                        }} />
-                                    </RadarChart>
-                                </ResponsiveContainer>
-                            </div>
-                        ) : (
-                            <div className="flex-1 flex items-center justify-center text-slate-500">{t('noData')}</div>
+                    <TalentHeatmap counts={talentTop15Counts} />
+
+                    {canSeeRisks && (
+                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                            <TeamRisks
+                                weaknesses={weaknesses}
+                                spof={spofList}
+                                resilience={resilience}
+                                memberNames={memberNames}
+                                membersWithResultsCount={membersWithResults.length}
+                            />
+                        </div>
+                    )}
+
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                        <UniqueContributions contributions={contributions} memberNames={memberNames} />
+                        {canSeeRisks && (
+                            <ComplementaryPairs
+                                pairs={pairs}
+                                memberNames={memberNames}
+                                membersWithResultsCount={membersWithResults.length}
+                            />
                         )}
                     </div>
+                </div>
+            )}
+
+            {activeTab === 'profiles' && (
+                <div className="space-y-4">
+                    <div className="flex justify-end">
+                        <div className="flex bg-slate-100 p-1 rounded-lg">
+                            <button
+                                onClick={() => setShowTop15Profiles(false)}
+                                className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${!showTop15Profiles ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-600 hover:text-slate-900'}`}
+                            >
+                                Top 5
+                            </button>
+                            <button
+                                onClick={() => setShowTop15Profiles(true)}
+                                className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${showTop15Profiles ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-600 hover:text-slate-900'}`}
+                            >
+                                Top 15
+                            </button>
+                        </div>
+                    </div>
+                    {membersWithResults.length === 0 ? (
+                        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-12 text-center text-slate-500">
+                            {t('noTalentData')}
+                        </div>
+                    ) : (
+                        <MemberProfileCards members={membersWithResults} topN={showTop15Profiles ? 15 : 5} />
+                    )}
                 </div>
             )}
         </div>
