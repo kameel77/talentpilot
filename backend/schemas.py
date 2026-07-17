@@ -244,6 +244,21 @@ class TalentResponse(BaseModel):
     model_config = {"from_attributes": True}
 
 
+class AdminTalentResponse(BaseModel):
+    id: int
+    code: str
+    domain: GallupDomain
+    translations: list[TalentTranslationResponse]
+
+    model_config = {"from_attributes": True}
+
+
+class AdminTalentTranslationUpdate(BaseModel):
+    name: Optional[str] = Field(None, min_length=1, max_length=100)
+    short_description: Optional[str] = Field(None, max_length=500)
+    description: Optional[str] = None
+
+
 class UserTalentCreate(BaseModel):
     talent_id: int
     rank: int = Field(..., ge=1, le=34)

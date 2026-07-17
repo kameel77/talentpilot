@@ -8,7 +8,7 @@ import uuid
 
 from auth import hash_password, require_role
 from database import get_db
-from models import AnswerReview, GeneratedAnswer, KnowledgeItem, ReviewStatus, UserQuery, User, UserRole, Organization, OrganizationAccess
+from models import AnswerReview, GeneratedAnswer, KnowledgeItem, ReviewStatus, UserQuery, User, UserRole, Organization, OrganizationAccess, Talent, TalentTranslation
 from schemas import (
     AdminSettingUpdate,
     AdminSettingsResponse,
@@ -24,6 +24,9 @@ from schemas import (
     KnowledgeItemResponse,
     QueryReviewResponse,
     ReviewUpdate,
+    AdminTalentResponse,
+    AdminTalentTranslationUpdate,
+    TalentTranslationResponse,
 )
 from services.assistant_service import get_embedding
 from services.settings_service import get_all_settings, upsert_setting
@@ -230,6 +233,62 @@ def toggle_organization_access(
 
 
 # -------- End User Management --------
+
+
+# -------- Talent Content Management --------
+
+@router.get("/talents", response_model=list[AdminTalentResponse])
+def list_talents_admin(
+    db: Session = Depends(get_db),
+    current_user=Depends(require_role(["admin"])),
+):
+    """List all talents with translations in every language (admin CMS)."""
+    return db.query(Talent).order_by(Talent.id).all()
+
+
+@router.patch(
+    "/talents/{talent_id}/translations/{language}",
+    response_model=TalentTranslationResponse,
+)
+def update_talent_translation(
+    talent_id: int,
+    language: str,
+    payload: AdminTalentTranslationUpdate,
+    db: Session = Depends(get_db),
+    current_user=Depends(require_role(["admin"])),
+):
+    """Update (or create) a talent translation for the given language."""
+    talent = db.query(Talent).filter(Talent.id == talent_id).first()
+    if not talent:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Talent not found")
+
+    translation = (
+        db.query(TalentTranslation)
+        .filter(
+            TalentTranslation.talent_id == talent_id,
+            TalentTranslation.language == language,
+        )
+        .first()
+    )
+    if not translation:
+        if not payload.name:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail="name is required when creating a new translation",
+            )
+        translation = TalentTranslation(talent_id=talent_id, language=language)
+        db.add(translation)
+
+    update_data = payload.model_dump(exclude_unset=True)
+    for field, value in update_data.items():
+        setattr(translation, field, value)
+
+    db.commit()
+    db.refresh(translation)
+    return translation
+
+
+# -------- End Talent Content Management --------
 
 
 def _build_metadata(explicit_meta: dict, category: str, tags: list[str]) -> dict:
