@@ -19,7 +19,9 @@ import {
     Menu,
     X,
     ChevronDown,
-    Building
+    Building,
+    PanelLeftClose,
+    PanelLeftOpen
 } from "lucide-react";
 import { tokenManager, User, api } from "@/lib/api";
 import { cn } from "@/lib/utils";
@@ -35,6 +37,7 @@ export default function DashboardLayout({
     const [user, setUser] = useState<User | null>(null);
     const [loading, setLoading] = useState(true);
     const [sidebarOpen, setSidebarOpen] = useState(false);
+    const [collapsed, setCollapsed] = useState(false);
     const [userMenuOpen, setUserMenuOpen] = useState(false);
     const [orgMenuOpen, setOrgMenuOpen] = useState(false);
     const [organizations, setOrganizations] = useState<Array<{id: number, name: string}>>([]);
@@ -96,6 +99,19 @@ export default function DashboardLayout({
         setSidebarOpen(false);
     }, [pathname]);
 
+    // Restore persisted collapse state after mount (avoids SSR hydration mismatch)
+    useEffect(() => {
+        // eslint-disable-next-line react-hooks/set-state-in-effect
+        setCollapsed(localStorage.getItem("tp_sidebar_collapsed") === "1");
+    }, []);
+
+    const toggleCollapsed = () => {
+        setCollapsed((prev) => {
+            localStorage.setItem("tp_sidebar_collapsed", prev ? "0" : "1");
+            return !prev;
+        });
+    };
+
     const handleLogout = () => {
         tokenManager.removeToken();
         router.push("/login");
@@ -145,12 +161,12 @@ export default function DashboardLayout({
 
     const sidebarContent = (
         <>
-            <div className="p-5 flex items-center justify-between border-b border-white/5 h-16">
+            <div className={cn("p-5 flex items-center justify-between border-b border-white/5 h-16", collapsed && "lg:justify-center lg:p-3")}>
                 <div className="flex items-center gap-3">
                     <div className="h-10 w-10 bg-blue-600 flex items-center justify-center rounded-xl text-white font-bold text-xl">
                         TP
                     </div>
-                    <span className="text-xl font-bold text-white tracking-tight">
+                    <span className={cn("text-xl font-bold text-white tracking-tight", collapsed && "lg:hidden")}>
                         TalentPilot
                     </span>
                 </div>
@@ -172,18 +188,20 @@ export default function DashboardLayout({
                             <Link
                                 key={item.name}
                                 href={item.href}
+                                title={item.name}
                                 className={cn(
                                     "flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 group text-sm font-medium",
+                                    collapsed && "lg:justify-center lg:px-0",
                                     isActive
                                         ? "bg-blue-600 text-white"
                                         : "text-slate-400 hover:text-white hover:bg-white/5"
                                 )}
                             >
                                 <item.icon className={cn(
-                                    "h-5 w-5",
+                                    "h-5 w-5 shrink-0",
                                     isActive ? "text-white" : "text-slate-500 group-hover:text-white"
                                 )} />
-                                {item.name}
+                                <span className={cn(collapsed && "lg:hidden")}>{item.name}</span>
                             </Link>
                         );
                     })}
@@ -191,7 +209,7 @@ export default function DashboardLayout({
 
                 {(user?.role === 'admin' || user?.role === 'coach') && (
                     <div className="mt-8">
-                        <h3 className="px-4 text-[10px] font-bold uppercase tracking-widest text-slate-500 mb-2">
+                        <h3 className={cn("px-4 text-[10px] font-bold uppercase tracking-widest text-slate-500 mb-2", collapsed && "lg:hidden")}>
                             {t('administration')}
                         </h3>
                         <div className="space-y-3">
@@ -199,22 +217,24 @@ export default function DashboardLayout({
                                 <div className="space-y-1">
                                     <Link
                                         href="/dashboard/admin/knowledge"
+                                        title={t("adminKnowledge")}
                                         className={cn(
                                             "flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 group text-sm font-medium",
+                                            collapsed && "lg:justify-center lg:px-0",
                                             pathname === "/dashboard/admin/knowledge"
                                                 ? "bg-blue-600 text-white"
                                                 : "text-slate-400 hover:text-white hover:bg-white/5"
                                         )}
                                     >
                                         <Database className={cn(
-                                            "h-5 w-5",
+                                            "h-5 w-5 shrink-0",
                                             pathname === "/dashboard/admin/knowledge"
                                                 ? "text-white"
                                                 : "text-slate-500 group-hover:text-white"
                                         )} />
-                                        {t("adminKnowledge")}
+                                        <span className={cn(collapsed && "lg:hidden")}>{t("adminKnowledge")}</span>
                                     </Link>
-                                    <div className="ml-8 space-y-1">
+                                    <div className={cn("ml-8 space-y-1", collapsed && "lg:hidden")}>
                                         {knowledgeLinks.map((item) => {
                                             const isActive = pathname === item.href;
                                             return (
@@ -245,18 +265,20 @@ export default function DashboardLayout({
                                         <Link
                                             key={item.name}
                                             href={item.href}
+                                            title={item.name}
                                             className={cn(
                                                 "flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 group text-sm font-medium",
+                                                collapsed && "lg:justify-center lg:px-0",
                                                 isActive
                                                     ? "bg-blue-600 text-white"
                                                     : "text-slate-400 hover:text-white hover:bg-white/5"
                                             )}
                                         >
                                             <item.icon className={cn(
-                                                "h-5 w-5",
+                                                "h-5 w-5 shrink-0",
                                                 isActive ? "text-white" : "text-slate-500 group-hover:text-white"
                                             )} />
-                                            {item.name}
+                                            <span className={cn(collapsed && "lg:hidden")}>{item.name}</span>
                                         </Link>
                                     );
                                 })}
@@ -265,6 +287,28 @@ export default function DashboardLayout({
                     </div>
                 )}
             </nav>
+
+            {/* Collapse toggle — desktop only */}
+            <div className="hidden lg:block p-3 border-t border-white/5">
+                <button
+                    onClick={toggleCollapsed}
+                    title={collapsed ? t('expandMenu') : t('collapseMenu')}
+                    aria-label={collapsed ? t('expandMenu') : t('collapseMenu')}
+                    className={cn(
+                        "w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-medium text-slate-400 hover:text-white hover:bg-white/5 transition-colors",
+                        collapsed && "justify-center px-0"
+                    )}
+                >
+                    {collapsed ? (
+                        <PanelLeftOpen className="h-5 w-5 shrink-0" />
+                    ) : (
+                        <>
+                            <PanelLeftClose className="h-5 w-5 shrink-0" />
+                            {t('collapseMenu')}
+                        </>
+                    )}
+                </button>
+            </div>
 
             {/* Settings/Logout moved to user dropdown */}
         </>
@@ -284,10 +328,11 @@ export default function DashboardLayout({
             {/* Sidebar — Desktop: always visible, Mobile: slide-in */}
             <aside
                 className={cn(
-                    "fixed inset-y-0 left-0 z-50 flex flex-col border-r border-white/10 transition-transform duration-300 ease-in-out lg:static lg:translate-x-0",
-                    sidebarOpen ? "translate-x-0" : "-translate-x-full"
+                    "fixed inset-y-0 left-0 z-50 flex w-64 flex-col border-r border-white/10 transition-[transform,width] duration-300 ease-in-out lg:static lg:translate-x-0",
+                    sidebarOpen ? "translate-x-0" : "-translate-x-full",
+                    collapsed ? "lg:w-[72px]" : "lg:w-64"
                 )}
-                style={{ width: '256px', backgroundColor: '#111827', minWidth: '256px' }}
+                style={{ backgroundColor: '#111827' }}
             >
                 {sidebarContent}
             </aside>
