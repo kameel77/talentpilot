@@ -402,6 +402,28 @@ export interface DashboardOverview {
     members: DashboardMember[];
 }
 
+export interface CoachClientOverview {
+    id: number;
+    name: string;
+    members: number;
+    teams: number;
+    users_with_talents: number;
+}
+
+export interface CoachDashboardTotals {
+    clients: number;
+    teams: number;
+    people: number;
+    users_with_talents: number;
+}
+
+export interface CoachDashboardOverview {
+    clients: CoachClientOverview[];
+    individual_clients: number;
+    individual_clients_with_talents: number;
+    totals: CoachDashboardTotals;
+}
+
 // API methods
 export const api = {
     // Auth
@@ -828,6 +850,10 @@ export const api = {
     dashboard: {
         overview: async (): Promise<DashboardOverview> => {
             const response = await apiClient.get<DashboardOverview>('/api/dashboard/overview');
+            return response.data;
+        },
+        coachOverview: async (): Promise<CoachDashboardOverview> => {
+            const response = await apiClient.get<CoachDashboardOverview>('/api/dashboard/coach-overview');
             return response.data;
         },
     },
