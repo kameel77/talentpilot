@@ -797,3 +797,28 @@ class DashboardOverview(BaseModel):
     users_with_talents: int
     team_domains: TeamDomainCounts
     members: List[DashboardMember]
+
+
+class CoachClientOverview(BaseModel):
+    """Per-client-organization stats for the coach dashboard."""
+    id: int
+    name: str
+    members: int
+    teams: int
+    users_with_talents: int
+
+
+class CoachDashboardTotals(BaseModel):
+    """Aggregate totals across client orgs and individual clients."""
+    clients: int
+    teams: int
+    people: int
+    users_with_talents: int
+
+
+class CoachDashboardOverview(BaseModel):
+    """Single-call aggregate for the coach dashboard landing page."""
+    clients: List[CoachClientOverview]
+    individual_clients: int
+    individual_clients_with_talents: int
+    totals: CoachDashboardTotals
