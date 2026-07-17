@@ -8,6 +8,7 @@ import { getLocaleFromCookie } from "@/lib/locale";
 import { api, tokenManager } from "@/lib/api";
 
 import MatrixDashboard from "@/components/dashboard/MatrixDashboard";
+import MemberReportUpload from "@/components/dashboard/MemberReportUpload";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -629,6 +630,13 @@ export default function TeamDetailPage() {
                                                                         </span>
                                                                     )}
                                                                 </button>
+                                                            )}
+                                                            {isPrivileged && (
+                                                                <MemberReportUpload
+                                                                    userId={parseInt(member.id as string)}
+                                                                    memberName={member.name}
+                                                                    onDone={loadTeamData}
+                                                                />
                                                             )}
                                                             <button
                                                                 onClick={() => toggleLeader(member)}
