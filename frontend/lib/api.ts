@@ -123,6 +123,13 @@ export interface Talent {
     translation: TalentTranslation;
 }
 
+export interface AdminTalent {
+    id: number;
+    code: string;
+    domain: 'executing' | 'influencing' | 'relationship_building' | 'strategic_thinking';
+    translations: TalentTranslation[];
+}
+
 export interface GhostInviteTalent {
     talent_id: number;
     rank: number;
@@ -803,6 +810,23 @@ export const api = {
         },
         deleteUser: async (userId: number): Promise<void> => {
             await apiClient.delete(`/api/admin/users/${userId}`);
+        },
+
+        // Admin: Talent content (CMS)
+        listTalents: async (): Promise<AdminTalent[]> => {
+            const response = await apiClient.get<AdminTalent[]>('/api/admin/talents');
+            return response.data;
+        },
+        updateTalentTranslation: async (
+            talentId: number,
+            language: string,
+            data: { name?: string; short_description?: string; description?: string },
+        ): Promise<TalentTranslation> => {
+            const response = await apiClient.patch<TalentTranslation>(
+                `/api/admin/talents/${talentId}/translations/${language}`,
+                data,
+            );
+            return response.data;
         },
     },
 

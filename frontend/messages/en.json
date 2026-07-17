@@ -138,6 +138,7 @@
     "adminSettings": "AI Settings",
     "adminUsers": "Users & Access",
     "adminKnowledge": "Knowledge Base",
+    "adminTalents": "Talents",
     "logout": "Logout",
     "myOrg": "My Organization",
     "closeMenu": "Close menu",
@@ -739,6 +740,19 @@
       "updateUserError": "Failed to update user.",
       "archiveUserError": "Error changing user status.",
       "deleteUserError": "Failed to delete user."
+    },
+    "talents": {
+      "title": "Talent content",
+      "subtitle": "Manage names and descriptions of the 34 Gallup talents",
+      "edit": "Edit",
+      "name": "Name",
+      "shortDescription": "Short description (tooltip)",
+      "description": "Full description",
+      "save": "Save",
+      "cancel": "Cancel",
+      "saved": "Changes saved",
+      "saveError": "Failed to save",
+      "missingShort": "no description"
     }
   },
   "talentImport": {

@@ -21,7 +21,8 @@ import {
     ChevronDown,
     Building,
     PanelLeftClose,
-    PanelLeftOpen
+    PanelLeftOpen,
+    PenSquare
 } from "lucide-react";
 import { tokenManager, User, api } from "@/lib/api";
 import { cn } from "@/lib/utils";
@@ -157,6 +158,7 @@ export default function DashboardLayout({
         { name: isCoach ? t("clients") : t("organizations"), href: "/dashboard/organizations", icon: Building },
         { name: t("adminSettings"), href: "/dashboard/admin/settings", icon: Shield },
         { name: t("adminUsers"), href: "/dashboard/admin/users", icon: Users },
+        { name: t("adminTalents"), href: "/dashboard/admin/talents", icon: PenSquare },
     ];
 
     const sidebarContent = (

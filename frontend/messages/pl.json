@@ -138,6 +138,7 @@
     "adminSettings": "Ustawienia AI",
     "adminUsers": "Użytkownicy i dostępy",
     "adminKnowledge": "Baza wiedzy",
+    "adminTalents": "Talenty",
     "logout": "Wyloguj",
     "myOrg": "Moja Organizacja",
     "closeMenu": "Zamknij menu",
@@ -739,6 +740,19 @@
       "updateUserError": "Nie udało się zaktualizować użytkownika.",
       "archiveUserError": "Błąd podczas zmiany statusu użytkownika.",
       "deleteUserError": "Nie udało się usunąć użytkownika."
+    },
+    "talents": {
+      "title": "Talenty — treści",
+      "subtitle": "Zarządzaj nazwami i opisami 34 talentów Gallupa",
+      "edit": "Edytuj",
+      "name": "Nazwa",
+      "shortDescription": "Krótki opis (tooltip)",
+      "description": "Pełny opis",
+      "save": "Zapisz",
+      "cancel": "Anuluj",
+      "saved": "Zapisano zmiany",
+      "saveError": "Nie udało się zapisać",
+      "missingShort": "brak opisu"
     }
   },
   "talentImport": {
