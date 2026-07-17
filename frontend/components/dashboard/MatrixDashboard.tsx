@@ -207,19 +207,23 @@ export default function MatrixDashboard({ members, canSeeRisks = false, talents 
                                             {t('personColumn')}
                                         </th>
                                         {GALLUP_TALENTS.map(talent => (
-                                            <th key={talent.code} className="px-1 py-3 border-b border-slate-200 cursor-help" style={{
+                                            // Tailwind v4 px/py are logical (padding-inline/block): under vertical-rl, py sets physical horizontal padding
+                                            <th key={talent.code} className="px-3 py-1 border-b border-slate-200 cursor-help" style={{
                                                 writingMode: 'vertical-rl',
                                                 textOrientation: 'mixed',
                                                 transform: 'rotate(180deg)',
                                                 color: getDomainStyle(talent.domain),
                                                 borderTop: `4px solid ${getDomainStyle(talent.domain)}`,
                                                 minWidth: '32px',
-                                                maxHeight: '160px',
+                                                whiteSpace: 'nowrap',
+                                                lineHeight: '1.1',
                                                 fontSize: '11px',
                                             }}
                                             onMouseEnter={e => {
                                                 const rect = e.currentTarget.getBoundingClientRect();
-                                                setHeaderTooltip({ code: talent.code, x: rect.left + rect.width / 2, y: rect.bottom });
+                                                // Clamp so the w-64 (256px) tooltip stays inside the viewport
+                                                const x = Math.min(Math.max(rect.left + rect.width / 2, 136), window.innerWidth - 136);
+                                                setHeaderTooltip({ code: talent.code, x, y: rect.bottom });
                                             }}
                                             onMouseLeave={() => setHeaderTooltip(null)}>
                                                 {locale === 'en' ? talent.en : talent.pl}
@@ -249,7 +253,7 @@ export default function MatrixDashboard({ members, canSeeRisks = false, talents 
 
                                                     return (
                                                         <td key={talent.code} className="px-0.5 py-1 text-center border-r border-slate-100 last:border-r-0">
-                                                            <div className="mx-auto flex items-center justify-center w-7 h-7 rounded-md text-[11px] font-bold" style={{
+                                                            <div className="mx-auto flex items-center justify-center w-6 h-6 rounded-md text-[11px] font-bold" style={{
                                                                 background: bg,
                                                                 color: textColor,
                                                                 border: isMissing ? '1px dashed #e2e8f0' : 'none',
@@ -282,7 +286,7 @@ export default function MatrixDashboard({ members, canSeeRisks = false, talents 
 
                                                 return (
                                                     <td key={talent.code} className="px-0.5 py-1 text-center border-r border-slate-100 last:border-r-0">
-                                                        <div className="mx-auto flex items-center justify-center w-7 h-7 rounded-md text-[11px] font-bold" style={{
+                                                        <div className="mx-auto flex items-center justify-center w-6 h-6 rounded-md text-[11px] font-bold" style={{
                                                             background: bg,
                                                             color: textColor,
                                                         }}>
@@ -303,7 +307,7 @@ export default function MatrixDashboard({ members, canSeeRisks = false, talents 
                                             const count = talentTop15Counts[talent.code] || 0;
                                             return (
                                                 <td key={talent.code} className="px-0.5 py-1 text-center border-r border-slate-100 last:border-r-0">
-                                                    <div className="mx-auto flex items-center justify-center w-7 h-7 rounded-md text-[11px] font-bold" style={{
+                                                    <div className="mx-auto flex items-center justify-center w-6 h-6 rounded-md text-[11px] font-bold" style={{
                                                         background: count >= 2 ? getDomainStyle(talent.domain, 80) : count === 1 ? getDomainStyle(talent.domain, 25) : 'transparent',
                                                         color: count >= 2 ? '#fff' : count === 1 ? getDomainStyle(talent.domain) : '#94a3b8',
                                                     }}>
