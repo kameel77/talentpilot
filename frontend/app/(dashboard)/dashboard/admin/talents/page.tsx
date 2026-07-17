@@ -76,48 +76,55 @@ export default function AdminTalentsPage() {
         setSaving(true);
         setSaveError(null);
 
-        try {
-            const languages: Array<{ lang: string; original?: TalentTranslation; form: TranslationForm }> = [
-                { lang: "pl", original: getTranslation(editTalent, "pl"), form: formPl },
-                { lang: "en", original: getTranslation(editTalent, "en"), form: formEn },
-            ];
+        const languages: Array<{ lang: string; original?: TalentTranslation; form: TranslationForm }> = [
+            { lang: "pl", original: getTranslation(editTalent, "pl"), form: formPl },
+            { lang: "en", original: getTranslation(editTalent, "en"), form: formEn },
+        ];
 
-            const updated: Record<string, TalentTranslation> = {};
+        const updated: Record<string, TalentTranslation> = {};
+        let anyFailed = false;
 
-            for (const { lang, original, form } of languages) {
-                const changed: { name?: string; short_description?: string; description?: string } = {};
-                if (form.name !== (original?.name ?? "")) changed.name = form.name;
-                if (form.short_description !== (original?.short_description ?? "")) changed.short_description = form.short_description;
-                if (form.description !== (original?.description ?? "")) changed.description = form.description;
+        for (const { lang, original, form } of languages) {
+            const changed: { name?: string; short_description?: string; description?: string } = {};
+            if (form.name !== (original?.name ?? "")) changed.name = form.name;
+            if (form.short_description !== (original?.short_description ?? "")) changed.short_description = form.short_description;
+            if (form.description !== (original?.description ?? "")) changed.description = form.description;
 
-                if (Object.keys(changed).length === 0) continue;
+            if (Object.keys(changed).length === 0) continue;
 
-                // The backend creates a missing translation row on first PATCH, but
-                // requires `name` in that payload — always include it for a new row.
-                if (!original && changed.name === undefined) {
-                    changed.name = form.name;
-                }
+            // The backend creates a missing translation row on first PATCH, but
+            // requires `name` in that payload — always include it for a new row.
+            if (!original && changed.name === undefined) {
+                changed.name = form.name;
+            }
 
+            // Failure-isolated per language: a failed PATCH for one language must
+            // not discard successful results already persisted for another.
+            try {
                 updated[lang] = await api.admin.updateTalentTranslation(editTalent.id, lang, changed);
+            } catch (error) {
+                console.error(`Failed to save talent translation (${lang}):`, error);
+                anyFailed = true;
             }
+        }
 
-            if (Object.keys(updated).length > 0) {
-                setTalents((prev) => prev.map((talent) => {
-                    if (talent.id !== editTalent.id) return talent;
-                    const rest = talent.translations.filter((tr) => !(tr.language in updated));
-                    return { ...talent, translations: [...rest, ...Object.values(updated)] };
-                }));
-            }
+        // Merge whatever succeeded into local state, even if another language failed.
+        if (Object.keys(updated).length > 0) {
+            setTalents((prev) => prev.map((talent) => {
+                if (talent.id !== editTalent.id) return talent;
+                const rest = talent.translations.filter((tr) => !(tr.language in updated));
+                return { ...talent, translations: [...rest, ...Object.values(updated)] };
+            }));
+        }
 
+        if (anyFailed) {
+            setSaveError(t("saveError"));
+        } else {
             setSavedNotice(true);
             setTimeout(() => setSavedNotice(false), 2000);
             closeEdit();
-        } catch (error) {
-            console.error("Failed to save talent translation:", error);
-            setSaveError(t("saveError"));
-        } finally {
-            setSaving(false);
         }
+        setSaving(false);
     };
 
     if (loading) {
