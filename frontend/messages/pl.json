@@ -142,6 +142,8 @@
     "myOrg": "Moja Organizacja",
     "closeMenu": "Zamknij menu",
     "openMenu": "Otwórz menu",
+    "collapseMenu": "Zwiń menu",
+    "expandMenu": "Rozwiń menu",
     "administration": "Administracja",
     "availableOrgs": "Dostępne organizacje",
     "orgFallback": "Organizacja",
