@@ -16,20 +16,35 @@ import {
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { api, tokenManager, DashboardOverview, User } from "@/lib/api";
+import CoachDashboard from "@/components/dashboard/CoachDashboard";
 
 interface DashboardData extends DashboardOverview {
     currentUser: User | null;
 }
 
 export default function DashboardPage() {
+    const [role, setRole] = useState<string | null>(null);
+    const [ready, setReady] = useState(false);
+
+    // Role comes from localStorage — read after mount to avoid hydration mismatch.
+    useEffect(() => {
+        // eslint-disable-next-line react-hooks/set-state-in-effect
+        setRole(tokenManager.getUser()?.role ?? null);
+        setReady(true);
+    }, []);
+
+    if (!ready) return null;
+    if (role === "coach") return <CoachDashboard />;
+    return <TeamDashboard />;
+}
+
+function TeamDashboard() {
     const t = useTranslations("dashboard");
     const tCommon = useTranslations("common");
-    const tOnboarding = useTranslations("onboarding");
 
     const [data, setData] = useState<DashboardData | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState("");
-    const [showCoachOnboardingBanner, setShowCoachOnboardingBanner] = useState(false);
 
     useEffect(() => {
         const loadDashboard = async () => {
@@ -48,22 +63,6 @@ export default function DashboardPage() {
 
         loadDashboard();
     }, [t]);
-
-    useEffect(() => {
-        const me = tokenManager.getUser();
-        if (!me || me.role !== "coach") return;
-        (async () => {
-            try {
-                const clients = await api.auth.getMyOrganizations();
-                if (clients.length > 0) return;
-                const individuals = (await api.users.list(undefined, me.organization_id))
-                    .filter((u: { id: number }) => u.id !== me.id);
-                if (individuals.length === 0) setShowCoachOnboardingBanner(true);
-            } catch {
-                // ignore — banner stays hidden
-            }
-        })();
-    }, []);
 
     if (loading) {
         return (
@@ -119,15 +118,6 @@ export default function DashboardPage() {
                     <ArrowRight className="h-4 w-4 group-hover:translate-x-1 transition-transform" />
                 </Link>
             </div>
-
-            {showCoachOnboardingBanner && (
-                <div className="mb-6 flex items-center justify-between rounded-2xl border border-blue-200 bg-blue-50 px-6 py-4">
-                    <p className="text-sm font-medium text-blue-800">{tOnboarding("coach.resumeBanner")}</p>
-                    <Link href="/dashboard/onboarding" className="text-sm font-bold text-blue-700 hover:underline">
-                        {tOnboarding("coach.resumeCta")} →
-                    </Link>
-                </div>
-            )}
 
             {/* KPI Grid */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
