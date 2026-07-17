@@ -53,6 +53,44 @@ PL_TALENT_NAMES = {
     "strategic": "Strateg",
 }
 
+# Polish short descriptions (authored from official Gallup theme descriptions)
+PL_TALENT_SHORT_DESCRIPTIONS = {
+    "achiever": "Ogromna wytrwałość i satysfakcja z bycia produktywnym",
+    "arranger": "Elastyczne organizowanie ludzi i zasobów dla maksymalnej produktywności",
+    "belief": "Trwałe wartości, które nadają życiu sens i kierunek",
+    "consistency": "Równe traktowanie wszystkich według jasnych zasad",
+    "deliberative": "Ostrożność w decyzjach i staranne przewidywanie przeszkód",
+    "discipline": "Potrzeba rutyny, struktury i uporządkowanego świata",
+    "focus": "Wyznaczanie kierunku i konsekwentne dążenie do celu",
+    "responsibility": "Poczucie własności zobowiązań i dotrzymywanie słowa",
+    "restorative": "Biegłość w diagnozowaniu i rozwiązywaniu problemów",
+    "activator": "Zamienianie myśli w działanie — od razu",
+    "command": "Silna obecność, przejmowanie kontroli i wyrażanie zdania wprost",
+    "communication": "Łatwość ubierania myśli w słowa w rozmowie i prezentacji",
+    "competition": "Mierzenie postępów na tle innych i dążenie do zwycięstwa",
+    "maximizer": "Przekształcanie mocnych stron w doskonałość",
+    "self-assurance": "Wewnętrzna pewność własnych osądów i możliwości",
+    "significance": "Pragnienie dużego wpływu i bycia docenianym",
+    "woo": "Radość ze zdobywania sympatii nowo poznanych osób",
+    "adaptability": "Życie chwilą i spokojne przyjmowanie zmian",
+    "connectedness": "Wiara, że wszystko jest ze sobą powiązane i ma sens",
+    "developer": "Dostrzeganie i pielęgnowanie potencjału innych",
+    "empathy": "Wyczuwanie emocji innych i patrzenie na świat ich oczami",
+    "harmony": "Poszukiwanie zgody i unikanie konfliktów",
+    "includer": "Poszerzanie kręgu i włączanie tych, którzy stoją z boku",
+    "individualization": "Dostrzeganie wyjątkowych cech każdej osoby",
+    "positivity": "Zaraźliwy entuzjazm i dostrzeganie dobrych stron",
+    "relator": "Głębokie, autentyczne relacje z bliskimi ludźmi",
+    "analytical": "Poszukiwanie przyczyn, dowodów i danych",
+    "context": "Rozumienie teraźniejszości przez pryzmat przeszłości",
+    "futuristic": "Inspirowanie siebie i innych wizją przyszłości",
+    "ideation": "Fascynacja pomysłami i łączenie odległych zjawisk",
+    "input": "Kolekcjonowanie informacji, rzeczy i pomysłów",
+    "intellection": "Potrzeba aktywności intelektualnej i refleksji",
+    "learner": "Radość z samego procesu uczenia się i rozwoju",
+    "strategic": "Szybkie dostrzeganie wzorców i alternatywnych dróg",
+}
+
 TALENTS_DATA = [
     # EXECUTING Domain
     {
@@ -334,6 +372,7 @@ def seed_talents(db: Session):
                 talent_id=talent.id,
                 language="pl",
                 name=PL_TALENT_NAMES.get(talent_data["code"], talent_data["name"]),
+                short_description=PL_TALENT_SHORT_DESCRIPTIONS.get(talent_data["code"]),
             )
         )
     
