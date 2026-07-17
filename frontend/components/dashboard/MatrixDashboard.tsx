@@ -176,18 +176,19 @@ export default function MatrixDashboard({ members, canSeeRisks = false }: Matrix
                             <table className="w-full text-sm text-left">
                                 <thead>
                                     <tr className="bg-slate-50">
-                                        <th className="sticky left-0 bg-slate-50 z-10 px-4 py-3 font-semibold text-slate-900 min-w-[200px] border-b border-r border-slate-200">
+                                        <th className="sticky left-0 bg-slate-50 z-10 px-3 py-2 font-semibold text-slate-900 min-w-[160px] border-b border-r border-slate-200">
                                             {t('personColumn')}
                                         </th>
                                         {GALLUP_TALENTS.map(talent => (
-                                            <th key={talent.code} className="px-2 py-4 border-b border-slate-200" style={{
+                                            <th key={talent.code} className="px-1 py-3 border-b border-slate-200" style={{
                                                 writingMode: 'vertical-rl',
                                                 textOrientation: 'mixed',
                                                 transform: 'rotate(180deg)',
                                                 color: getDomainStyle(talent.domain),
                                                 borderTop: `4px solid ${getDomainStyle(talent.domain)}`,
-                                                minWidth: '40px',
+                                                minWidth: '32px',
                                                 maxHeight: '160px',
+                                                fontSize: '11px',
                                             }}>
                                                 {locale === 'en' ? talent.en : talent.pl}
                                             </th>
@@ -200,7 +201,7 @@ export default function MatrixDashboard({ members, canSeeRisks = false }: Matrix
                                         member.results.forEach(r => { rankMap[r.talent] = r.rank; });
                                         return (
                                             <tr key={member.id} className="border-b border-slate-100 hover:bg-slate-50/50">
-                                                <td className="sticky left-0 bg-white z-10 px-4 py-3 font-medium text-slate-900 border-r border-slate-200 shadow-[1px_0_0_0_#e2e8f0]">
+                                                <td className="sticky left-0 bg-white z-10 px-3 py-2 font-medium text-slate-900 border-r border-slate-200 shadow-[1px_0_0_0_#e2e8f0]">
                                                     {member.name}
                                                 </td>
                                                 {GALLUP_TALENTS.map(talent => {
@@ -215,8 +216,8 @@ export default function MatrixDashboard({ members, canSeeRisks = false }: Matrix
                                                         : rank <= 15 ? '#fff' : '#0f172a';
 
                                                     return (
-                                                        <td key={talent.code} className="px-1 py-2 text-center border-r border-slate-100 last:border-r-0">
-                                                            <div className="mx-auto flex items-center justify-center w-8 h-8 rounded-md text-xs font-bold" style={{
+                                                        <td key={talent.code} className="px-0.5 py-1 text-center border-r border-slate-100 last:border-r-0">
+                                                            <div className="mx-auto flex items-center justify-center w-7 h-7 rounded-md text-[11px] font-bold" style={{
                                                                 background: bg,
                                                                 color: textColor,
                                                                 border: isMissing ? '1px dashed #e2e8f0' : 'none',
@@ -233,7 +234,7 @@ export default function MatrixDashboard({ members, canSeeRisks = false }: Matrix
                                     {/* Team Rank Row */}
                                     {teamRanks.length > 0 && (
                                         <tr className="bg-slate-50 border-t-2 border-slate-200">
-                                            <td className="sticky left-0 bg-slate-50 z-10 px-4 py-3 font-bold text-slate-900 border-r border-slate-200 shadow-[1px_0_0_0_#e2e8f0]">
+                                            <td className="sticky left-0 bg-slate-50 z-10 px-3 py-2 font-bold text-slate-900 border-r border-slate-200 shadow-[1px_0_0_0_#e2e8f0]">
                                                 {t('teamRanking')}
                                             </td>
                                             {GALLUP_TALENTS.map(talent => {
@@ -248,8 +249,8 @@ export default function MatrixDashboard({ members, canSeeRisks = false }: Matrix
                                                     : rank <= 15 ? '#fff' : '#0f172a';
 
                                                 return (
-                                                    <td key={talent.code} className="px-1 py-2 text-center border-r border-slate-100 last:border-r-0">
-                                                        <div className="mx-auto flex items-center justify-center w-8 h-8 rounded-md text-xs font-bold" style={{
+                                                    <td key={talent.code} className="px-0.5 py-1 text-center border-r border-slate-100 last:border-r-0">
+                                                        <div className="mx-auto flex items-center justify-center w-7 h-7 rounded-md text-[11px] font-bold" style={{
                                                             background: bg,
                                                             color: textColor,
                                                         }}>
@@ -263,14 +264,14 @@ export default function MatrixDashboard({ members, canSeeRisks = false }: Matrix
 
                                     {/* Summary Row */}
                                     <tr className="bg-white">
-                                        <td className="sticky left-0 bg-white z-10 px-4 py-3 font-semibold text-xs text-slate-500 uppercase tracking-wider border-r border-slate-200 shadow-[1px_0_0_0_#e2e8f0]">
+                                        <td className="sticky left-0 bg-white z-10 px-3 py-2 font-semibold text-xs text-slate-500 uppercase tracking-wider border-r border-slate-200 shadow-[1px_0_0_0_#e2e8f0]">
                                             {t('inTop15')}
                                         </td>
                                         {GALLUP_TALENTS.map(talent => {
                                             const count = talentTop15Counts[talent.code] || 0;
                                             return (
-                                                <td key={talent.code} className="px-1 py-2 text-center border-r border-slate-100 last:border-r-0">
-                                                    <div className="mx-auto flex items-center justify-center w-8 h-8 rounded-md text-xs font-bold" style={{
+                                                <td key={talent.code} className="px-0.5 py-1 text-center border-r border-slate-100 last:border-r-0">
+                                                    <div className="mx-auto flex items-center justify-center w-7 h-7 rounded-md text-[11px] font-bold" style={{
                                                         background: count >= 2 ? getDomainStyle(talent.domain, 80) : count === 1 ? getDomainStyle(talent.domain, 25) : 'transparent',
                                                         color: count >= 2 ? '#fff' : count === 1 ? getDomainStyle(talent.domain) : '#94a3b8',
                                                     }}>
