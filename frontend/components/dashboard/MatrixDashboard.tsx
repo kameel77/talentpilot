@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { GALLUP_TALENTS, getDomainStyle, DOMAIN_LABELS, GallupDomain, getTalentsByDomain } from '@/lib/gallup-data';
 import { getLocaleFromCookie } from '@/lib/locale';
+import { Talent } from '@/lib/api';
 import {
     teamTalentRanks, teamDomainScores, findTeamWeaknesses, findSPOF,
     teamResilience, uniqueContributions, complementaryPairs,
@@ -38,9 +39,10 @@ interface Member {
 interface MatrixDashboardProps {
     members: Member[];
     canSeeRisks?: boolean;
+    talents?: Talent[];
 }
 
-export default function MatrixDashboard({ members, canSeeRisks = false }: MatrixDashboardProps) {
+export default function MatrixDashboard({ members, canSeeRisks = false, talents }: MatrixDashboardProps) {
     const t = useTranslations('teams');
     const locale = getLocaleFromCookie();
 
@@ -48,6 +50,12 @@ export default function MatrixDashboard({ members, canSeeRisks = false }: Matrix
     const [matrixSearch, setMatrixSearch] = useState('');
     const [showTop15Domains, setShowTop15Domains] = useState(true);
     const [showTop15Profiles, setShowTop15Profiles] = useState(true);
+    const talentInfoByCode = new Map((talents ?? []).map(t => [t.code, t]));
+    const [headerTooltip, setHeaderTooltip] = useState<{
+        code: string;
+        x: number;
+        y: number;
+    } | null>(null);
 
     const membersWithResults = members.filter(m => m.results.length > 0);
 
@@ -167,6 +175,25 @@ export default function MatrixDashboard({ members, canSeeRisks = false }: Matrix
 
             {activeTab === 'matrix' && (
                 <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+                    {headerTooltip && (() => {
+                        const info = talentInfoByCode.get(headerTooltip.code);
+                        const local = GALLUP_TALENTS.find(t => t.code === headerTooltip.code);
+                        if (!local) return null;
+                        const name = info?.translation?.name ?? (locale === 'en' ? local.en : local.pl);
+                        const shortDesc = info?.translation?.short_description;
+                        const domainColor = getDomainStyle(local.domain);
+                        const domainLabel = locale === 'en' ? DOMAIN_LABELS[local.domain]?.en : DOMAIN_LABELS[local.domain]?.pl;
+                        return (
+                            <div
+                                className="fixed z-50 w-64 -translate-x-1/2 rounded-lg border border-slate-200 bg-white p-3 shadow-lg pointer-events-none"
+                                style={{ left: headerTooltip.x, top: headerTooltip.y + 8 }}
+                            >
+                                <div className="font-semibold text-sm text-slate-900">{name}</div>
+                                <div className="text-xs font-medium mb-1" style={{ color: domainColor }}>{domainLabel}</div>
+                                {shortDesc && <div className="text-xs text-slate-600 leading-relaxed">{shortDesc}</div>}
+                            </div>
+                        );
+                    })()}
                     {membersWithResults.length === 0 ? (
                         <div className="p-12 text-center text-slate-500">
                             {t('noTalentData')}
@@ -180,7 +207,7 @@ export default function MatrixDashboard({ members, canSeeRisks = false }: Matrix
                                             {t('personColumn')}
                                         </th>
                                         {GALLUP_TALENTS.map(talent => (
-                                            <th key={talent.code} className="px-1 py-3 border-b border-slate-200" style={{
+                                            <th key={talent.code} className="px-1 py-3 border-b border-slate-200 cursor-help" style={{
                                                 writingMode: 'vertical-rl',
                                                 textOrientation: 'mixed',
                                                 transform: 'rotate(180deg)',
@@ -189,7 +216,12 @@ export default function MatrixDashboard({ members, canSeeRisks = false }: Matrix
                                                 minWidth: '32px',
                                                 maxHeight: '160px',
                                                 fontSize: '11px',
-                                            }}>
+                                            }}
+                                            onMouseEnter={e => {
+                                                const rect = e.currentTarget.getBoundingClientRect();
+                                                setHeaderTooltip({ code: talent.code, x: rect.left + rect.width / 2, y: rect.bottom });
+                                            }}
+                                            onMouseLeave={() => setHeaderTooltip(null)}>
                                                 {locale === 'en' ? talent.en : talent.pl}
                                             </th>
                                         ))}

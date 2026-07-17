@@ -5,7 +5,7 @@ import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { getLocaleFromCookie } from "@/lib/locale";
-import { api, tokenManager } from "@/lib/api";
+import { api, tokenManager, Talent } from "@/lib/api";
 
 import MatrixDashboard from "@/components/dashboard/MatrixDashboard";
 import MemberReportUpload from "@/components/dashboard/MemberReportUpload";
@@ -34,16 +34,6 @@ interface TeamMember {
     invited_at?: string | null;
     invitation_status?: string;
     results: MemberResult[];
-}
-
-interface Talent {
-    id: number;
-    code: string;
-    translation?: {
-        name: string;
-        description?: string;
-    };
-    domain: string;
 }
 
 interface GhostInvitePayload {
@@ -518,7 +508,7 @@ export default function TeamDetailPage() {
                 </div>
             </div>
 
-            <MatrixDashboard members={members} canSeeRisks={canSeeRisks} />
+            <MatrixDashboard members={members} canSeeRisks={canSeeRisks} talents={allTalents} />
 
             <div className="rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden mt-6">
                 <button
