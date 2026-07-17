@@ -394,3 +394,118 @@ export function checkDomainSpecialist(
         count: bestCount,
     };
 }
+
+// ─── 9. Unique Contributions ────────────────────────────────────────────
+
+export interface UniqueContributionResult {
+    memberIndex: number;                                   // index in membersRankMaps
+    talents: { talentCode: string; rank: number }[];       // sorted by rank asc
+}
+
+/**
+ * For each member: talents they hold in their Top 10 that NO other member
+ * has in their Top 15. Positive framing of SPOF — "what X uniquely brings".
+ */
+export function uniqueContributions(
+    membersRankMaps: MemberRankMap[],
+    talentCodes: string[],
+): UniqueContributionResult[] {
+    return membersRankMaps.map((memberMap, i) => {
+        const talents: { talentCode: string; rank: number }[] = [];
+        for (const talent of talentCodes) {
+            const rank = memberMap[talent];
+            if (rank === undefined || rank > 10) continue;
+            const someoneElseHasIt = membersRankMaps.some((other, j) => {
+                if (j === i) return false;
+                const r = other[talent];
+                return r !== undefined && r <= 15;
+            });
+            if (!someoneElseHasIt) talents.push({ talentCode: talent, rank });
+        }
+        talents.sort((a, b) => a.rank - b.rank);
+        return { memberIndex: i, talents };
+    });
+}
+
+// ─── 10. Complementary Pairs ────────────────────────────────────────────
+
+export interface PairCoverage {
+    talentCode: string;
+    coveringRank: number;    // rank in the covering member's profile (<=10)
+    coveredRank: number;     // rank in the covered member's profile (>=30)
+}
+
+export interface ComplementaryPairResult {
+    memberA: number;         // index in membersRankMaps, memberA < memberB
+    memberB: number;
+    aCoversB: PairCoverage[];  // A strong (Top 10) where B is Bottom 5
+    bCoversA: PairCoverage[];  // B strong (Top 10) where A is Bottom 5
+    strength: number;          // aCoversB.length + bCoversA.length
+}
+
+/**
+ * Pairs of members where one's Top 10 covers the other's Bottom 5 (rank>=30).
+ * Sorted by strength desc; pairs with strength 0 are omitted.
+ */
+export function complementaryPairs(
+    membersRankMaps: MemberRankMap[],
+    talentCodes: string[],
+): ComplementaryPairResult[] {
+    const results: ComplementaryPairResult[] = [];
+    for (let a = 0; a < membersRankMaps.length; a++) {
+        for (let b = a + 1; b < membersRankMaps.length; b++) {
+            const aCoversB: PairCoverage[] = [];
+            const bCoversA: PairCoverage[] = [];
+            for (const talent of talentCodes) {
+                const ra = membersRankMaps[a][talent];
+                const rb = membersRankMaps[b][talent];
+                if (ra === undefined || rb === undefined) continue;
+                if (ra <= 10 && rb >= 30) {
+                    aCoversB.push({ talentCode: talent, coveringRank: ra, coveredRank: rb });
+                }
+                if (rb <= 10 && ra >= 30) {
+                    bCoversA.push({ talentCode: talent, coveringRank: rb, coveredRank: ra });
+                }
+            }
+            const strength = aCoversB.length + bCoversA.length;
+            if (strength > 0) {
+                results.push({ memberA: a, memberB: b, aCoversB, bCoversA, strength });
+            }
+        }
+    }
+    return results.sort((x, y) => y.strength - x.strength);
+}
+
+// ─── 11. Team Resilience ────────────────────────────────────────────────
+
+export interface TeamResilienceResult {
+    percentage: number;      // 0-100, rounded
+    coveredCount: number;    // team Top 15 talents carried by >=2 members in their Top 10
+    totalCount: number;      // number of talents in team Top 15
+}
+
+/**
+ * Share of the team's Top 15 talents (by teamTalentRanks) that at least
+ * TWO members carry in their personal Top 10. Complements SPOF as one KPI.
+ */
+export function teamResilience(
+    membersRankMaps: MemberRankMap[],
+    talentCodes: string[],
+): TeamResilienceResult {
+    const teamTop15 = teamTalentRanks(membersRankMaps, talentCodes)
+        .filter(tr => tr.teamRank <= 15);
+    let coveredCount = 0;
+    for (const tr of teamTop15) {
+        const carriers = membersRankMaps.filter(m => {
+            const r = m[tr.talent];
+            return r !== undefined && r <= 10;
+        }).length;
+        if (carriers >= 2) coveredCount++;
+    }
+    const totalCount = teamTop15.length;
+    return {
+        percentage: totalCount > 0 ? Math.round((coveredCount / totalCount) * 100) : 0,
+        coveredCount,
+        totalCount,
+    };
+}
