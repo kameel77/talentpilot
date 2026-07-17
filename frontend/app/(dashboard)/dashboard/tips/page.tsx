@@ -226,7 +226,7 @@ export default function TipsPage() {
     };
 
     return (
-        <div className="max-w-4xl mx-auto space-y-8">
+        <div className="max-w-4xl mx-auto w-full space-y-8">
             {/* Header */}
             <div>
                 <h1 className="text-3xl font-bold font-heading text-slate-900 tracking-tight">{t("title")}</h1>

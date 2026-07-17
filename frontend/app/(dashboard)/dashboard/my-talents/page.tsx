@@ -402,7 +402,7 @@ export default function MyTalentsPage() {
     const dominantDomain = getDominantDomain();
 
     return (
-        <div className="mx-auto max-w-5xl space-y-6">
+        <div className="max-w-5xl mx-auto w-full space-y-6">
             <TalentImportDialog
                 open={talentImportOpen}
                 onOpenChange={setTalentImportOpen}
