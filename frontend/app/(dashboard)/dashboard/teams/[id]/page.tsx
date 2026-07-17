@@ -5,7 +5,7 @@ import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { getLocaleFromCookie } from "@/lib/locale";
-import { api } from "@/lib/api";
+import { api, tokenManager } from "@/lib/api";
 
 import MatrixDashboard from "@/components/dashboard/MatrixDashboard";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
@@ -13,8 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { UserPlus, Trash2, ChevronDown, Check, Crown, Edit2, Upload, Search, FileText, X, Loader2, AlertTriangle } from "lucide-react";
-import { GALLUP_TALENTS, DOMAIN_CSS_KEY } from "@/lib/gallup-data";
-import { cn } from "@/lib/utils";
+import { GALLUP_TALENTS } from "@/lib/gallup-data";
 
 
 interface MemberResult {
@@ -81,7 +80,6 @@ export default function TeamDetailPage() {
     const [members, setMembers] = useState<TeamMember[]>([]);
     const [allTalents, setAllTalents] = useState<Talent[]>([]);
     const [loading, setLoading] = useState(true);
-    const [showMatrix, setShowMatrix] = useState(false);
 
     // Add Member State
     const [showAddMember, setShowAddMember] = useState(false);
@@ -99,6 +97,7 @@ export default function TeamDetailPage() {
     } | null>(null);
     const [replacingMember, setReplacingMember] = useState(false);
     const [membersSearch, setMembersSearch] = useState('');
+    const [membersExpanded, setMembersExpanded] = useState(false);
 
     // PDF Import State
     const pdfImportRef = useRef<HTMLInputElement>(null);
@@ -363,6 +362,11 @@ export default function TeamDetailPage() {
         return <div className="text-red-600">{tCommon('notFound')}</div>;
     }
 
+    const currentUser = tokenManager.getUser();
+    const isPrivileged = !!currentUser && ['coach', 'admin', 'manager'].includes(currentUser.role);
+    const isTeamLeader = !!currentUser && members.some(m => m.is_leader && Number(m.id) === currentUser.id);
+    const canSeeRisks = isPrivileged || isTeamLeader;
+
     return (
         <div className="space-y-6">
             <div className="flex items-start justify-between rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
@@ -412,14 +416,6 @@ export default function TeamDetailPage() {
                     )}
                 </div>
                 <div className="flex items-center gap-3">
-                    <Button
-                        variant="outline"
-                        onClick={() => setShowMatrix(!showMatrix)}
-                        className="rounded-lg font-medium"
-                    >
-                        {showMatrix ? t('hideMatrix') : t('showMatrix')}
-                    </Button>
-
                     <Button
                         variant="secondary"
                         onClick={triggerPdfImport}
@@ -521,182 +517,156 @@ export default function TeamDetailPage() {
                 </div>
             </div>
 
-            {showMatrix && (
-                <MatrixDashboard members={members} />
-            )}
+            <MatrixDashboard members={members} canSeeRisks={canSeeRisks} />
 
             <div className="rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden mt-6">
-                <div className="p-6 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <button
+                    type="button"
+                    onClick={() => setMembersExpanded(!membersExpanded)}
+                    className="w-full p-6 flex items-center justify-between text-left"
+                >
                     <div>
                         <h2 className="text-xl font-semibold text-slate-900">
                             {t('membersTableTitle')} <span className="text-sm font-normal text-slate-500 ml-2">({members.length})</span>
                         </h2>
                         <p className="text-sm text-slate-500 mt-1">{t('membersTableDesc')}</p>
                     </div>
-
-                    <div className="flex items-center gap-3 w-full sm:w-auto">
-                        <div className="relative flex-1 sm:w-64">
-                            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                                <Search className="h-4 w-4 text-slate-400" />
+                    <ChevronDown className={`w-5 h-5 text-slate-400 transition-transform ${membersExpanded ? 'rotate-180' : ''}`} />
+                </button>
+                {membersExpanded && (
+                    <div className="border-t border-slate-100">
+                        <div className="p-6 pb-0 flex flex-col sm:flex-row sm:items-center justify-end gap-4">
+                            <div className="flex items-center gap-3 w-full sm:w-auto">
+                                <div className="relative flex-1 sm:w-64">
+                                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                        <Search className="h-4 w-4 text-slate-400" />
+                                    </div>
+                                    <input
+                                        type="text"
+                                        placeholder={t('searchMember')}
+                                        className="block w-full pl-10 pr-3 py-2 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-primary focus:border-primary transition-shadow bg-slate-50 focus:bg-white"
+                                        value={membersSearch}
+                                        onChange={(e) => setMembersSearch(e.target.value)}
+                                    />
+                                </div>
                             </div>
-                            <input
-                                type="text"
-                                placeholder={t('searchMember')}
-                                className="block w-full pl-10 pr-3 py-2 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-primary focus:border-primary transition-shadow bg-slate-50 focus:bg-white"
-                                value={membersSearch}
-                                onChange={(e) => setMembersSearch(e.target.value)}
-                            />
                         </div>
-                    </div>
-                </div>
 
-                {members.length === 0 ? (
-                    <div className="p-12 text-center">
-                        <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                            <UserPlus className="w-8 h-8 text-slate-400" />
-                        </div>
-                        <h3 className="text-lg font-medium text-slate-900 mb-1">{t('noMembers')}</h3>
-                        <p className="text-slate-500 max-w-sm mx-auto">
-                            {t('teamEmptyDesc')}
-                        </p>
-                    </div>
-                ) : (
-                    <div className="overflow-x-auto">
-                        <table className="w-full text-left border-collapse">
-                            <thead>
-                                <tr className="bg-slate-50/80 border-b border-slate-200">
-                                    <th className="py-4 px-6 text-xs font-semibold text-slate-500 uppercase tracking-wider">{t('columnPerson')}</th>
-                                    <th className="py-4 px-6 text-xs font-semibold text-slate-500 uppercase tracking-wider">{t('columnRole')}</th>
-                                    <th className="py-4 px-6 text-xs font-semibold text-slate-500 uppercase tracking-wider">{t('columnTop5')}</th>
-                                    <th className="py-4 px-6 text-xs font-semibold text-slate-500 uppercase tracking-wider text-right">{t('columnActions')}</th>
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y divide-slate-100">
-                                {filteredMembers.map((member) => {
-                                    const top5 = [...member.results]
-                                        .sort((a, b) => a.rank - b.rank)
-                                        .slice(0, 5);
-
-                                    return (
-                                        <tr key={member.id} className="hover:bg-slate-50/80 transition-colors group">
-                                            <td className="py-4 px-6">
-                                                <Link href={`/dashboard/users/${member.id}`} className="flex items-center gap-3 group/link">
-                                                    <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white font-medium shadow-sm shrink-0">
-                                                        {member.name.charAt(0).toUpperCase()}
-                                                    </div>
-                                                    <div>
-                                                        <div className="font-medium text-slate-900 group-hover/link:text-blue-600 transition-colors flex items-center gap-2">
-                                                            {member.name}
-                                                            {member.is_leader && (
-                                                                <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-amber-100 text-amber-600" title={t('manager')}>
-                                                                    <Crown className="w-3 h-3" />
-                                                                </span>
-                                                            )}
-                                                        </div>
-                                                        <div className="flex items-center gap-2 mt-0.5">
-                                                            <div className="text-sm text-slate-500">{member.email || t('noEmailAddress')}</div>
-                                                            {member.is_ghost && getStatusBadge(member)}
-                                                        </div>
-                                                    </div>
-                                                </Link>
-                                            </td>
-                                            <td className="py-4 px-6">
-                                                <span className="text-sm text-slate-700 bg-slate-100 px-2.5 py-1 rounded-md inline-block">
-                                                    {member.role || t('noRole')}
-                                                </span>
-                                            </td>
-                                            <td className="py-4 px-6">
-                                                <div className="flex flex-wrap gap-1.5 max-w-md">
-                                                    {top5.length > 0 ? top5.map((tr) => {
-                                                        const localTalentInfo = GALLUP_TALENTS.find(gt => gt.code === tr.talent || gt.en === tr.talent || gt.pl === tr.talent || gt.code.toLowerCase() === tr.talent.toLowerCase());
-                                                        const translatedName = locale === 'en'
-                                                            ? (localTalentInfo?.en || tr.talent)
-                                                            : (localTalentInfo?.pl || tr.talent);
-                                                        const translatedDesc = locale === 'en'
-                                                            ? (localTalentInfo?.en_desc || undefined)
-                                                            : (localTalentInfo?.pl_desc || undefined);
-
-                                                        return (
-                                                            <div
-                                                                key={tr.talent}
-                                                                className={cn(
-                                                                    "relative inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium border transition-colors hover:[&>.talent-tooltip]:opacity-100",
-                                                                    `domain-${DOMAIN_CSS_KEY[tr.domain as keyof typeof DOMAIN_CSS_KEY] || tr.domain}`
-                                                                )}
-                                                            >
-                                                                <span
-                                                                    className="w-5 h-5 rounded-full flex items-center justify-center text-xs font-bold text-white shadow-sm"
-                                                                    style={{ backgroundColor: `var(--color-domain-${DOMAIN_CSS_KEY[tr.domain as keyof typeof DOMAIN_CSS_KEY] || tr.domain})` }}
-                                                                >
-                                                                    {tr.rank}
-                                                                </span>
-                                                                {translatedName}
-
-                                                                {translatedDesc && (
-                                                                    <div className="talent-tooltip pointer-events-none absolute bottom-full left-1/2 mb-2 w-64 -translate-x-1/2 rounded-lg bg-slate-900 px-3 py-2 text-xs text-slate-100 opacity-0 shadow-lg transition-opacity z-50 whitespace-normal text-center">
-                                                                        {translatedDesc}
-                                                                    </div>
-                                                                )}
-                                                            </div>
-                                                        );
-                                                    }) : (
-                                                        <span className="text-sm text-slate-400 italic">{t('noTalentsEntered')}</span>
-                                                    )}
-                                                </div>
-                                            </td>
-                                            <td className="py-4 px-6 text-right">
-                                                <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                                                    {member.is_ghost && member.invitation_status !== 'active' && (
-                                                        <button
-                                                            onClick={() => handleResend(member.id)}
-                                                            disabled={resendingId === member.id}
-                                                            className="p-2 text-slate-400 hover:text-purple-600 hover:bg-purple-50 rounded-lg transition-colors disabled:opacity-50"
-                                                            title={member.invitation_status === 'not_invited' ? tInv('invite') : tInv('resend')}
-                                                        >
-                                                            {resendingId === member.id ? (
-                                                                <Loader2 className="w-4 h-4 animate-spin" />
-                                                            ) : (
-                                                                <span className="text-xs font-medium px-1">
-                                                                    {member.invitation_status === 'not_invited' ? tInv('invite') : tInv('resend')}
-                                                                </span>
-                                                            )}
-                                                        </button>
-                                                    )}
-                                                    <button
-                                                        onClick={() => toggleLeader(member)}
-                                                        className={`p-2 rounded-lg transition-colors ${member.is_leader ? 'text-amber-600 bg-amber-50 hover:bg-amber-100' : 'text-slate-400 hover:text-slate-600 hover:bg-slate-100'}`}
-                                                        title={member.is_leader ? t('noManager') : t('manager')}
-                                                    >
-                                                        <Crown className="w-4 h-4" />
-                                                    </button>
-                                                    <button
-                                                        onClick={() => setEditingMember({ id: member.id, name: member.name, email: member.email || '', role: member.role || '' })}
-                                                        className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-                                                        title={tCommon('edit')}
-                                                    >
-                                                        <Edit2 className="w-4 h-4" />
-                                                    </button>
-                                                    <button
-                                                        onClick={() => handleRemoveMember(parseInt(member.id as string))}
-                                                        className="p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors"
-                                                        title={t('removeMember')}
-                                                    >
-                                                        <Trash2 className="w-4 h-4" />
-                                                    </button>
-                                                </div>
-                                            </td>
+                        {members.length === 0 ? (
+                            <div className="p-12 text-center">
+                                <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                                    <UserPlus className="w-8 h-8 text-slate-400" />
+                                </div>
+                                <h3 className="text-lg font-medium text-slate-900 mb-1">{t('noMembers')}</h3>
+                                <p className="text-slate-500 max-w-sm mx-auto">
+                                    {t('teamEmptyDesc')}
+                                </p>
+                            </div>
+                        ) : (
+                            <div className="overflow-x-auto">
+                                <table className="w-full text-left border-collapse">
+                                    <thead>
+                                        <tr className="bg-slate-50/80 border-b border-slate-200">
+                                            <th className="py-4 px-6 text-xs font-semibold text-slate-500 uppercase tracking-wider">{t('columnPerson')}</th>
+                                            <th className="py-4 px-6 text-xs font-semibold text-slate-500 uppercase tracking-wider">{t('columnRole')}</th>
+                                            <th className="py-4 px-6 text-xs font-semibold text-slate-500 uppercase tracking-wider">{t('columnTalents')}</th>
+                                            <th className="py-4 px-6 text-xs font-semibold text-slate-500 uppercase tracking-wider text-right">{t('columnActions')}</th>
                                         </tr>
-                                    );
-                                })}
-                                {filteredMembers.length === 0 && members.length > 0 && (
-                                    <tr>
-                                        <td colSpan={4} className="py-8 text-center text-slate-500">
-                                            {t('searchNoResults')}
-                                        </td>
-                                    </tr>
-                                )}
-                            </tbody>
-                        </table>
+                                    </thead>
+                                    <tbody className="divide-y divide-slate-100">
+                                        {filteredMembers.map((member) => {
+                                            return (
+                                                <tr key={member.id} className="hover:bg-slate-50/80 transition-colors group">
+                                                    <td className="py-4 px-6">
+                                                        <Link href={`/dashboard/users/${member.id}`} className="flex items-center gap-3 group/link">
+                                                            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white font-medium shadow-sm shrink-0">
+                                                                {member.name.charAt(0).toUpperCase()}
+                                                            </div>
+                                                            <div>
+                                                                <div className="font-medium text-slate-900 group-hover/link:text-blue-600 transition-colors flex items-center gap-2">
+                                                                    {member.name}
+                                                                    {member.is_leader && (
+                                                                        <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-amber-100 text-amber-600" title={t('manager')}>
+                                                                            <Crown className="w-3 h-3" />
+                                                                        </span>
+                                                                    )}
+                                                                </div>
+                                                                <div className="flex items-center gap-2 mt-0.5">
+                                                                    <div className="text-sm text-slate-500">{member.email || t('noEmailAddress')}</div>
+                                                                    {member.is_ghost && getStatusBadge(member)}
+                                                                </div>
+                                                            </div>
+                                                        </Link>
+                                                    </td>
+                                                    <td className="py-4 px-6">
+                                                        <span className="text-sm text-slate-700 bg-slate-100 px-2.5 py-1 rounded-md inline-block">
+                                                            {member.role || t('noRole')}
+                                                        </span>
+                                                    </td>
+                                                    <td className="py-4 px-6">
+                                                        {member.results.length > 0 ? (
+                                                            <span className="text-sm text-emerald-600 font-medium">
+                                                                ✓ {t('talentsLoadedCount', { count: member.results.length })}
+                                                            </span>
+                                                        ) : (
+                                                            <span className="text-sm text-slate-400 italic">{t('noTalentsEntered')}</span>
+                                                        )}
+                                                    </td>
+                                                    <td className="py-4 px-6 text-right">
+                                                        <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                            {member.is_ghost && member.invitation_status !== 'active' && (
+                                                                <button
+                                                                    onClick={() => handleResend(member.id)}
+                                                                    disabled={resendingId === member.id}
+                                                                    className="p-2 text-slate-400 hover:text-purple-600 hover:bg-purple-50 rounded-lg transition-colors disabled:opacity-50"
+                                                                    title={member.invitation_status === 'not_invited' ? tInv('invite') : tInv('resend')}
+                                                                >
+                                                                    {resendingId === member.id ? (
+                                                                        <Loader2 className="w-4 h-4 animate-spin" />
+                                                                    ) : (
+                                                                        <span className="text-xs font-medium px-1">
+                                                                            {member.invitation_status === 'not_invited' ? tInv('invite') : tInv('resend')}
+                                                                        </span>
+                                                                    )}
+                                                                </button>
+                                                            )}
+                                                            <button
+                                                                onClick={() => toggleLeader(member)}
+                                                                className={`p-2 rounded-lg transition-colors ${member.is_leader ? 'text-amber-600 bg-amber-50 hover:bg-amber-100' : 'text-slate-400 hover:text-slate-600 hover:bg-slate-100'}`}
+                                                                title={member.is_leader ? t('noManager') : t('manager')}
+                                                            >
+                                                                <Crown className="w-4 h-4" />
+                                                            </button>
+                                                            <button
+                                                                onClick={() => setEditingMember({ id: member.id, name: member.name, email: member.email || '', role: member.role || '' })}
+                                                                className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                                                                title={tCommon('edit')}
+                                                            >
+                                                                <Edit2 className="w-4 h-4" />
+                                                            </button>
+                                                            <button
+                                                                onClick={() => handleRemoveMember(parseInt(member.id as string))}
+                                                                className="p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors"
+                                                                title={t('removeMember')}
+                                                            >
+                                                                <Trash2 className="w-4 h-4" />
+                                                            </button>
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                            );
+                                        })}
+                                        {filteredMembers.length === 0 && members.length > 0 && (
+                                            <tr>
+                                                <td colSpan={4} className="py-8 text-center text-slate-500">
+                                                    {t('searchNoResults')}
+                                                </td>
+                                            </tr>
+                                        )}
+                                    </tbody>
+                                </table>
+                            </div>
+                        )}
                     </div>
                 )}
             </div>
