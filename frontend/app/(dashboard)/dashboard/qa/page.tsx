@@ -21,6 +21,7 @@ interface ChatMessage {
     query_id?: number;
     answer_id?: number;
     feedback_sent?: boolean;
+    streaming?: boolean;
 }
 
 export default function QACopilotPage() {
@@ -99,31 +100,62 @@ export default function QACopilotPage() {
         ];
         setMessages(newMessages);
 
-        try {
-            const res = await api.qa.query({
-                context,
-                question: currentMsg,
-                target_user_id: context === "team" ? selectedMember?.id : undefined,
-                language: getLocaleFromCookie()
-            });
+        const payload = {
+            context,
+            question: currentMsg,
+            target_user_id: context === "team" ? selectedMember?.id : undefined,
+            language: getLocaleFromCookie()
+        };
 
-            setMessages([
-                ...newMessages,
-                {
-                    role: "assistant",
-                    content: context === "self"
-                        ? t("answerPrefixSelf")
-                        : t("answerPrefixTeam", { name: selectedMember?.full_name ?? "" }),
-                    answer: res.answer,
-                    answer_raw: res.answer_raw || "",
-                    render_mode: res.render_mode || "structured",
-                    query_id: res.query_id,
-                    answer_id: res.answer_id
-                }
-            ]);
-        } catch (err) {
-            console.error("Failed to fetch answer", err);
-            alert(t("errorGeneric"));
+        const assistantPrefix = context === "self"
+            ? t("answerPrefixSelf")
+            : t("answerPrefixTeam", { name: selectedMember?.full_name ?? "" });
+
+        const setAssistantMessage = (msg: ChatMessage) => setMessages([...newMessages, msg]);
+
+        const applyFinalResponse = (res: {
+            query_id: number; answer_id: number; answer: QAAnswer;
+            answer_raw?: string; render_mode?: string;
+        }) => {
+            setAssistantMessage({
+                role: "assistant",
+                content: assistantPrefix,
+                answer: res.answer,
+                answer_raw: res.answer_raw || "",
+                render_mode: res.render_mode || "structured",
+                query_id: res.query_id,
+                answer_id: res.answer_id
+            });
+        };
+
+        let streamedText = "";
+
+        try {
+            await api.qa.queryStream(payload, {
+                onDelta: (text) => {
+                    streamedText += text;
+                    setIsLoading(false); // hide spinner as soon as tokens flow
+                    setAssistantMessage({
+                        role: "assistant",
+                        content: assistantPrefix,
+                        answer: { talent: "", competency: "", actions: [], fallback: false },
+                        answer_raw: streamedText,
+                        render_mode: "freeform",
+                        streaming: true
+                    });
+                },
+                onDone: applyFinalResponse
+            });
+        } catch (streamErr) {
+            console.warn("Streaming failed, falling back to non-streaming", streamErr);
+            try {
+                // Fallback: classic non-streaming request
+                const res = await api.qa.query(payload);
+                applyFinalResponse(res);
+            } catch (err) {
+                console.error("Failed to fetch answer", err);
+                alert(t("errorGeneric"));
+            }
         } finally {
             setIsLoading(false);
         }
@@ -222,7 +254,7 @@ export default function QACopilotPage() {
                                                     teamNames={teamNames}
                                                 />
 
-                                                {!msg.feedback_sent && (
+                                                {!msg.feedback_sent && !msg.streaming && (
                                                     <div className="mt-6 rounded-2xl border border-slate-200/80 bg-slate-50 p-4">
                                                         <div className="flex items-center justify-between">
                                                             <div>

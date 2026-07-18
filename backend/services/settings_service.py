@@ -11,6 +11,8 @@ DEFAULT_SETTINGS = {
     "openrouter_embedding_model": "text-embedding-3-small",
     "daily_query_limit": "20",
     "rag_top_k": "8",
+    # SSE streaming for QA answers ("true"/"false") - editable by admin in UI
+    "qa_streaming_enabled": "true",
     # Intent classifier settings
     "intent_classifier_model": "openai/gpt-4.1-nano",
     "intent_classifier_prompt": (

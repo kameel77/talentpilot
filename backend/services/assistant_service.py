@@ -316,6 +316,35 @@ def generate_answer(
         )
 
 
+def stream_answer_chunks(
+    model_name: str,
+    messages: list[dict],
+):
+    """Stream answer text chunks from LLM (SSE support).
+
+    Yields text deltas as they arrive from the provider.
+    Note: deliberately takes no DB session — this generator runs after the
+    request-scoped session may have been closed (StreamingResponse).
+
+    Raises:
+        OpenAIError: propagated to the caller, which translates it into an
+        SSE error event (cannot raise HTTPException mid-stream).
+    """
+    client = get_openrouter_client()
+    stream = client.chat.completions.create(
+        model=model_name,
+        messages=messages,
+        temperature=0.4,
+        stream=True,
+    )
+    for chunk in stream:
+        if not chunk.choices:
+            continue
+        delta = chunk.choices[0].delta
+        if delta and delta.content:
+            yield delta.content
+
+
 def find_similar_query(
     db: Session,
     organization_id: int,

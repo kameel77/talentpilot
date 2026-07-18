@@ -5,10 +5,12 @@ import re
 from datetime import datetime, timedelta
 
 from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi.responses import StreamingResponse
+from openai import OpenAIError
 from sqlalchemy.orm import Session
 
 from auth import get_current_user
-from database import get_db
+from database import SessionLocal, get_db
 from models import GeneratedAnswer, UserFeedback, UserQuery, ReviewStatus
 from schemas import (
     QAAnswer,
@@ -18,6 +20,7 @@ from schemas import (
     QAQueryResponse,
 )
 from services.assistant_service import (
+    build_prompt,
     compute_question_hash,
     find_similar_query,
     generate_answer,
@@ -26,6 +29,7 @@ from services.assistant_service import (
     get_user_talents,
     retrieve_instruction,
     retrieve_knowledge,
+    stream_answer_chunks,
 )
 from services.intent_service import classify_intent
 from services.settings_service import get_setting
@@ -224,6 +228,145 @@ def query_qa(
         answer=parsed_answer,
         answer_raw=answer_text,
         render_mode=render_mode,
+    )
+
+
+def _sse_event(event: str, data: dict) -> str:
+    """Format a single SSE event."""
+    return f"event: {event}\ndata: {json.dumps(data, ensure_ascii=False)}\n\n"
+
+
+@router.post("/query/stream")
+def query_qa_stream(
+    request: QAQueryRequest,
+    db: Session = Depends(get_db),
+    current_user=Depends(get_current_user),
+):
+    """SSE streaming variant of /query.
+
+    Protocol (Server-Sent Events):
+      event: meta  -> {query_id, render_mode}
+      event: delta -> {text}            (repeated)
+      event: done  -> full QAQueryResponse payload
+      event: error -> {detail}
+
+    Honors the admin setting `qa_streaming_enabled`: when disabled, the
+    answer is generated non-streaming and emitted as a single delta + done,
+    so the client uses one protocol either way.
+    """
+    logger.info(f"--- QA STREAM START --- User: {current_user.email}, Q: {request.question}")
+
+    language = request.language or current_user.language or "pl"
+    target_user_id = request.target_user_id or current_user.id
+    target_user = get_user_in_organization(db, target_user_id, current_user.organization_id)
+    if not target_user:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+
+    # --- All DB pre-work happens here, inside the request-scoped session ---
+    question_hash = compute_question_hash(request.question)
+    query_embedding = get_embedding(db, request.question)
+
+    user_query = UserQuery(
+        user_id=current_user.id,
+        target_user_id=target_user.id,
+        organization_id=current_user.organization_id,
+        question=request.question,
+        question_hash=question_hash,
+        embedding=query_embedding,
+        language=language,
+        is_unique=True,
+    )
+    db.add(user_query)
+    db.commit()
+    db.refresh(user_query)
+    query_id = user_query.id
+
+    talents = get_user_talents(db, target_user.id, language)
+    knowledge_items = retrieve_knowledge(db, current_user.organization_id, query_embedding, language)
+    sources = [item.id for item in knowledge_items]
+
+    intent = classify_intent(db, request.question, language)
+    instruction, render_mode = retrieve_instruction(db, intent, language)
+    logger.info(f"--- STREAM INTENT: {intent}, RENDER_MODE: {render_mode} ---")
+
+    streaming_enabled = get_setting(db, "qa_streaming_enabled").lower() == "true"
+    model_name = get_setting(db, "openrouter_chat_model")
+    messages = build_prompt(
+        db, request.question, talents, knowledge_items, language,
+        instruction_content=instruction,
+    )
+
+    # --- Generator runs after the request session may be closed: no `db` usage ---
+    def event_generator():
+        answer_text = ""
+        try:
+            yield _sse_event("meta", {"query_id": query_id, "render_mode": render_mode})
+
+            if streaming_enabled:
+                for chunk in stream_answer_chunks(model_name, messages):
+                    answer_text += chunk
+                    yield _sse_event("delta", {"text": chunk})
+            else:
+                # Toggle off: same protocol, single delta
+                session = SessionLocal()
+                try:
+                    text, _ = generate_answer(
+                        session, request.question, talents, knowledge_items,
+                        language, instruction_content=instruction,
+                    )
+                finally:
+                    session.close()
+                answer_text = text
+                yield _sse_event("delta", {"text": answer_text})
+
+            answer_text = answer_text.strip()
+            if not answer_text:
+                yield _sse_event("error", {"detail": "Pusta odpowiedź modelu. Spróbuj ponownie."})
+                return
+
+            # Persist the final answer using a fresh session
+            session = SessionLocal()
+            try:
+                generated_answer = GeneratedAnswer(
+                    query_id=query_id,
+                    answer_text=answer_text,
+                    model_name=model_name,
+                    sources=sources,
+                )
+                session.add(generated_answer)
+                session.commit()
+                session.refresh(generated_answer)
+                answer_id = generated_answer.id
+            finally:
+                session.close()
+
+            if render_mode == "structured":
+                parsed_answer = parse_structured_answer(answer_text)
+            else:
+                parsed_answer = QAAnswer(talent="", competency="", actions=[], fallback=False)
+
+            yield _sse_event("done", {
+                "query_id": query_id,
+                "answer_id": answer_id,
+                "answer": parsed_answer.model_dump(),
+                "answer_raw": answer_text,
+                "render_mode": render_mode,
+            })
+        except OpenAIError as e:
+            logger.error(f"OpenRouter streaming error: {e}")
+            yield _sse_event("error", {"detail": "Usługa AI jest chwilowo niedostępna. Spróbuj ponownie za chwilę."})
+        except Exception as e:
+            logger.exception(f"Unexpected error during QA stream: {e}")
+            yield _sse_event("error", {"detail": "Wystąpił nieoczekiwany błąd. Spróbuj ponownie."})
+
+    return StreamingResponse(
+        event_generator(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no",  # disable buffering on nginx/proxies
+        },
     )
 
 

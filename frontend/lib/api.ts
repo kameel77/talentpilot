@@ -837,6 +837,69 @@ export const api = {
             return response.data;
         },
 
+        /**
+         * SSE streaming variant of query. Uses fetch (axios cannot stream in browser).
+         * Calls onDelta for each text chunk, onDone with the final response.
+         * Throws on transport/HTTP errors so the caller can fall back to query().
+         */
+        queryStream: async (
+            data: { context: string; question: string; target_user_id?: number; language?: string },
+            callbacks: {
+                onMeta?: (meta: { query_id: number; render_mode: string }) => void;
+                onDelta: (text: string) => void;
+                onDone: (response: QAQueryResponse) => void;
+            },
+        ): Promise<void> => {
+            const token = tokenManager.getToken();
+            const response = await fetch(`${API_BASE_URL}/api/v1/qa/query/stream`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+                },
+                body: JSON.stringify(data),
+            });
+
+            if (!response.ok || !response.body) {
+                throw new Error(`Stream request failed: ${response.status}`);
+            }
+
+            const reader = response.body.getReader();
+            const decoder = new TextDecoder();
+            let buffer = '';
+
+            const processEvent = (rawEvent: string) => {
+                let eventName = 'message';
+                const dataLines: string[] = [];
+                for (const line of rawEvent.split('\n')) {
+                    if (line.startsWith('event:')) eventName = line.slice(6).trim();
+                    else if (line.startsWith('data:')) dataLines.push(line.slice(5).trim());
+                }
+                if (dataLines.length === 0) return;
+                const payload = JSON.parse(dataLines.join('\n'));
+
+                if (eventName === 'meta') callbacks.onMeta?.(payload);
+                else if (eventName === 'delta') callbacks.onDelta(payload.text ?? '');
+                else if (eventName === 'done') callbacks.onDone(payload as QAQueryResponse);
+                else if (eventName === 'error') throw new Error(payload.detail || 'Stream error');
+            };
+
+            // eslint-disable-next-line no-constant-condition
+            while (true) {
+                const { done, value } = await reader.read();
+                if (done) break;
+                buffer += decoder.decode(value, { stream: true });
+
+                // SSE events are separated by a blank line
+                let separatorIndex;
+                while ((separatorIndex = buffer.indexOf('\n\n')) !== -1) {
+                    const rawEvent = buffer.slice(0, separatorIndex);
+                    buffer = buffer.slice(separatorIndex + 2);
+                    if (rawEvent.trim()) processEvent(rawEvent);
+                }
+            }
+        },
+
         submitFeedback: async (feedback: QAFeedbackRequest) => {
             const response = await apiClient.post('/api/v1/qa/feedback', feedback);
             return response.data;
