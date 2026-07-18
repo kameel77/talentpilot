@@ -344,6 +344,63 @@ export const tokenManager = {
     }
 };
 
+/**
+ * Shared SSE consumer: POST/GET to an SSE endpoint and dispatch parsed events.
+ * Uses fetch (axios cannot stream in the browser). Throws on transport errors
+ * and on server `error` events so callers can fall back to non-streaming APIs.
+ */
+async function sseRequest(
+    path: string,
+    init: RequestInit,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    onEvent: (event: string, payload: any) => void,
+): Promise<void> {
+    const token = tokenManager.getToken();
+    const response = await fetch(`${API_BASE_URL}${path}`, {
+        ...init,
+        headers: {
+            ...(init.headers || {}),
+            ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+    });
+
+    if (!response.ok || !response.body) {
+        throw new Error(`Stream request failed: ${response.status}`);
+    }
+
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = '';
+
+    const processEvent = (rawEvent: string) => {
+        let eventName = 'message';
+        const dataLines: string[] = [];
+        for (const line of rawEvent.split('\n')) {
+            if (line.startsWith('event:')) eventName = line.slice(6).trim();
+            else if (line.startsWith('data:')) dataLines.push(line.slice(5).trim());
+        }
+        if (dataLines.length === 0) return;
+        const payload = JSON.parse(dataLines.join('\n'));
+        if (eventName === 'error') throw new Error(payload.detail || 'Stream error');
+        onEvent(eventName, payload);
+    };
+
+    // eslint-disable-next-line no-constant-condition
+    while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+
+        // SSE events are separated by a blank line
+        let separatorIndex;
+        while ((separatorIndex = buffer.indexOf('\n\n')) !== -1) {
+            const rawEvent = buffer.slice(0, separatorIndex);
+            buffer = buffer.slice(separatorIndex + 2);
+            if (rawEvent.trim()) processEvent(rawEvent);
+        }
+    }
+}
+
 // Create axios instance
 const apiClient: AxiosInstance = axios.create({
     baseURL: API_BASE_URL,
@@ -675,6 +732,39 @@ export const api = {
             return response.data;
         },
 
+        /** SSE streaming variant of getDaily. Throws on failure — caller should fall back to getDaily. */
+        getDailyStream: async (
+            context: string | undefined,
+            callbacks: {
+                onMeta?: (meta: { talent_focus: string; context: string }) => void;
+                onDelta: (text: string) => void;
+                onDone: (result: { tip_id: number | null; content: string }) => void;
+            },
+        ): Promise<void> => {
+            const qs = context ? `?context=${encodeURIComponent(context)}` : '';
+            await sseRequest(`/api/tips/daily/stream${qs}`, { method: 'GET' }, (event, payload) => {
+                if (event === 'meta') callbacks.onMeta?.(payload);
+                else if (event === 'delta') callbacks.onDelta(payload.text ?? '');
+                else if (event === 'done') callbacks.onDone(payload);
+            });
+        },
+
+        /** SSE streaming variant of getSynergy. Compare data arrives instantly via onMeta. */
+        getSynergyStream: async (
+            targetUserId: number,
+            callbacks: {
+                onMeta?: (meta: Omit<SynergyTipResponse, 'tip_id' | 'content'>) => void;
+                onDelta: (text: string) => void;
+                onDone: (result: { tip_id: number | null; content: string }) => void;
+            },
+        ): Promise<void> => {
+            await sseRequest(`/api/tips/synergy/${targetUserId}/stream`, { method: 'GET' }, (event, payload) => {
+                if (event === 'meta') callbacks.onMeta?.(payload);
+                else if (event === 'delta') callbacks.onDelta(payload.text ?? '');
+                else if (event === 'done') callbacks.onDone(payload);
+            });
+        },
+
         submitFeedback: async (tipId: number, helpful: boolean) => {
             const response = await apiClient.post('/api/tips/feedback', { tip_id: tipId, helpful });
             return response.data;
@@ -850,54 +940,19 @@ export const api = {
                 onDone: (response: QAQueryResponse) => void;
             },
         ): Promise<void> => {
-            const token = tokenManager.getToken();
-            const response = await fetch(`${API_BASE_URL}/api/v1/qa/query/stream`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+            await sseRequest(
+                '/api/v1/qa/query/stream',
+                {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data),
                 },
-                body: JSON.stringify(data),
-            });
-
-            if (!response.ok || !response.body) {
-                throw new Error(`Stream request failed: ${response.status}`);
-            }
-
-            const reader = response.body.getReader();
-            const decoder = new TextDecoder();
-            let buffer = '';
-
-            const processEvent = (rawEvent: string) => {
-                let eventName = 'message';
-                const dataLines: string[] = [];
-                for (const line of rawEvent.split('\n')) {
-                    if (line.startsWith('event:')) eventName = line.slice(6).trim();
-                    else if (line.startsWith('data:')) dataLines.push(line.slice(5).trim());
-                }
-                if (dataLines.length === 0) return;
-                const payload = JSON.parse(dataLines.join('\n'));
-
-                if (eventName === 'meta') callbacks.onMeta?.(payload);
-                else if (eventName === 'delta') callbacks.onDelta(payload.text ?? '');
-                else if (eventName === 'done') callbacks.onDone(payload as QAQueryResponse);
-                else if (eventName === 'error') throw new Error(payload.detail || 'Stream error');
-            };
-
-            // eslint-disable-next-line no-constant-condition
-            while (true) {
-                const { done, value } = await reader.read();
-                if (done) break;
-                buffer += decoder.decode(value, { stream: true });
-
-                // SSE events are separated by a blank line
-                let separatorIndex;
-                while ((separatorIndex = buffer.indexOf('\n\n')) !== -1) {
-                    const rawEvent = buffer.slice(0, separatorIndex);
-                    buffer = buffer.slice(separatorIndex + 2);
-                    if (rawEvent.trim()) processEvent(rawEvent);
-                }
-            }
+                (event, payload) => {
+                    if (event === 'meta') callbacks.onMeta?.(payload);
+                    else if (event === 'delta') callbacks.onDelta(payload.text ?? '');
+                    else if (event === 'done') callbacks.onDone(payload as QAQueryResponse);
+                },
+            );
         },
 
         submitFeedback: async (feedback: QAFeedbackRequest) => {

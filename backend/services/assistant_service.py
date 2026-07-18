@@ -319,6 +319,7 @@ def generate_answer(
 def stream_answer_chunks(
     model_name: str,
     messages: list[dict],
+    temperature: float = 0.4,
 ):
     """Stream answer text chunks from LLM (SSE support).
 
@@ -334,7 +335,7 @@ def stream_answer_chunks(
     stream = client.chat.completions.create(
         model=model_name,
         messages=messages,
-        temperature=0.4,
+        temperature=temperature,
         stream=True,
     )
     for chunk in stream:

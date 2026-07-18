@@ -231,9 +231,7 @@ def query_qa(
     )
 
 
-def _sse_event(event: str, data: dict) -> str:
-    """Format a single SSE event."""
-    return f"event: {event}\ndata: {json.dumps(data, ensure_ascii=False)}\n\n"
+from services.sse import sse_event as _sse_event  # noqa: E402  (shared SSE helper)
 
 
 @router.post("/query/stream")

@@ -208,7 +208,7 @@ export default function ComparePage() {
     }
 
     return (
-        <div className="max-w-5xl mx-auto space-y-8">
+        <div className="w-full space-y-8">
             {/* Header */}
             <div>
                 <h1 className="text-3xl font-bold font-heading text-slate-900 tracking-tight">{t('title')}</h1>

@@ -11,7 +11,7 @@ interface ClientOrg {
     name: string;
 }
 
-export default function IndividualClientsTab() {
+export default function IndividualClientsTab({ filter = "" }: { filter?: string }) {
     const t = useTranslations("clients");
     const me = tokenManager.getUser();
 
@@ -117,9 +117,20 @@ export default function IndividualClientsTab() {
         return <p className="text-slate-500 text-sm py-8 text-center">{t("empty")}</p>;
     }
 
+    const query = filter.trim().toLowerCase();
+    const visibleIndividuals = query
+        ? individuals.filter((u) =>
+            u.full_name.toLowerCase().includes(query) || u.email.toLowerCase().includes(query)
+        )
+        : individuals;
+
+    if (visibleIndividuals.length === 0) {
+        return <p className="text-slate-500 text-sm py-8 text-center">{t("noResults")}</p>;
+    }
+
     return (
         <div className="space-y-3">
-            {individuals.map((u) => (
+            {visibleIndividuals.map((u) => (
                 <div
                     key={u.id}
                     className="bg-white rounded-xl border border-slate-200 p-4 flex items-center justify-between gap-4"

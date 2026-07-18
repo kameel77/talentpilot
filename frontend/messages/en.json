@@ -640,7 +640,9 @@
     "pinConfirm": "Pin",
     "pinning": "Pinning...",
     "cancel": "Cancel",
-    "error": "Failed to pin the client. Please try again."
+    "error": "Failed to pin the client. Please try again.",
+    "searchPlaceholder": "Search clients (name, e-mail)…",
+    "noResults": "No clients match your search."
   },
   "organizations": {
     "title": "Organizations",
@@ -698,7 +700,9 @@
     "teamDescPlaceholder": "Short team description",
     "teamCreating": "Creating…",
     "createTeam": "Create team",
-    "noTaxId": "No Tax ID"
+    "noTaxId": "No Tax ID",
+    "searchPlaceholder": "Search organizations (name, city, tax ID)…",
+    "noResults": "No organizations match your search."
   },
   "admin": {
     "settings": {

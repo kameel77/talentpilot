@@ -77,7 +77,7 @@
 | ✅ | Tips — Mój Ruch (`/tips`) | AI daily tip z 5 kontekstami (feedback, 1:1, konflikt, motywacja) |
 | ✅ | Tips — Mosty (`/tips`) | AI interaction guide + compare engine data |
 | ✅ | Feedback na tipach | Thumbs up/down, zapis do DB |
-| ✅ | Streaming (SSE) — QA | `/v1/qa/query/stream` + frontend z fallbackiem; toggle `qa_streaming_enabled` (2026-07-19) |
+| ✅ | Streaming (SSE) — QA + Tips | `/v1/qa/query/stream`, `/tips/daily/stream`, `/tips/synergy/{id}/stream`; frontend z fallbackiem; toggle `qa_streaming_enabled` (2026-07-19) |
 | ⬜ | Cache podobnych pytań | Kod gotowy (zakomentowany w qa.py), do aktywacji |
 
 ---
@@ -96,7 +96,7 @@
 
 | Priorytet | Funkcjonalność | Opis |
 |:---------:|----------------|------|
-| 🔧 | Streaming (SSE) | ✅ QA Copilot (2026-07-19); ⬜ Tips — Mój Ruch / Mosty |
+| ✅ | Streaming (SSE) | QA Copilot + Tips (Mój Ruch, Mosty) — 2026-07-19 |
 | ⬜ | Mapa Ciepła Kompetencji | Wizualizacja zespołu po obszarach biznesowych |
 | ⬜ | Blind Spot Detector | Analiza luk kompetencyjnych w zespole |
 | ⬜ | Power Couple | Algorytmiczne sugestie pairingów |

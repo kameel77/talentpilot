@@ -182,7 +182,7 @@ export default function QACopilotPage() {
     };
 
     return (
-        <div className="max-w-5xl mx-auto w-full space-y-8">
+        <div className="w-full space-y-8">
             <header className="flex flex-wrap items-center justify-between gap-4">
                 <div>
                     <h1 className="text-3xl font-bold font-heading text-slate-900 tracking-tight">{t("title")}</h1>

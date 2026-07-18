@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { api, tokenManager } from "@/lib/api";
-import { Building, Plus, Loader2, Save } from "lucide-react";
+import { Building, Plus, Loader2, Save, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import IndividualClientsTab from "@/components/clients/IndividualClientsTab";
 import { Input } from "@/components/ui/input";
@@ -37,6 +37,16 @@ export default function OrganizationsPage() {
     const [organizations, setOrganizations] = useState<Organization[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState("");
+    const [search, setSearch] = useState("");
+
+    const query = search.trim().toLowerCase();
+    const filteredOrganizations = query
+        ? organizations.filter((org) =>
+            [org.name, org.city, org.tax_id]
+                .filter(Boolean)
+                .some((field) => (field as string).toLowerCase().includes(query))
+        )
+        : organizations;
 
     // Create-org modal
     const [open, setOpen] = useState(false);
@@ -142,6 +152,21 @@ export default function OrganizationsPage() {
                 </div>
             )}
 
+            {/* Search — filters both tabs */}
+            <div className="relative max-w-md">
+                <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 pointer-events-none" />
+                <Input
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                    placeholder={
+                        !isCoach || activeTab === "orgs"
+                            ? t("searchPlaceholder")
+                            : tClients("searchPlaceholder")
+                    }
+                    className="pl-10 rounded-xl"
+                />
+            </div>
+
             {(!isCoach || activeTab === "orgs") && (
                 <>
                     {error && (
@@ -164,9 +189,11 @@ export default function OrganizationsPage() {
                                 {t('create')}
                             </Button>
                         </div>
+                    ) : filteredOrganizations.length === 0 ? (
+                        <p className="text-slate-500 text-sm py-8 text-center">{t("noResults")}</p>
                     ) : (
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                            {organizations.map((org) => (
+                            {filteredOrganizations.map((org) => (
                                 <Link
                                     key={org.id}
                                     href={`/dashboard/organizations/${org.id}`}
@@ -191,7 +218,7 @@ export default function OrganizationsPage() {
                 </>
             )}
 
-            {isCoach && activeTab === "individuals" && <IndividualClientsTab />}
+            {isCoach && activeTab === "individuals" && <IndividualClientsTab filter={search} />}
 
             {/* Create Organization Modal */}
             <Dialog open={open} onOpenChange={setOpen}>

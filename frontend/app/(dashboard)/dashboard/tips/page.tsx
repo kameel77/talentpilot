@@ -175,32 +175,94 @@ export default function TipsPage() {
         loadUsers();
     }, []);
 
-    // Generate daily tip
+    // Generate daily tip (SSE streaming with fallback to non-streaming)
     const generateDailyTip = async (ctx?: string) => {
         const selectedContext = ctx || context;
         setDailyLoading(true);
         setDailyError("");
+
+        let streamedText = "";
+        let talentFocus = "";
+
         try {
-            const data = await api.tips.getDaily(selectedContext);
-            setDailyTip(data);
-        } catch {
-            setDailyError(t("noTalents"));
+            await api.tips.getDailyStream(selectedContext, {
+                onMeta: (meta) => { talentFocus = meta.talent_focus; },
+                onDelta: (text) => {
+                    streamedText += text;
+                    setDailyLoading(false);
+                    setDailyTip({
+                        tip_id: null,
+                        content: streamedText,
+                        talent_focus: talentFocus,
+                        context: selectedContext,
+                    });
+                },
+                onDone: (result) => {
+                    setDailyTip({
+                        tip_id: result.tip_id,
+                        content: result.content,
+                        talent_focus: talentFocus,
+                        context: selectedContext,
+                    });
+                },
+            });
+        } catch (streamErr) {
+            console.warn("Daily tip streaming failed, falling back", streamErr);
+            try {
+                const data = await api.tips.getDaily(selectedContext);
+                setDailyTip(data);
+            } catch {
+                setDailyError(t("noTalents"));
+            }
         } finally {
             setDailyLoading(false);
         }
     };
 
-    // Generate synergy tip
+    // Generate synergy tip (SSE: compare data arrives instantly, AI guide streams in)
     const generateSynergyTip = async (userId: number) => {
         setTargetUserId(userId);
         setUserDropdownOpen(false);
         setSynergyLoading(true);
         setSynergyError("");
+
+        let streamedText = "";
+        let metaBase: Omit<SynergyTipResponse, "tip_id" | "content"> | null = null;
+
+        const buildTip = (content: string, tipId: number | null): SynergyTipResponse => ({
+            tip_id: tipId,
+            content,
+            target_user_name: metaBase?.target_user_name ?? null,
+            shared_talents: metaBase?.shared_talents ?? [],
+            synergy_score: metaBase?.synergy_score ?? 0,
+            collaboration_tips: metaBase?.collaboration_tips ?? [],
+            domain_balance: metaBase?.domain_balance ?? [],
+        });
+
         try {
-            const data = await api.tips.getSynergy(userId);
-            setSynergyTip(data);
-        } catch {
-            setSynergyError(t("synergyError"));
+            await api.tips.getSynergyStream(userId, {
+                onMeta: (meta) => {
+                    metaBase = meta;
+                    // Render deterministic compare data immediately
+                    setSynergyLoading(false);
+                    setSynergyTip(buildTip("", null));
+                },
+                onDelta: (text) => {
+                    streamedText += text;
+                    setSynergyTip(buildTip(streamedText, null));
+                },
+                onDone: (result) => {
+                    setSynergyTip(buildTip(result.content, result.tip_id));
+                },
+            });
+        } catch (streamErr) {
+            console.warn("Synergy tip streaming failed, falling back", streamErr);
+            try {
+                const data = await api.tips.getSynergy(userId);
+                setSynergyTip(data);
+            } catch {
+                setSynergyError(t("synergyError"));
+            }
         } finally {
             setSynergyLoading(false);
         }
@@ -226,7 +288,7 @@ export default function TipsPage() {
     };
 
     return (
-        <div className="max-w-5xl mx-auto w-full space-y-8">
+        <div className="w-full space-y-8">
             {/* Header */}
             <div>
                 <h1 className="text-3xl font-bold font-heading text-slate-900 tracking-tight">{t("title")}</h1>

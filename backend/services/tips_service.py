@@ -71,25 +71,42 @@ def _format_talents_block(talents: list[dict]) -> str:
     return "\n".join(lines)
 
 
-def generate_daily_tip(
+def save_tip(session: Session, user_id: int, content: str, talent_focus: str, context: str) -> int:
+    """Persist an AITip and return its id. Accepts any session (incl. fresh one in SSE flow)."""
+    tip = AITip(
+        user_id=user_id,
+        tip_content=content,
+        talent_focus=talent_focus,
+        context=context,
+    )
+    session.add(tip)
+    session.commit()
+    session.refresh(tip)
+    return tip.id
+
+
+def prepare_daily_tip(
     db: Session,
     user: User,
     context: str = "general",
     language: str = "pl",
 ) -> dict:
-    """Generate an AI-powered daily tip based on user's talents and context."""
+    """Build everything needed to generate a daily tip (shared by sync and SSE paths).
+
+    Returns {"ready": False, "content": ...} when the user has no talents,
+    otherwise {"ready": True, "messages", "talent_focus", "context", "model_name", "temperature"}.
+    """
     talents = get_user_talents(db, user.id, language)
     if not talents:
         return {
+            "ready": False,
             "content": "Zaimportuj swoje talenty CliftonStrengths, aby otrzymać spersonalizowane wskazówki.",
             "talent_focus": "",
             "context": context,
         }
 
     context_label = CONTEXT_LABELS.get(context, CONTEXT_LABELS["general"])
-    top_talent = talents[0]["name"] if talents else "General"
-
-    # Build the user prompt with talent context
+    top_talent = talents[0]["name"]
     talents_block = _format_talents_block(talents)
 
     # Get knowledge items via RAG for richer context
@@ -109,75 +126,81 @@ def generate_daily_tip(
     )
     if knowledge_section:
         user_message += f"\nDodatkowa wiedza:\n{knowledge_section}\n"
-
     user_message += "\nWygeneruj wskazówkę."
 
-    # Generate via LLM
+    return {
+        "ready": True,
+        "messages": [
+            {"role": "system", "content": DAILY_TIP_SYSTEM_PROMPT},
+            {"role": "user", "content": user_message},
+        ],
+        "talent_focus": top_talent,
+        "context": context,
+        "model_name": get_setting(db, "openrouter_chat_model"),
+        "temperature": 0.7,
+    }
+
+
+def generate_daily_tip(
+    db: Session,
+    user: User,
+    context: str = "general",
+    language: str = "pl",
+) -> dict:
+    """Generate an AI-powered daily tip based on user's talents and context."""
+    prep = prepare_daily_tip(db, user, context=context, language=language)
+    if not prep["ready"]:
+        return {"content": prep["content"], "talent_focus": "", "context": context}
+
     try:
         client = get_openrouter_client()
-        model_name = get_setting(db, "openrouter_chat_model")
         response = client.chat.completions.create(
-            model=model_name,
-            messages=[
-                {"role": "system", "content": DAILY_TIP_SYSTEM_PROMPT},
-                {"role": "user", "content": user_message},
-            ],
-            temperature=0.7,
+            model=prep["model_name"],
+            messages=prep["messages"],
+            temperature=prep["temperature"],
         )
         answer = response.choices[0].message.content.strip()
     except Exception as e:
         logger.error(f"Tips LLM error: {e}")
         return {
             "content": "Usługa AI jest chwilowo niedostępna. Spróbuj ponownie za chwilę.",
-            "talent_focus": top_talent,
+            "talent_focus": prep["talent_focus"],
             "context": context,
         }
 
-    # Save to DB
-    tip = AITip(
-        user_id=user.id,
-        tip_content=answer,
-        talent_focus=top_talent,
-        context=context,
-    )
-    db.add(tip)
-    db.commit()
-    db.refresh(tip)
-
+    tip_id = save_tip(db, user.id, answer, prep["talent_focus"], context)
     return {
-        "tip_id": tip.id,
+        "tip_id": tip_id,
         "content": answer,
-        "talent_focus": top_talent,
+        "talent_focus": prep["talent_focus"],
         "context": context,
     }
 
 
-def generate_synergy_tip(
+def prepare_synergy_tip(
     db: Session,
     current_user: User,
     target_user: User,
     language: str = "pl",
 ) -> dict:
-    """Generate a synergy tip for interacting with a specific team member.
-    
-    Combines deterministic compare data with AI-generated interaction guide.
+    """Build everything needed for a synergy tip (shared by sync and SSE paths).
+
+    Returns {"ready": False, "content": ...} when the caller has no talents,
+    otherwise {"ready": True, "messages", "compare", "model_name", "temperature"}
+    where "compare" holds the deterministic payload (sent instantly in SSE meta).
     """
-    # Get deterministic compare data (instant)
+    # Deterministic compare data (instant)
     compare_result = compare_users(db, current_user, target_user, language)
 
-    # Get talents for the AI prompt
     talents_me = get_user_talents(db, current_user.id, language)
     talents_them = get_user_talents(db, target_user.id, language)
 
     if not talents_me:
         return {
+            "ready": False,
             "content": "Zaimportuj swoje talenty CliftonStrengths, aby otrzymać wskazówki relacyjne.",
-            "talent_focus": "",
-            "shared_talents": [],
-            "synergy_score": 0,
         }
 
-    # Build AI prompt for interaction guide
     my_block = _format_talents_block(talents_me[:5])
     their_block = _format_talents_block(talents_them[:5]) if talents_them else "Brak danych o talentach."
 
@@ -191,40 +214,58 @@ def generate_synergy_tip(
         f"Wygeneruj 3-zdaniową instrukcję obsługi relacji."
     )
 
-    # Generate via LLM
+    return {
+        "ready": True,
+        "messages": [
+            {"role": "system", "content": SYNERGY_TIP_SYSTEM_PROMPT},
+            {"role": "user", "content": user_message},
+        ],
+        "compare": {
+            "target_user_name": target_user.full_name,
+            "shared_talents": compare_result["shared_talents"],
+            "synergy_score": compare_result["synergy_score"],
+            "collaboration_tips": compare_result["collaboration_tips"],
+            "domain_balance": compare_result["domain_balance"],
+        },
+        "model_name": get_setting(db, "openrouter_chat_model"),
+        "temperature": 0.6,
+    }
+
+
+def generate_synergy_tip(
+    db: Session,
+    current_user: User,
+    target_user: User,
+    language: str = "pl",
+) -> dict:
+    """Generate a synergy tip for interacting with a specific team member.
+
+    Combines deterministic compare data with AI-generated interaction guide.
+    """
+    prep = prepare_synergy_tip(db, current_user, target_user, language=language)
+    if not prep["ready"]:
+        return {
+            "content": prep["content"],
+            "talent_focus": "",
+            "shared_talents": [],
+            "synergy_score": 0,
+        }
+
     try:
         client = get_openrouter_client()
-        model_name = get_setting(db, "openrouter_chat_model")
         response = client.chat.completions.create(
-            model=model_name,
-            messages=[
-                {"role": "system", "content": SYNERGY_TIP_SYSTEM_PROMPT},
-                {"role": "user", "content": user_message},
-            ],
-            temperature=0.6,
+            model=prep["model_name"],
+            messages=prep["messages"],
+            temperature=prep["temperature"],
         )
         answer = response.choices[0].message.content.strip()
     except Exception as e:
         logger.error(f"Synergy tip LLM error: {e}")
         answer = "Usługa AI jest chwilowo niedostępna. Spróbuj ponownie za chwilę."
 
-    # Save to DB
-    tip = AITip(
-        user_id=current_user.id,
-        tip_content=answer,
-        talent_focus=f"synergy:{target_user.id}",
-        context="synergy",
-    )
-    db.add(tip)
-    db.commit()
-    db.refresh(tip)
-
+    tip_id = save_tip(db, current_user.id, answer, f"synergy:{target_user.id}", "synergy")
     return {
-        "tip_id": tip.id,
+        "tip_id": tip_id,
         "content": answer,
-        "target_user_name": target_user.full_name,
-        "shared_talents": compare_result["shared_talents"],
-        "synergy_score": compare_result["synergy_score"],
-        "collaboration_tips": compare_result["collaboration_tips"],
-        "domain_balance": compare_result["domain_balance"],
+        **prep["compare"],
     }

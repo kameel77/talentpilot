@@ -101,7 +101,7 @@ function TeamDashboard() {
     const firstName = currentUser?.full_name?.split(" ")[0];
 
     return (
-        <div className="space-y-8 max-w-7xl mx-auto">
+        <div className="space-y-8 w-full">
             {/* Page Header */}
             <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
                 <div>

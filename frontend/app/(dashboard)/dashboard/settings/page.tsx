@@ -479,7 +479,7 @@ export default function SettingsPage() {
   const initials = currentUser?.full_name?.split(" ").map((n) => n[0]).join("").toUpperCase().slice(0, 2) ?? "";
 
   return (
-    <div className="max-w-5xl mx-auto w-full space-y-6 overflow-hidden">
+    <div className="w-full space-y-6 overflow-hidden">
       {/* Header */}
       <div>
         <h1 className="text-headline">Ustawienia</h1>

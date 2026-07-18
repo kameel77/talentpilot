@@ -640,7 +640,9 @@
     "pinConfirm": "Przypnij",
     "pinning": "Przypinanie...",
     "cancel": "Anuluj",
-    "error": "Nie udało się przypiąć klienta. Spróbuj ponownie."
+    "error": "Nie udało się przypiąć klienta. Spróbuj ponownie.",
+    "searchPlaceholder": "Szukaj klienta (imię, e-mail)…",
+    "noResults": "Brak klientów pasujących do wyszukiwania."
   },
   "organizations": {
     "title": "Organizacje",
@@ -698,7 +700,9 @@
     "teamDescPlaceholder": "Krótki opis zespołu",
     "teamCreating": "Tworzenie…",
     "createTeam": "Utwórz zespół",
-    "noTaxId": "Brak NIP"
+    "noTaxId": "Brak NIP",
+    "searchPlaceholder": "Szukaj organizacji (nazwa, miasto, NIP)…",
+    "noResults": "Brak organizacji pasujących do wyszukiwania."
   },
   "admin": {
     "settings": {
