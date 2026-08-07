@@ -3,6 +3,7 @@ from auth import hash_password
 from models import (
     GallupDomain,
     Organization,
+    PlanTier,
     Talent,
     Team,
     User,
@@ -19,6 +20,17 @@ def _register_coach(client, email="coach@example.com", full_name="Anna Kowalska"
     )
     assert response.status_code == 201, response.text
     return {"Authorization": f"Bearer {response.json()['access_token']}"}
+
+
+def _make_unlimited(db_session, email):
+    """Bump a coach's workspace to an unlimited plan so tests that create
+    multiple client orgs to exercise aggregation logic (not billing) don't
+    trip the FREE plan's 1 client-org limit (docs/BRIEF_BILLING_TRIAL.md §8).
+    """
+    coach = db_session.query(User).filter(User.email == email).first()
+    org = db_session.query(Organization).filter(Organization.id == coach.organization_id).first()
+    org.plan = PlanTier.PRO
+    db_session.commit()
 
 
 def _add_user(db_session, org_id, email, with_talent=None):
@@ -49,6 +61,7 @@ def _make_talent(db_session, code="achiever"):
 
 def test_coach_overview_aggregates_clients_and_individuals(client, db_session):
     headers = _register_coach(client)
+    _make_unlimited(db_session, "coach@example.com")
     talent = _make_talent(db_session)
 
     # Two client orgs created by the coach (auto-granted OrganizationAccess)

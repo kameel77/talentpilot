@@ -29,6 +29,7 @@ from schemas import (
 
 import uuid
 from utils import PLACEHOLDER_EMAIL_DOMAIN, is_placeholder_email, compute_invitation_status, INVITE_TTL_DAYS
+from services.plan_limits import assert_within_limit
 
 router = APIRouter()
 
@@ -131,6 +132,13 @@ def create_ghost_invite(
     if existing_user:
         user = existing_user
     else:
+        # A new profile is about to be created — enforce the plan limit
+        # before writing anything. Only coaches carry a billing org in
+        # Phase 1 (see docs/BRIEF_BILLING_TRIAL.md §4); admin/manager
+        # invites bypass, matching create_organization's convention.
+        if current_user.role == UserRole.COACH and current_user.organization is not None:
+            assert_within_limit(db, current_user.organization, "profiles")
+
         random_password = secrets.token_urlsafe(24)
         user = User(
             email=user_email,

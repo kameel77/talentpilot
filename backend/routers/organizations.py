@@ -7,6 +7,7 @@ from database import get_db
 from models import User, Organization, UserRole, OrganizationAccess
 from schemas import OrganizationCreate, OrganizationUpdate, OrganizationUpgradeRequest, OrganizationResponse
 from auth import get_current_user, require_role, check_org_access
+from services.plan_limits import assert_within_limit
 
 router = APIRouter()
 
@@ -53,6 +54,11 @@ def create_organization(
     current_user: User = Depends(require_role(["admin", "coach"])),
 ):
     """Create a new organization (admin or coach)."""
+    # Plan limits are only meaningful for coaches — they are the billing
+    # entity (see docs/BRIEF_BILLING_TRIAL.md §4). Admins bypass.
+    if current_user.role == UserRole.COACH and current_user.organization is not None:
+        assert_within_limit(db, current_user.organization, "client_orgs")
+
     organization = Organization(
         name=data.name,
         street=data.street,

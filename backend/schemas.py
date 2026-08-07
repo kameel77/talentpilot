@@ -6,7 +6,7 @@ from typing import List, Optional
 from datetime import datetime
 from enum import Enum
 
-from models import ReviewStatus
+from models import ReviewStatus, PlanTier, SubscriptionStatus
 
 
 def _validate_gallup_profile_url(value: Optional[str]) -> Optional[str]:
@@ -89,7 +89,23 @@ class OrganizationResponse(BaseModel):
     created_at: datetime
     teams: Optional[List[OrganizationTeamSimple]] = None
 
+    # Billing (Phase 1 — read-only cache, see docs/BRIEF_BILLING_TRIAL.md §4)
+    plan: PlanTier = PlanTier.FREE
+    subscription_status: SubscriptionStatus = SubscriptionStatus.FREE
+    trial_ends_at: Optional[datetime] = None
+
     model_config = {"from_attributes": True}
+
+
+class AdminBillingOverride(BaseModel):
+    """Admin override for design-partner trials / manual plan grants.
+
+    See docs/BRIEF_BILLING_TRIAL.md §8 (frontend point 5) — lets an admin
+    grant e.g. 90 trial days without touching the DB. Both fields optional
+    and independent: set only what you mean to change.
+    """
+    plan: Optional[PlanTier] = None
+    trial_ends_at: Optional[datetime] = None
 
 
 # User Schemas

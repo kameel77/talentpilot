@@ -47,6 +47,38 @@ class GallupDomain(str, enum.Enum):
     STRATEGIC_THINKING = "strategic_thinking"
 
 
+# Billing (Phase 1 — provider-agnostic domain, see docs/BRIEF_BILLING_TRIAL.md §4-5).
+# No Stripe integration in this phase: these columns are a cache that a future
+# webhook-driven sync (Phase 2) will keep in sync with the payment provider.
+class PlanTier(str, enum.Enum):
+    FREE = "free"
+    PRO = "pro"
+    STUDIO = "studio"
+
+
+class SubscriptionStatus(str, enum.Enum):
+    TRIALING = "trialing"
+    ACTIVE = "active"
+    PAST_DUE = "past_due"
+    CANCELED = "canceled"
+    FREE = "free"
+
+
+# Stored as their lowercase .value (not member name) — matches the literal
+# strings in docs/BRIEF_BILLING_TRIAL.md §4 and keeps DB rows human-readable.
+PLAN_TIER_ENUM = SQLEnum(
+    PlanTier,
+    values_callable=lambda enum_cls: [member.value for member in enum_cls],
+    name="plantier",
+)
+
+SUBSCRIPTION_STATUS_ENUM = SQLEnum(
+    SubscriptionStatus,
+    values_callable=lambda enum_cls: [member.value for member in enum_cls],
+    name="subscriptionstatus",
+)
+
+
 # Association table for user-team many-to-many relationship
 user_teams = Table(
     'user_teams',
@@ -72,6 +104,22 @@ class Organization(Base):
     language = Column(String(10), nullable=False, default="pl")
     is_workspace = Column(Boolean, nullable=False, default=False, server_default='false')
     name_confirmed = Column(Boolean, nullable=False, default=True, server_default='true')
+
+    # Billing (Phase 1 — provider-agnostic; see docs/BRIEF_BILLING_TRIAL.md §4-5).
+    # Column names deliberately omit any `stripe_` prefix so the domain model
+    # stays provider-agnostic; Stripe integration lands in Phase 2.
+    plan = Column(PLAN_TIER_ENUM, nullable=False, default=PlanTier.FREE, server_default=PlanTier.FREE.value)
+    subscription_status = Column(
+        SUBSCRIPTION_STATUS_ENUM,
+        nullable=False,
+        default=SubscriptionStatus.FREE,
+        server_default=SubscriptionStatus.FREE.value,
+    )
+    trial_ends_at = Column(DateTime(timezone=True), nullable=True)  # manually set for design partners (90 days)
+    current_period_end = Column(DateTime(timezone=True), nullable=True)  # cache from the payment provider
+    billing_customer_id = Column(String(64), nullable=True, unique=True)
+    billing_subscription_id = Column(String(64), nullable=True, unique=True)
+    payment_method_last4 = Column(String(4), nullable=True)  # display only
 
     # Relationships
     users = relationship("User", back_populates="organization", cascade="all, delete-orphan")
@@ -413,6 +461,20 @@ class UserFeedback(Base) :
     query = relationship("UserQuery")
     answer = relationship("GeneratedAnswer")
     user = relationship("User")
+
+
+class ProcessedBillingEvent(Base):
+    """Idempotency ledger for payment-provider webhook events (Phase 2).
+
+    Created in Phase 1 so Phase 2 (Stripe webhook integration) only needs to
+    insert into an existing table instead of shipping a migration alongside
+    the integration itself. Not written to anywhere in Phase 1.
+    """
+    __tablename__ = "processed_billing_events"
+
+    event_id = Column(String(255), primary_key=True)
+    provider = Column(String(32), nullable=False)
+    processed_at = Column(DateTime(timezone=True), server_default=func.now())
 
 
 class ApiKey(Base):

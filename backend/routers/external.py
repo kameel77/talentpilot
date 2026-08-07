@@ -16,6 +16,7 @@ from schemas import (
 )
 from services.gallup_pdf_parser import extract_gallup_rankings
 from services.email_service import send_invitation_email
+from services.plan_limits import assert_within_limit
 from auth import verify_api_key, hash_password
 from database import get_db
 from models import (
@@ -167,6 +168,20 @@ def _hash_token(token: str) -> str:
     return hashlib.sha256(token.encode("utf-8")).hexdigest()
 
 
+def _billing_org_for_api_key(db: Session, api_key: ApiKey) -> Organization | None:
+    """The billing organization tied to this API key, if any.
+
+    `ApiKey.organization_id` is optional — most integrations (e.g. the
+    unscoped gallup/parse key) aren't tied to any organization at all, so
+    there's nothing to meter against and provisioning stays unlimited, same
+    as it is today. When it is set, plan limits apply exactly like they do
+    for the coach dashboard: see docs/BRIEF_BILLING_TRIAL.md §8.
+    """
+    if api_key.organization_id is None:
+        return None
+    return db.query(Organization).filter(Organization.id == api_key.organization_id).first()
+
+
 @router.post(
     "/provision/org-team",
     response_model=ExternalProvisionOrgTeamResponse,
@@ -195,6 +210,10 @@ def provision_org_team(
         if not org:
             raise HTTPException(status_code=404, detail="Organization not found")
     else:
+        billing_org = _billing_org_for_api_key(db, api_key)
+        if billing_org is not None:
+            assert_within_limit(db, billing_org, "client_orgs")
+
         org = Organization(name=data.org_name)
         db.add(org)
         db.flush()
@@ -272,6 +291,8 @@ def provision_users(
         rows = db.query(Talent).filter(Talent.code.in_(talent_codes)).all()
         talent_map = {r.code: r.id for r in rows}
 
+    billing_org = _billing_org_for_api_key(db, api_key)
+
     results: list[ExternalProvisionUserResult] = []
 
     for user_data in data.users:
@@ -285,6 +306,9 @@ def provision_users(
                 user = existing
                 user_status = "existing"
             else:
+                if billing_org is not None:
+                    assert_within_limit(db, billing_org, "profiles")
+
                 random_pw = secrets.token_urlsafe(24)
                 user = User(
                     email=user_data.email,

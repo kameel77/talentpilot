@@ -1,7 +1,22 @@
 """Tests for coach self-serve registration, workspace filtering, and client management."""
 import pytest
 
-from models import Organization, User, UserRole
+from models import Organization, PlanTier, User, UserRole
+
+
+def _make_unlimited(db_session, email):
+    """Bump a coach's workspace to an unlimited plan.
+
+    Several onboarding tests create more than one client org for a single
+    coach purely to exercise unrelated behavior (org listing, team moves,
+    etc) — not to test billing. FREE plan defaults to a 1 client-org limit
+    (docs/BRIEF_BILLING_TRIAL.md §8), so those tests need a paid plan to
+    avoid tripping the 402 they aren't testing for.
+    """
+    coach = db_session.query(User).filter(User.email == email).first()
+    org = db_session.query(Organization).filter(Organization.id == coach.organization_id).first()
+    org.plan = PlanTier.PRO
+    db_session.commit()
 
 
 def _register_coach(client, email="coach@example.com", full_name="Anna Kowalska"):
@@ -50,8 +65,9 @@ def test_register_coach_token_authenticates_as_coach(client):
     assert me.json()["role"] == "coach"
 
 
-def test_my_organizations_excludes_coach_workspace(client):
+def test_my_organizations_excludes_coach_workspace(client, db_session):
     _, headers = _register_coach(client, email="wcoach@example.com", full_name="W Coach")
+    _make_unlimited(db_session, "wcoach@example.com")
 
     client.post("/api/organizations", json={"name": "Client A"}, headers=headers)
     client.post("/api/organizations", json={"name": "Client B"}, headers=headers)
@@ -287,6 +303,7 @@ def test_user_can_see_self(client, auth_headers_user, test_user):
 
 def test_move_team_must_belong_to_target_org(client, db_session):
     _, headers = _register_coach(client, email="tcoach@example.com", full_name="T Coach")
+    _make_unlimited(db_session, "tcoach@example.com")
     me = _me(client, headers)
     user_id = _create_individual(client, headers, me["organization_id"], email="pin3@example.com")
 

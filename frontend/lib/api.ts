@@ -43,6 +43,10 @@ export interface Organization {
     is_workspace?: boolean;
     name_confirmed?: boolean;
     created_at: string;
+    // Billing (Phase 1 — read-only cache, no Stripe integration yet)
+    plan?: 'free' | 'pro' | 'studio';
+    subscription_status?: 'trialing' | 'active' | 'past_due' | 'canceled' | 'free';
+    trial_ends_at?: string | null;
 }
 
 export interface OrganizationCreateData {
@@ -927,6 +931,19 @@ export const api = {
         },
         getOrganizations: async (): Promise<Organization[]> => {
             const response = await apiClient.get<Organization[]>('/api/admin/organizations');
+            return response.data;
+        },
+        // Billing override (Phase 1 — no UI yet, see docs/BRIEF_BILLING_TRIAL.md §8).
+        // Lets an admin grant e.g. a 90-day trial to a design partner without
+        // touching the DB directly.
+        overrideOrganizationBilling: async (
+            organizationId: number,
+            data: { plan?: 'free' | 'pro' | 'studio'; trial_ends_at?: string }
+        ): Promise<Organization> => {
+            const response = await apiClient.patch<Organization>(
+                `/api/admin/organizations/${organizationId}/billing`,
+                data
+            );
             return response.data;
         },
         toggleOrganizationAccess: async (userId: number, organizationId: number, hasAccess: boolean): Promise<number[]> => {

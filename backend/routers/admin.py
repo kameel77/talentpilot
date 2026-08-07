@@ -8,8 +8,9 @@ import uuid
 
 from auth import hash_password, require_role
 from database import get_db
-from models import AnswerReview, GeneratedAnswer, KnowledgeItem, ReviewStatus, UserQuery, User, UserRole, Organization, OrganizationAccess, Talent, TalentTranslation
+from models import AnswerReview, GeneratedAnswer, KnowledgeItem, ReviewStatus, SubscriptionStatus, UserQuery, User, UserRole, Organization, OrganizationAccess, Talent, TalentTranslation
 from schemas import (
+    AdminBillingOverride,
     AdminSettingUpdate,
     AdminSettingsResponse,
     AdminRoleUpdate,
@@ -186,6 +187,41 @@ def list_all_organizations(
 ):
     """List all organizations in the system."""
     return db.query(Organization).order_by(Organization.name).all()
+
+
+@router.patch("/organizations/{organization_id}/billing", response_model=OrganizationResponse)
+def override_organization_billing(
+    organization_id: int,
+    payload: AdminBillingOverride,
+    db: Session = Depends(get_db),
+    current_user=Depends(require_role(["admin"])),
+):
+    """Manually override an organization's plan and/or trial end date.
+
+    Superadmin-only escape hatch (docs/BRIEF_BILLING_TRIAL.md §8, frontend
+    point 5) for granting design partners a 90-day trial — or any other
+    plan/trial combination — without touching the DB directly. No Stripe
+    involvement in Phase 1: this only writes the local cache columns.
+
+    Setting `trial_ends_at` also sets `subscription_status` to TRIALING —
+    that's the flag `plan_limits.assert_within_limit` checks to treat the
+    organization as unlimited while the trial is active. Without it, a
+    trial date alone would have no effect on enforcement.
+    """
+    organization = db.query(Organization).filter(Organization.id == organization_id).first()
+    if not organization:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Organization not found")
+
+    if payload.plan is not None:
+        organization.plan = payload.plan
+
+    if payload.trial_ends_at is not None:
+        organization.trial_ends_at = payload.trial_ends_at
+        organization.subscription_status = SubscriptionStatus.TRIALING
+
+    db.commit()
+    db.refresh(organization)
+    return organization
 
 
 @router.post("/users/{user_id}/organization-access", response_model=list[int])
