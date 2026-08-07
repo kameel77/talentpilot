@@ -3,6 +3,33 @@
 > Dziennik decyzji i istotnych zmian. Wpisy od najnowszych.
 > Uwaga: docelowe miejsce devloga to vault (`/documents/vault/`) przez skill `/devlog-vault` — w tej sesji niedostępny (folder niepodmontowany), stąd wpis w repo. Do scalenia z vaultem przy okazji.
 
+## 2026-08-07 — Account model (personal → organization) & working share links (Brief #2)
+
+### Decyzje architektoniczne & UX:
+1. **Model konta osobistego (Personal Workspace):** Samosłużebna rejestracja na `/register` (rola `personal` / „Dla siebie i swojego zespołu”) tworzy Konto Osobiste (`is_workspace=True`, `name_confirmed=False`, domyślna nazwa `"{full_name} — Moje konto"` z pełnymi uprawnieniami `role=UserRole.ADMIN`).
+2. **Momenty konwersji (Upgrade Moment):** Usunięto baner z pulpitu oraz miękkie ostrzeżenie. Wdrożono dedykowany endpoint `POST /api/organizations/{id}/upgrade` oraz wielokrotnego użytku modal `UpgradeWorkspaceModal.tsx`. Modal przechwytuje akcje tworzenia pierwszego zespołu lub wysyłki pierwszego zaproszenia, pyta o właściwą nazwę firmy i płynnie realizuje akcję bez konieczności ponownego klikania. Próba podniesienia workspace'u Coacha zwraca `403 Forbidden`.
+3. **Publiczne linki dla klientów Ghost (Share Links Fix):**
+   - Podczas tworzenia konta Ghost generowany jest unikalny 32-znakowy `public_token` (`create_ghost_invite`).
+   - Wdrożono migrację uzupełniającą `q2r3s4t5u6v7_backfill_user_public_tokens.py` przydzielającą tokeny dotychczasowym profilom ghost.
+   - Endpoint publiczny `/api/public/{slug_or_token}` rozwiązuje dane wizytówki również dla kont z `is_ghost=True`.
+4. **Granica dostępu publicznego (Exposure Boundary):** Profil klienta ghost jest dostępny dla każdego posiadacza unikalnego 32-znakowego tokena URL. Dostęp ograniczony jest wyłącznie do pól włączonych w `public_profile_settings`. Adres e-mail pozostaje zablokowany/zamaskowany (`isPlaceholderEmail`), brak dostępu do logowania, danych organizacji czy list użytkowników.
+5. **Czystość architektury (Layering Cleanup):** Przeniesiono `is_placeholder_email`, `PLACEHOLDER_EMAIL_DOMAIN` i `compute_invitation_status` do dedykowanego modułu `backend/utils.py`, usuwając lokalne importy routerów w serwisach.
+6. **Refaktoryzacja & Porządki:**
+   - **Guard upgrade'u:** Poprawiono sprawdzanie `coach_owner` na podstawie roli właściciela/użytkowników w organizacji (`User.role == UserRole.COACH`), dzięki czemu test `test_upgrade_coach_workspace_forbidden` weryfikuje właściwą logikę biznesową przy wywołaniu przez Admina.
+   - **i18n & Etykiety:** Usunięto nieużywane klucze `roleCompany*`. Zaktualizowano etykietę w `UpgradeWorkspaceModal` (`nameLabel`) oraz podpięto `useRoleLabels()` (`inviteLabel`) i tłumaczony `t("newTeam")` na stronie `users/page.tsx`.
+   - **Downgrade migracji & Stub:** Doprecyzowano `sa.String(64)` w stubie tabeli migracji `q2r3s4t5u6v7` oraz zapisano w kodzie `downgrade()`, że `pass` jest celowym wyborem (bezinwazyjne zachowanie wygenerowanych tokenów). Usunięto martwą ścieżkę modalu ze szczegółów zespołu (`teams/[id]/page.tsx`).
+
+---
+
+## 2026-08-06 — Coach signup & onboarding rework
+
+### Decyzje architektoniczne & UX:
+1. **Org name deferred post-signup:** Wycofano wymagane pole `organization_name` z formularza rejestracji (`/register`). Dla organizacji firmowych nazwa jest nadawana z domyślnym szablonem i flagą `name_confirmed=False`. Wdrożono baner z opcją edycji nazwy na `/dashboard` oraz ostrzeżenie przed wysyłką zaproszeń e-mail w modalach zespołów.
+2. **Dwustopniowa rejestracja z wyborem roli (`/register`):** Strona `/register` zawiera wybór roli („Dla każdego / Dla siebie” vs „Jestem coachem”). Przekierowanie ze starej ścieżki `/register/coach` na `/register?role=coach`.
+3. **Ghost invite bez wymaganego e-maila & syntetyczne adresy placeholder:** Zaimplementowano ujednoliconą funkcję `is_placeholder_email` (backend & frontend parsing domeny `placeholder.talentpilot.local`). Mechanizm wysyłkowy (`send_invitation_email` / `resend_invitation`) blokuje wysyłkę na te adresy (HTTP 400 "User has no email address"). Na frontendzie syntetyczne adresy są maskowane (`—`).
+4. **Ukrycie pól stanowiska dla Coachów:** Ukryto pola `Stanowisko (PL/EN)` w ustawieniach konta oraz profilu publicznym `/aboutme/[token]` dla roli Coach.
+5. **Kreator coacha (PDF-first + Bulk Drop + Link do profilu + Tłumaczone talenty):** Kreator wspiera bezpośrednie odczytywanie raportów PDF (z przetłumaczonym podglądem Top 5 talentów PL/EN i auto-wypełnieniem nazwisk), masowy upload wielu plików PDF na raz z przyciskiem kopiowania profilu (E1 & E4), wskaźnik postępu i pełne i18n (E2) oraz podpięcie `useRoleLabels` (E3). `GhostInviteResponse` zwraca `public_token` i `public_slug`.
+
 ---
 
 ## 2026-07-19 — Strategia komercjalizacji + streaming SSE (QA i Tips) + UX

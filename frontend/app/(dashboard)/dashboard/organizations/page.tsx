@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
-import { api, tokenManager } from "@/lib/api";
+import { api } from "@/lib/api";
 import { Building, Plus, Loader2, Save, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import IndividualClientsTab from "@/components/clients/IndividualClientsTab";
@@ -19,6 +19,8 @@ import {
     DialogClose,
 } from "@/components/ui/dialog";
 
+import { useRoleLabels } from "@/hooks/useRoleLabels";
+
 interface Organization {
     id: number;
     name: string;
@@ -32,7 +34,7 @@ interface Organization {
 export default function OrganizationsPage() {
     const t = useTranslations('organizations');
     const tClients = useTranslations('clients');
-    const isCoach = tokenManager.getUser()?.role === "coach";
+    const { isCoach, orgsLabel } = useRoleLabels();
     const [activeTab, setActiveTab] = useState<"orgs" | "individuals">("orgs");
     const [organizations, setOrganizations] = useState<Organization[]>([]);
     const [loading, setLoading] = useState(true);
@@ -123,7 +125,7 @@ export default function OrganizationsPage() {
         <div className="space-y-10">
             <div className="flex flex-wrap items-center justify-between gap-6">
                 <div>
-                    <h1 className="text-3xl font-bold font-heading text-slate-900 tracking-tight">{t('title')}</h1>
+                    <h1 className="text-3xl font-bold font-heading text-slate-900 tracking-tight">{orgsLabel}</h1>
                     <p className="mt-2 text-slate-500 max-w-2xl">
                         {t('subtitle')}
                     </p>

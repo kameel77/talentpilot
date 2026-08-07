@@ -16,7 +16,7 @@ from schemas import (
     PresentationTalentResult
 )
 from auth import get_current_user, require_role, get_current_active_org_id
-from routers.invitations import compute_invitation_status
+from utils import compute_invitation_status
 from config import settings
 import httpx
 from pydantic import BaseModel

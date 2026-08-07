@@ -1,160 +1,101 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useState, useEffect, Suspense } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
-import { api, tokenManager } from "@/lib/api";
+import { UserCog, Building2, ChevronRight } from "lucide-react";
+import { RegisterForm } from "@/components/auth/RegisterForm";
 
-export default function RegisterPage() {
+type RoleType = "coach" | "personal" | "company" | null;
+
+function RegisterContent() {
     const router = useRouter();
+    const searchParams = useSearchParams();
     const t = useTranslations("auth.register");
-    const [formData, setFormData] = useState({
-        email: "",
-        password: "",
-        full_name: "",
-        organization_name: "",
-    });
-    const [error, setError] = useState("");
-    const [loading, setLoading] = useState(false);
 
-    const getErrorMessage = (err: unknown) => {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const error = err as any;
-        const detail = error?.response?.data?.detail;
-        if (typeof detail === "string") {
-            return detail;
+    const [role, setRole] = useState<RoleType>(null);
+
+    useEffect(() => {
+        const paramRole = searchParams.get("role");
+        if (paramRole === "coach" || paramRole === "personal" || paramRole === "company") {
+            // eslint-disable-next-line react-hooks/set-state-in-effect
+            setRole(paramRole === "company" ? "personal" : paramRole);
         }
-        if (Array.isArray(detail)) {
-            return detail.map((item) => item?.msg || "Invalid input").join(", ");
-        }
-        if (detail && typeof detail === "object") {
-            return JSON.stringify(detail);
-        }
-        return "Registration failed. Please try again.";
+    }, [searchParams]);
+
+    const handleSelectRole = (selectedRole: "coach" | "personal") => {
+        setRole(selectedRole);
+        router.replace(`/register?role=${selectedRole}`);
     };
 
-    const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        setFormData({
-            ...formData,
-            [e.target.name]: e.target.value,
-        });
-    };
-
-    const handleSubmit = async (e: React.FormEvent) => {
-        e.preventDefault();
-        setError("");
-        setLoading(true);
-
-        try {
-            const { access_token } = await api.auth.register(formData);
-            tokenManager.setToken(access_token);
-
-            // Get user info and store
-            const user = await api.auth.getCurrentUser();
-            tokenManager.setUser(user);
-
-            // Redirect to dashboard
-            router.push("/dashboard");
-        } catch (err) {
-            setError(getErrorMessage(err));
-        } finally {
-            setLoading(false);
-        }
+    const handleClearRole = () => {
+        setRole(null);
+        router.replace("/register");
     };
 
     return (
         <div className="min-h-screen flex items-center justify-center bg-slate-50 p-4 font-sans">
             <div className="w-full max-w-md">
-                <div className="text-center mb-10">
+                <div className="text-center mb-8">
                     <h1 className="text-4xl font-bold font-heading text-primary tracking-tight">
                         TalentPilot
                     </h1>
-                    <p className="text-slate-500 mt-2 font-medium">Build a strength-based culture</p>
+                    <p className="text-slate-500 mt-2 font-medium">{t("subtitle")}</p>
                 </div>
 
-                <div className="bg-white rounded-3xl shadow-xl shadow-blue-500/5 border border-slate-200 p-10 animate-fade-up">
-                    <form onSubmit={handleSubmit} className="space-y-5">
-                        {error && (
-                            <div className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-medium text-rose-700">
-                                {typeof error === "string" ? error : JSON.stringify(error)}
+                <div className="bg-white rounded-3xl shadow-xl shadow-blue-500/5 border border-slate-200 p-8 sm:p-10 animate-fade-up">
+                    {!role ? (
+                        <div className="space-y-6">
+                            <div className="text-center">
+                                <h2 className="text-xl font-bold text-slate-900">
+                                    {t("roleStepTitle")}
+                                </h2>
                             </div>
-                        )}
 
-                        <div className="space-y-1.5">
-                            <label htmlFor="organization_name" className="block text-sm font-semibold text-slate-700 ml-1">
-                                Organization Name
-                            </label>
-                            <input
-                                id="organization_name"
-                                name="organization_name"
-                                type="text"
-                                value={formData.organization_name}
-                                onChange={handleChange}
-                                required
-                                className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-primary focus:bg-white focus:border-transparent transition-all outline-none text-slate-900"
-                                placeholder="Acme Inc."
-                            />
+                            <div className="space-y-3">
+                                <button
+                                    type="button"
+                                    onClick={() => handleSelectRole("personal")}
+                                    className="w-full flex items-center gap-4 p-5 rounded-2xl border border-slate-200 hover:border-primary hover:bg-blue-50/50 transition-all text-left group"
+                                >
+                                    <div className="h-12 w-12 rounded-xl bg-blue-100 text-blue-600 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
+                                        <Building2 className="w-6 h-6" />
+                                    </div>
+                                    <div className="flex-1 min-w-0">
+                                        <div className="font-bold text-slate-900 text-base">
+                                            {t("rolePersonal")}
+                                        </div>
+                                        <div className="text-xs text-slate-500 mt-0.5 leading-relaxed">
+                                            {t("rolePersonalDesc")}
+                                        </div>
+                                    </div>
+                                    <ChevronRight className="w-5 h-5 text-slate-300 group-hover:text-primary transition-colors shrink-0" />
+                                </button>
+
+                                <button
+                                    type="button"
+                                    onClick={() => handleSelectRole("coach")}
+                                    className="w-full flex items-center gap-4 p-5 rounded-2xl border border-slate-200 hover:border-primary hover:bg-purple-50/50 transition-all text-left group"
+                                >
+                                    <div className="h-12 w-12 rounded-xl bg-purple-100 text-purple-600 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
+                                        <UserCog className="w-6 h-6" />
+                                    </div>
+                                    <div className="flex-1 min-w-0">
+                                        <div className="font-bold text-slate-900 text-base">
+                                            {t("roleCoach")}
+                                        </div>
+                                        <div className="text-xs text-slate-500 mt-0.5 leading-relaxed">
+                                            {t("roleCoachDesc")}
+                                        </div>
+                                    </div>
+                                    <ChevronRight className="w-5 h-5 text-slate-300 group-hover:text-primary transition-colors shrink-0" />
+                                </button>
+                            </div>
                         </div>
-
-                        <div className="space-y-1.5">
-                            <label htmlFor="full_name" className="block text-sm font-semibold text-slate-700 ml-1">
-                                {t("nameLabel")}
-                            </label>
-                            <input
-                                id="full_name"
-                                name="full_name"
-                                type="text"
-                                value={formData.full_name}
-                                onChange={handleChange}
-                                required
-                                className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-primary focus:bg-white focus:border-transparent transition-all outline-none text-slate-900"
-                                placeholder="John Doe"
-                            />
-                        </div>
-
-                        <div className="space-y-1.5">
-                            <label htmlFor="email" className="block text-sm font-semibold text-slate-700 ml-1">
-                                {t("emailLabel")}
-                            </label>
-                            <input
-                                id="email"
-                                name="email"
-                                type="email"
-                                value={formData.email}
-                                onChange={handleChange}
-                                required
-                                className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-primary focus:bg-white focus:border-transparent transition-all outline-none text-slate-900"
-                                placeholder="name@company.com"
-                            />
-                        </div>
-
-                        <div className="space-y-1.5">
-                            <label htmlFor="password" className="block text-sm font-semibold text-slate-700 ml-1">
-                                {t("passwordLabel")}
-                            </label>
-                            <input
-                                id="password"
-                                name="password"
-                                type="password"
-                                value={formData.password}
-                                onChange={handleChange}
-                                required
-                                minLength={8}
-                                className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-primary focus:bg-white focus:border-transparent transition-all outline-none text-slate-900"
-                                placeholder="••••••••"
-                            />
-                            <p className="text-[10px] text-slate-400 font-bold uppercase tracking-tight ml-1">Min. 8 characters</p>
-                        </div>
-
-                        <button
-                            type="submit"
-                            disabled={loading}
-                            className="w-full bg-primary text-white py-3.5 mt-2 rounded-xl font-bold hover:bg-blue-700 transition-all shadow-lg shadow-blue-500/10 disabled:opacity-50 disabled:cursor-not-allowed active:scale-[0.98]"
-                        >
-                            {loading ? t("loading") : t("submit")}
-                        </button>
-                    </form>
+                    ) : (
+                        <RegisterForm role={role} onRoleChange={handleClearRole} />
+                    )}
 
                     <div className="mt-8 text-center text-sm text-slate-500 font-medium">
                         {t("alreadyHaveAccount")}{" "}
@@ -162,14 +103,20 @@ export default function RegisterPage() {
                             {t("signIn")}
                         </Link>
                     </div>
-                    <p className="mt-3 text-center text-sm text-slate-500">
-                        {t("coachCta")}{" "}
-                        <Link href="/register/coach" className="font-semibold text-primary hover:underline">
-                            {t("coachLink")}
-                        </Link>
-                    </p>
                 </div>
             </div>
         </div>
+    );
+}
+
+export default function RegisterPage() {
+    return (
+        <Suspense fallback={
+            <div className="min-h-screen flex items-center justify-center bg-slate-50">
+                <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+            </div>
+        }>
+            <RegisterContent />
+        </Suspense>
     );
 }

@@ -3,11 +3,11 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
-import { api, GhostInviteRequest, Talent, Team, tokenManager } from "@/lib/api";
+import { api, GhostInviteRequest, Talent, Team, tokenManager, Organization } from "@/lib/api";
 import { cn } from "@/lib/utils";
 import { KPICard } from "@/components/ui/KPICard";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Users, UserPlus, Shield, UserCheck, Power, Trash2 } from "lucide-react";
@@ -23,6 +23,9 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Loader2 } from "lucide-react";
 
+import { useRoleLabels } from "@/hooks/useRoleLabels";
+import { UpgradeWorkspaceModal } from "@/components/organizations/UpgradeWorkspaceModal";
+
 interface UserSummary {
     id: number;
     full_name: string;
@@ -34,11 +37,15 @@ interface UserSummary {
 
 export default function UsersPage() {
     const t = useTranslations('users');
+    const { usersLabel, inviteLabel } = useRoleLabels();
     const [users, setUsers] = useState<UserSummary[]>([]);
     const [teams, setTeams] = useState<Team[]>([]);
     const [talents, setTalents] = useState<Talent[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState("");
+    const [activeOrg, setActiveOrg] = useState<Organization | null>(null);
+    const [upgradeModalOpen, setUpgradeModalOpen] = useState(false);
+    const [pendingAction, setPendingAction] = useState<"invite" | "team" | null>(null);
     const [inviteOpen, setInviteOpen] = useState(false);
     const [teamOpen, setTeamOpen] = useState(false);
     const [inviteError, setInviteError] = useState("");
@@ -58,10 +65,23 @@ export default function UsersPage() {
         description: "",
     });
 
+    const loadActiveOrg = async () => {
+        const u = tokenManager.getUser();
+        if (u?.organization_id) {
+            try {
+                const orgData = await api.organizations.get(u.organization_id);
+                setActiveOrg(orgData);
+            } catch {
+                // ignore
+            }
+        }
+    };
+
     useEffect(() => {
         loadUsers();
         loadTeams();
         loadTalents();
+        loadActiveOrg();
     }, []);
 
     const currentUser = tokenManager.getUser();
@@ -231,27 +251,66 @@ export default function UsersPage() {
         <div className="space-y-10">
             <div className="flex flex-wrap items-center justify-between gap-6">
                 <div>
-                    <h1 className="text-3xl font-bold font-heading text-slate-900 tracking-tight">{t('title')}</h1>
+                    <h1 className="text-3xl font-bold font-heading text-slate-900 tracking-tight">{usersLabel}</h1>
                     <p className="mt-2 text-slate-500 max-w-2xl">
                         Manage your organization&apos;s members, assign roles, and track talent development progress across teams.
                     </p>
                 </div>
                 <div className="flex flex-wrap items-center gap-3">
+                    <Button
+                        variant="outline"
+                        onClick={() => {
+                            if (currentUser?.role === "admin" && activeOrg?.is_workspace) {
+                                setPendingAction("team");
+                                setUpgradeModalOpen(true);
+                                return;
+                            }
+                            setTeamOpen(true);
+                        }}
+                        className="inline-flex items-center gap-2"
+                    >
+                        <Users className="h-4 w-4" />
+                        {t("newTeam")}
+                    </Button>
+
+                    <Button
+                        onClick={() => {
+                            if (currentUser?.role === "admin" && activeOrg?.is_workspace) {
+                                setPendingAction("invite");
+                                setUpgradeModalOpen(true);
+                                return;
+                            }
+                            setInviteOpen(true);
+                        }}
+                        className="inline-flex items-center gap-2 rounded-xl bg-primary px-5 py-2.5 text-sm font-semibold text-white hover:bg-blue-700 transition-all shadow-sm hover:shadow-md active:scale-95"
+                    >
+                        <UserPlus className="h-4 w-4" />
+                        {inviteLabel}
+                    </Button>
+
+                    {activeOrg && (
+                        <UpgradeWorkspaceModal
+                            open={upgradeModalOpen}
+                            onOpenChange={setUpgradeModalOpen}
+                            organizationId={activeOrg.id}
+                            onSuccess={async () => {
+                                await loadActiveOrg();
+                                if (pendingAction === "team") setTeamOpen(true);
+                                if (pendingAction === "invite") setInviteOpen(true);
+                                setPendingAction(null);
+                            }}
+                        />
+                    )}
+
                     <Dialog open={teamOpen} onOpenChange={(open) => {
                         setTeamOpen(open);
                         if (!open) resetTeam();
                     }}>
-                        <DialogTrigger asChild>
-                            <Button variant="outline" className="inline-flex items-center gap-2">
-                                <Users className="h-4 w-4" />
-                                New Team
-                            </Button>
-                        </DialogTrigger>
                         <DialogContent className="max-w-lg">
                             <DialogHeader>
-                                <DialogTitle>Create a team</DialogTitle>
+                                <DialogTitle>{t("createTeamTitle")}</DialogTitle>
                                 <DialogDescription>
-                                    Teams help you organize members and comparisons.
+                                    {t("createTeamDesc")}
                                 </DialogDescription>
                             </DialogHeader>
                             <div className="grid gap-4">
@@ -297,17 +356,11 @@ export default function UsersPage() {
                     setInviteOpen(open);
                     if (!open) resetInvite();
                 }}>
-                        <DialogTrigger asChild>
-                            <Button className="inline-flex items-center gap-2 rounded-xl bg-primary px-5 py-2.5 text-sm font-semibold text-white hover:bg-blue-700 transition-all shadow-sm hover:shadow-md active:scale-95">
-                                <UserPlus className="h-4 w-4" />
-                                Invite User
-                            </Button>
-                        </DialogTrigger>
                         <DialogContent className="max-w-2xl">
                             <DialogHeader>
-                                <DialogTitle>Invite team member</DialogTitle>
+                                <DialogTitle>{t("inviteMemberTitle")}</DialogTitle>
                                 <DialogDescription>
-                                    Add a ghost profile and generate a 7-day invite link.
+                                    {t("inviteMemberDesc")}
                                 </DialogDescription>
                             </DialogHeader>
                             <div className="grid gap-4">

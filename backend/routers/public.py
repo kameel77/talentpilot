@@ -13,6 +13,8 @@ from schemas import (
     PresentationOrg
 )
 
+import sqlalchemy as sa
+
 router = APIRouter()
 
 # Source of truth — mirrors frontend/data/gallupTalents.ts
@@ -72,11 +74,11 @@ def get_public_profile(slug_or_token: str, db: Session = Depends(get_db)):
     # Try custom slug first, then fall back to random token
     user = (
         db.query(User)
-        .filter(User.public_slug == slug_or_token.lower(), User.is_active == True)
+        .filter(User.public_slug == slug_or_token.lower(), sa.or_(User.is_active == True, User.is_ghost == True))
         .first()
     )
     if not user:
-        user = db.query(User).filter(User.public_token == slug_or_token, User.is_active == True).first()
+        user = db.query(User).filter(User.public_token == slug_or_token, sa.or_(User.is_active == True, User.is_ghost == True)).first()
     if not user:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Profile not found")
 

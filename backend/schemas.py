@@ -39,6 +39,11 @@ class OrganizationUpdate(BaseModel):
     city: Optional[str] = Field(default=None, max_length=120)
     tax_id: Optional[str] = Field(default=None, max_length=32)
     language: Optional[str] = Field(default=None, pattern=r'^(pl|en)$')
+    name_confirmed: Optional[bool] = None
+
+
+class OrganizationUpgradeRequest(BaseModel):
+    name: str = Field(..., min_length=1, max_length=255)
 
 
 class OrganizationTeamSimple(BaseModel):
@@ -58,6 +63,7 @@ class OrganizationResponse(BaseModel):
     tax_id: Optional[str] = None
     language: str = "pl"
     is_workspace: bool = False
+    name_confirmed: bool = True
     created_at: datetime
     teams: Optional[List[OrganizationTeamSimple]] = None
 
@@ -166,7 +172,7 @@ class GhostInviteTalent(BaseModel):
 
 
 class GhostInviteCreate(BaseModel):
-    email: EmailStr
+    email: Optional[EmailStr] = None
     full_name: str = Field(..., min_length=1, max_length=255)
     job_title: Optional[str] = None
     team_id: Optional[int] = None
@@ -186,6 +192,8 @@ class GhostInviteResponse(BaseModel):
     invite_token: str
     expires_at: datetime
     status: str
+    public_token: Optional[str] = None
+    public_slug: Optional[str] = None
 
 
 class MoveOrganizationRequest(BaseModel):
@@ -296,7 +304,7 @@ class RegisterRequest(BaseModel):
     email: EmailStr
     password: str = Field(..., min_length=8, max_length=72)
     full_name: str = Field(..., min_length=1, max_length=255)
-    organization_name: str = Field(..., min_length=1, max_length=255)
+    organization_name: Optional[str] = Field(None, min_length=1, max_length=255)
 
 
 class RegisterCoachRequest(BaseModel):

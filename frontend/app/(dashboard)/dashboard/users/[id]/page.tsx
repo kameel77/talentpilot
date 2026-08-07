@@ -27,6 +27,7 @@ import {
 } from "lucide-react";
 
 import { useTranslations } from "next-intl";
+import { isPlaceholderEmail } from "@/lib/utils";
 import { getLocaleFromCookie } from "@/lib/locale";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -519,7 +520,7 @@ export default function UserProfilePage() {
                             <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-slate-100 text-slate-500 border border-slate-200">INACTIVE</span>
                         )}
                     </div>
-                    <p className="text-body">{user.email}</p>
+                    <p className="text-body">{isPlaceholderEmail(user.email) ? "—" : user.email}</p>
                     {user.job_title && <p className="text-sm text-muted-foreground mt-0.5">{user.job_title}</p>}
                 </div>
                 <div className="flex items-center gap-2">

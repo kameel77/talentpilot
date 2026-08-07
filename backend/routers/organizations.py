@@ -5,8 +5,8 @@ from typing import List
 
 from database import get_db
 from models import User, Organization, UserRole, OrganizationAccess
-from schemas import OrganizationCreate, OrganizationUpdate, OrganizationResponse
-from auth import get_current_user, require_role
+from schemas import OrganizationCreate, OrganizationUpdate, OrganizationUpgradeRequest, OrganizationResponse
+from auth import get_current_user, require_role, check_org_access
 
 router = APIRouter()
 
@@ -163,6 +163,8 @@ def update_organization(
         )
 
     payload = data.model_dump(exclude_unset=True)
+    if "name" in payload and payload["name"]:
+        payload["name_confirmed"] = True
     for field, value in payload.items():
         setattr(organization, field, value)
 
@@ -219,3 +221,63 @@ def delete_organization(
 
     db.delete(organization)
     db.commit()
+
+
+@router.post("/{organization_id}/upgrade", response_model=OrganizationResponse)
+def upgrade_organization(
+    organization_id: int,
+    data: OrganizationUpgradeRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_role(["admin"])),
+):
+    """
+    Upgrade a personal workspace to a full organization.
+    - Caller must be an admin of that organization
+    - 400 if already a normal organization (is_workspace is False)
+    - 403 if organization belongs to a coach (coach workspaces cannot be upgraded)
+    - Success: sets name = data.name.strip(), is_workspace = False, name_confirmed = True
+    """
+    if not check_org_access(db, current_user, organization_id):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Access denied to this organization"
+        )
+
+    coach_owner = db.query(User).filter(
+        User.organization_id == organization_id,
+        User.role == UserRole.COACH
+    ).first()
+    if coach_owner:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Coach workspaces cannot be converted into client organizations"
+        )
+
+    organization = db.query(Organization).filter(Organization.id == organization_id).first()
+    if not organization:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Organization not found"
+        )
+
+    if not organization.is_workspace:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Organization is already a full organization"
+        )
+
+    new_name = data.name.strip()
+    if not new_name:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Organization name cannot be empty"
+        )
+
+    organization.name = new_name
+    organization.is_workspace = False
+    organization.name_confirmed = True
+
+    db.commit()
+    db.refresh(organization)
+    return organization
+

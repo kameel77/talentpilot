@@ -224,3 +224,88 @@ def test_resend_invitation_not_ghost(mock_send, client, db_session, test_org, co
         headers=coach_headers,
     )
     assert response.status_code == 400
+
+
+def test_ghost_invite_without_email(client, coach_headers, test_team, db_session):
+    """Ghost invite can be created without email address."""
+    response = client.post(
+        "/api/invitations/ghost",
+        json={
+            "full_name": "No Email User",
+            "team_id": test_team.id,
+        },
+        headers=coach_headers,
+    )
+    assert response.status_code == 201
+    data = response.json()
+    user = db_session.query(User).filter(User.id == data["user_id"]).first()
+    assert user is not None
+    assert "placeholder.talentpilot.local" in user.email
+
+
+def test_resend_invitation_placeholder_email_fails(client, coach_headers, test_team, db_session):
+    """Resending invitation to a placeholder email user returns 400."""
+    import secrets
+    import hashlib
+    from models import TeamInvitation, InvitationStatus
+
+    ghost = User(
+        email="ghost+12345@placeholder.talentpilot.local",
+        hashed_password="x",
+        full_name="Placeholder User",
+        role=UserRole.USER,
+        is_active=False,
+        is_ghost=True,
+        organization_id=test_team.organization_id,
+    )
+    db_session.add(ghost)
+    db_session.flush()
+
+    token = secrets.token_urlsafe(32)
+    inv = TeamInvitation(
+        user_id=ghost.id,
+        team_id=test_team.id,
+        token_hash=hashlib.sha256(token.encode()).hexdigest(),
+        status=InvitationStatus.ACTIVE,
+        expires_at=datetime.now(timezone.utc) + timedelta(days=7),
+        created_by=None,
+    )
+    db_session.add(inv)
+    db_session.commit()
+
+    response = client.post(
+        f"/api/users/{ghost.id}/resend-invitation",
+        headers=coach_headers,
+    )
+    assert response.status_code == 400
+    assert "User has no email address" in response.json()["detail"]
+
+
+def test_ghost_creation_assigns_public_token_and_resolves_profile(client, coach_headers, test_team):
+    """Ghost creation assigns public_token and public profile resolves for ghost user (is_ghost=True)."""
+    payload = {
+        "full_name": "Ghost Share Test",
+        "job_title": "Klient Testowy",
+        "team_id": test_team.id,
+    }
+    response = client.post("/api/invitations/ghost", json=payload, headers=coach_headers)
+    assert response.status_code == 201
+    data = response.json()
+
+    public_token = data.get("public_token")
+    assert public_token is not None
+    assert len(public_token) == 32
+
+    # Fetch public profile using public_token
+    public_res = client.get(f"/api/public/{public_token}")
+    assert public_res.status_code == 200
+    profile = public_res.json()
+    assert profile["full_name"] == "Ghost Share Test"
+
+
+def test_public_profile_non_existent_token_returns_404(client):
+    """Public profile endpoint returns 404 for random invalid token."""
+    response = client.get("/api/public/invalid_token_99999999999999999")
+    assert response.status_code == 404
+
+

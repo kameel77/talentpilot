@@ -38,6 +38,8 @@ export interface Organization {
     city?: string;
     tax_id?: string;
     language?: string;
+    is_workspace?: boolean;
+    name_confirmed?: boolean;
     created_at: string;
 }
 
@@ -57,6 +59,7 @@ export interface OrganizationUpdateData {
     city?: string;
     tax_id?: string;
     language?: string;
+    name_confirmed?: boolean;
 }
 
 export interface UserUpdateData {
@@ -90,7 +93,7 @@ export interface RegisterData {
     email: string;
     password: string;
     full_name: string;
-    organization_name: string;
+    organization_name?: string;
 }
 
 export interface AuthResponse {
@@ -136,7 +139,7 @@ export interface GhostInviteTalent {
 }
 
 export interface GhostInviteRequest {
-    email: string;
+    email?: string;
     full_name: string;
     job_title?: string;
     team_id?: number;
@@ -150,6 +153,8 @@ export interface GhostInviteResponse {
     invite_token: string;
     expires_at: string;
     status: string;
+    public_token?: string;
+    public_slug?: string;
 }
 
 export interface QueryReview {
@@ -547,6 +552,11 @@ export const api = {
 
         update: async (id: number, data: OrganizationUpdateData): Promise<Organization> => {
             const response = await apiClient.patch<Organization>(`/api/organizations/${id}`, data);
+            return response.data;
+        },
+
+        upgrade: async (id: number, data: { name: string }): Promise<Organization> => {
+            const response = await apiClient.post<Organization>(`/api/organizations/${id}/upgrade`, data);
             return response.data;
         },
 

@@ -248,14 +248,18 @@ export default function SettingsPage() {
     setProfileMsg(null);
     try {
       const full_name = `${firstName.trim()} ${lastName.trim()}`.trim();
-      const updated = await api.users.update(currentUser.id, {
+      const isCoach = currentUser.role === "coach";
+      const payload: Record<string, unknown> = {
         full_name,
         email,
         phone: phone || undefined,
         linkedin_url: linkedin || undefined,
-        job_title: jobTitle || undefined,
-        job_title_en: jobTitleEn || undefined,
-      });
+      };
+      if (!isCoach) {
+        payload.job_title = jobTitle || undefined;
+        payload.job_title_en = jobTitleEn || undefined;
+      }
+      const updated = await api.users.update(currentUser.id, payload);
       tokenManager.setUser(updated);
       setCurrentUser(updated);
       setProfileMsg({ type: "success", text: "Dane zostały zapisane." });
@@ -588,26 +592,28 @@ export default function SettingsPage() {
                 />
               </div>
             </div>
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div className="space-y-2">
-                <Label htmlFor="job-title">Stanowisko (PL)</Label>
-                <Input
-                  id="job-title"
-                  value={jobTitle}
-                  onChange={(e) => setJobTitle(e.target.value)}
-                  placeholder="np. Senior Developer"
-                />
+            {currentUser?.role !== "coach" && (
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="space-y-2">
+                  <Label htmlFor="job-title">Stanowisko (PL)</Label>
+                  <Input
+                    id="job-title"
+                    value={jobTitle}
+                    onChange={(e) => setJobTitle(e.target.value)}
+                    placeholder="np. Senior Developer"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="job-title-en">Stanowisko (EN)</Label>
+                  <Input
+                    id="job-title-en"
+                    value={jobTitleEn}
+                    onChange={(e) => setJobTitleEn(e.target.value)}
+                    placeholder="e.g. Senior Developer"
+                  />
+                </div>
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="job-title-en">Stanowisko (EN)</Label>
-                <Input
-                  id="job-title-en"
-                  value={jobTitleEn}
-                  onChange={(e) => setJobTitleEn(e.target.value)}
-                  placeholder="e.g. Senior Developer"
-                />
-              </div>
-            </div>
+            )}
             {/* Language switcher */}
             <div>
               <p className="text-sm font-semibold text-slate-700 mb-2">{t("language.title")}</p>

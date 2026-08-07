@@ -47,8 +47,20 @@ def register(
             detail="Email already registered"
         )
     
-    # Create organization
-    organization = Organization(name=data.organization_name)
+    # Create organization or personal workspace
+    supplied_org_name = (data.organization_name or "").strip()
+    if supplied_org_name:
+        organization = Organization(
+            name=supplied_org_name,
+            is_workspace=False,
+            name_confirmed=True,
+        )
+    else:
+        organization = Organization(
+            name=f"{data.full_name} — Moje konto",
+            is_workspace=True,
+            name_confirmed=False,
+        )
     db.add(organization)
     db.flush()  # Get organization.id
     
@@ -90,7 +102,7 @@ def register_coach(
             detail="Email already registered"
         )
 
-    workspace = Organization(name=f"{data.full_name} — Coaching", is_workspace=True)
+    workspace = Organization(name=f"{data.full_name} — Coaching", is_workspace=True, name_confirmed=True)
     db.add(workspace)
     db.flush()  # get workspace.id
 

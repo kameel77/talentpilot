@@ -143,7 +143,7 @@ export default function DashboardLayout({
         // Self-as-member features are hidden for coaches — they work on clients, not on themselves
         ...(!isCoach ? [{ name: t("myTalents"), href: "/dashboard/my-talents", icon: Sparkles }] : []),
         { name: t("qa"), href: "/dashboard/qa", icon: MessageSquare },
-        { name: t("teams"), href: "/dashboard/teams", icon: Users },
+        { name: isCoach ? t("coachTeams") : t("teams"), href: "/dashboard/teams", icon: Users },
         { name: t("compare"), href: "/dashboard/compare", icon: GitCompare },
         { name: t("tips"), href: "/dashboard/tips", icon: Zap },
     ];

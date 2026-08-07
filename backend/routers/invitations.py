@@ -27,23 +27,10 @@ from schemas import (
     Token,
 )
 
+import uuid
+from utils import PLACEHOLDER_EMAIL_DOMAIN, is_placeholder_email, compute_invitation_status, INVITE_TTL_DAYS
+
 router = APIRouter()
-
-INVITE_TTL_DAYS = 7
-
-
-def compute_invitation_status(user) -> str:
-    """Compute invitation_status from user fields. Pure function — no DB access."""
-    if user.is_active:
-        return "active"
-    if user.invited_at is None:
-        return "not_invited"
-    invited = user.invited_at
-    if invited.tzinfo is None:
-        invited = invited.replace(tzinfo=timezone.utc)
-    if invited < datetime.now(timezone.utc) - timedelta(days=INVITE_TTL_DAYS):
-        return "expired"
-    return "invited"
 
 
 def _hash_token(token: str) -> str:
@@ -127,7 +114,14 @@ def create_ghost_invite(
             detail="Access denied to this organization",
         )
 
-    existing_user = db.query(User).filter(User.email == data.email).first()
+    raw_email = (data.email or "").strip()
+    if not raw_email:
+        user_email = f"ghost+{uuid.uuid4().hex}@{PLACEHOLDER_EMAIL_DOMAIN}"
+        existing_user = None
+    else:
+        user_email = raw_email
+        existing_user = db.query(User).filter(User.email == user_email).first()
+
     if existing_user and existing_user.organization_id != target_org_id:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
@@ -139,7 +133,7 @@ def create_ghost_invite(
     else:
         random_password = secrets.token_urlsafe(24)
         user = User(
-            email=data.email,
+            email=user_email,
             hashed_password=hash_password(random_password),
             full_name=data.full_name,
             job_title=data.job_title,
@@ -147,6 +141,7 @@ def create_ghost_invite(
             is_active=False,
             is_ghost=True,
             organization_id=target_org_id,
+            public_token=str(uuid.uuid4()).replace("-", ""),
         )
         db.add(user)
         db.flush()
@@ -192,6 +187,8 @@ def create_ghost_invite(
         invite_token=invite_token,
         expires_at=invitation.expires_at,
         status=invitation.status.value,
+        public_token=user.public_token,
+        public_slug=user.public_slug,
     )
 
 

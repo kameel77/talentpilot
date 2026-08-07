@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
-import { api, tokenManager, type Team } from "@/lib/api";
+import { api, tokenManager, type Team, type Organization } from "@/lib/api";
 import { Users, Plus, Loader2, Save } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -18,19 +18,27 @@ import {
     DialogClose,
 } from "@/components/ui/dialog";
 
+import { useRoleLabels } from "@/hooks/useRoleLabels";
+
+import { UpgradeWorkspaceModal } from "@/components/organizations/UpgradeWorkspaceModal";
+
 interface OrgOption {
     id: number;
     name: string;
+    is_workspace?: boolean;
 }
 
 export default function TeamsPage() {
     const t = useTranslations('teams');
     const tCommon = useTranslations('common');
+    const { teamsLabel } = useRoleLabels();
 
     const [teams, setTeams] = useState<Team[]>([]);
     const [orgs, setOrgs] = useState<OrgOption[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState("");
+    const [activeOrg, setActiveOrg] = useState<Organization | null>(null);
+    const [upgradeModalOpen, setUpgradeModalOpen] = useState(false);
 
     const currentUser = tokenManager.getUser();
     const canCreate = currentUser?.role === "admin" || currentUser?.role === "coach";
@@ -49,17 +57,35 @@ export default function TeamsPage() {
     const loadAll = async () => {
         try {
             setLoading(true);
+            const user = tokenManager.getUser();
             const [teamsData, orgsData] = await Promise.all([
                 api.teams.list(),
                 api.auth.getMyOrganizations(),
             ]);
             setTeams(teamsData);
             setOrgs(orgsData);
+
+            if (user?.organization_id) {
+                try {
+                    const orgData = await api.organizations.get(user.organization_id);
+                    setActiveOrg(orgData);
+                } catch {
+                    // ignore
+                }
+            }
         } catch {
             setError(t('loadError'));
         } finally {
             setLoading(false);
         }
+    };
+
+    const handleCreateTeamClick = () => {
+        if (currentUser?.role === "admin" && activeOrg?.is_workspace) {
+            setUpgradeModalOpen(true);
+            return;
+        }
+        openModal();
     };
 
     const openModal = () => {
@@ -110,13 +136,13 @@ export default function TeamsPage() {
         <div className="space-y-10">
             <div className="flex flex-wrap items-center justify-between gap-6">
                 <div>
-                    <h1 className="text-3xl font-bold font-heading text-slate-900 tracking-tight">{t('title')}</h1>
+                    <h1 className="text-3xl font-bold font-heading text-slate-900 tracking-tight">{teamsLabel}</h1>
                     <p className="mt-2 text-slate-500 max-w-2xl">
                         {t('manageTeamsDesc')}
                     </p>
                 </div>
                 {canCreate && (
-                    <Button onClick={openModal}>
+                    <Button onClick={handleCreateTeamClick}>
                         <Plus className="h-4 w-4 mr-2" />
                         {t('addTeam')}
                     </Button>
@@ -139,7 +165,7 @@ export default function TeamsPage() {
                         {t('noTeamsDesc')}
                     </p>
                     {canCreate && (
-                        <Button onClick={openModal} className="mt-6">
+                        <Button onClick={handleCreateTeamClick} className="mt-6">
                             <Plus className="h-4 w-4 mr-2" />
                             {t('addTeam')}
                         </Button>
@@ -168,6 +194,19 @@ export default function TeamsPage() {
                         </Link>
                     ))}
                 </div>
+            )}
+
+            {/* Upgrade Workspace Modal */}
+            {activeOrg && (
+                <UpgradeWorkspaceModal
+                    open={upgradeModalOpen}
+                    onOpenChange={setUpgradeModalOpen}
+                    organizationId={activeOrg.id}
+                    onSuccess={() => {
+                        loadAll();
+                        openModal();
+                    }}
+                />
             )}
 
             {/* Create Team Modal */}

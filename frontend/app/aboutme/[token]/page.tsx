@@ -18,7 +18,7 @@ import {
   Mail,
   Phone,
 } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { cn, isPlaceholderEmail } from "@/lib/utils";
 import { GALLUP_TALENTS, DOMAIN_CSS_KEY, GallupDomain } from "@/lib/gallup-data";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
@@ -249,9 +249,9 @@ export default function WizytowkaPage() {
                 )}
 
                 {/* Contact details */}
-                {(profile.email || profile.phone || profile.linkedin_url) && (
+                {((profile.email && !isPlaceholderEmail(profile.email)) || profile.phone || profile.linkedin_url) && (
                   <div className="mt-5 space-y-2.5 w-full">
-                    {profile.email && (
+                    {profile.email && !isPlaceholderEmail(profile.email) && (
                       <a
                         href={`mailto:${profile.email}`}
                         title={profile.email}

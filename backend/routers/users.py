@@ -9,6 +9,7 @@ from models import User, UserRole, user_teams, Team, UserTalent
 from services.email_service import send_team_added_email, send_invitation_email
 from schemas import UserCreate, UserUpdate, UserResponse, UserDetailResponse, PasswordChangeRequest, AdminRoleUpdate, MoveOrganizationRequest
 from auth import get_current_user, require_role, hash_password, verify_password, get_current_active_org_id, check_org_access, check_user_access
+from utils import is_placeholder_email
 
 router = APIRouter()
 
@@ -666,6 +667,8 @@ def resend_invitation(
     ghost = db.query(User).filter(User.id == user_id).first()
     if not ghost:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
+    if is_placeholder_email(ghost.email):
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="User has no email address")
     if not ghost.is_ghost or ghost.is_active:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="User is not a pending ghost invite")
     if not check_org_access(db, current_user, ghost.organization_id):

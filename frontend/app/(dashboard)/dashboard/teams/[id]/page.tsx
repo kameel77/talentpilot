@@ -15,6 +15,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { UserPlus, Trash2, ChevronDown, Check, Crown, Edit2, Upload, Search, FileText, X, Loader2, AlertTriangle } from "lucide-react";
 import { GALLUP_TALENTS } from "@/lib/gallup-data";
+import { isPlaceholderEmail } from "@/lib/utils";
 
 
 interface MemberResult {
@@ -25,13 +26,12 @@ interface MemberResult {
 }
 
 interface TeamMember {
-    id: string | number;
+    id: number;
     name: string;
-    email?: string;
+    email: string;
     role?: string;
     is_leader?: boolean;
     is_ghost?: boolean;
-    invited_at?: string | null;
     invitation_status?: string;
     results: MemberResult[];
 }
@@ -39,7 +39,7 @@ interface TeamMember {
 interface GhostInvitePayload {
     team_id: number;
     full_name: string;
-    email: string;
+    email?: string;
     job_title: string;
     talents?: {
         talent_id: number;
@@ -218,7 +218,7 @@ export default function TeamDetailPage() {
     const toggleLeader = async (member: TeamMember) => {
         const previousMembers = [...members];
         try {
-            const newManagerId = member.is_leader ? null : parseInt(member.id as string, 10);
+            const newManagerId = member.is_leader ? null : Number(member.id);
 
             // Optimistic update for UI responsiveness
             setMembers(members.map(m => ({
@@ -235,17 +235,11 @@ export default function TeamDetailPage() {
         }
     };
 
-    const onPdfImportSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
-        const files = Array.from(e.target.files || []);
-        e.target.value = '';
-        if (files.length === 0) return;
-
-        const items: PdfImportItem[] = files.map(f => ({ fileName: f.name, name: null, status: 'pending' }));
-        setPdfImportItems(items);
+    const handleBatchUpload = async (files: FileList | File[]) => {
+        if (!files || files.length === 0) return;
+        setPdfImportItems(Array.from(files).map(f => ({ fileName: f.name, name: null, status: 'pending' })));
         setShowPdfImport(true);
 
-        // Fetch fresh talents list from API - don't rely on allTalents state
-        // which might be empty at call time (race condition)
         let currentTalents = allTalents;
         if (currentTalents.length === 0) {
             try {
@@ -268,16 +262,9 @@ export default function TeamDetailPage() {
                     return { talent_id: found?.id || 0, rank: rank as number };
                 }).filter((t: { talent_id: number; rank: number }) => t.talent_id > 0);
 
-                console.log(`[PdfImport] Parsed rankings for "${name}":`, rankingsData);
-                console.log(`[PdfImport] Mapped ${mappedTalents.length}/${Object.keys(rankingsData).length} talents`, mappedTalents);
-                if (mappedTalents.length === 0 && Object.keys(rankingsData).length > 0) {
-                    console.warn('[PdfImport] WARNING: All talents failed to map! currentTalents.length =', currentTalents.length);
-                }
-
                 const payload: GhostInvitePayload = {
                     team_id: teamId,
                     full_name: name,
-                    email: `user_${Date.now()}_${i}@example.com`,
                     job_title: '',
                 };
 
@@ -294,6 +281,13 @@ export default function TeamDetailPage() {
             }
         }
         await loadTeamData();
+    };
+
+    const onPdfImportSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const files = Array.from(e.target.files || []);
+        e.target.value = '';
+        if (files.length === 0) return;
+        await handleBatchUpload(files);
     };
 
     const handleRemoveMember = async (userId: number) => {
@@ -582,8 +576,8 @@ export default function TeamDetailPage() {
                                                                         </span>
                                                                     )}
                                                                 </div>
-                                                                <div className="flex items-center gap-2 mt-0.5">
-                                                                    <div className="text-sm text-slate-500">{member.email || t('noEmailAddress')}</div>
+                                                                 <div className="flex items-center gap-2 mt-0.5">
+                                                                    <div className="text-sm text-slate-500">{isPlaceholderEmail(member.email) ? '—' : (member.email || t('noEmailAddress'))}</div>
                                                                     {member.is_ghost && getStatusBadge(member)}
                                                                 </div>
                                                             </div>
@@ -605,7 +599,7 @@ export default function TeamDetailPage() {
                                                     </td>
                                                     <td className="py-4 px-6 text-right">
                                                         <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                                                            {member.is_ghost && member.invitation_status !== 'active' && (
+                                                            {member.is_ghost && member.invitation_status !== 'active' && !isPlaceholderEmail(member.email) && (
                                                                 <button
                                                                     onClick={() => handleResend(member.id)}
                                                                     disabled={resendingId === member.id}
@@ -623,7 +617,7 @@ export default function TeamDetailPage() {
                                                             )}
                                                             {isPrivileged && (
                                                                 <MemberReportUpload
-                                                                    userId={parseInt(member.id as string)}
+                                                                    userId={Number(member.id)}
                                                                     memberName={member.name}
                                                                     onDone={loadTeamData}
                                                                 />
@@ -643,7 +637,7 @@ export default function TeamDetailPage() {
                                                                 <Edit2 className="w-4 h-4" />
                                                             </button>
                                                             <button
-                                                                onClick={() => handleRemoveMember(parseInt(member.id as string))}
+                                                                onClick={() => handleRemoveMember(Number(member.id))}
                                                                 className="p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors"
                                                                 title={t('removeMember')}
                                                             >

@@ -4,6 +4,7 @@ import logging
 from typing import Optional
 
 from config import settings
+from utils import is_placeholder_email
 
 logger = logging.getLogger(__name__)
 
@@ -64,6 +65,10 @@ def send_invitation_email(
     """
     Send invitation email in PL or EN based on organization language setting.
     """
+    if is_placeholder_email(to_email):
+        logger.info(f"Skipping invitation email send to placeholder address: {to_email}")
+        return
+
     frontend_url = getattr(settings, "frontend_url", "http://localhost:3000").rstrip("/")
     accept_link = f"{frontend_url}/join?token={invite_token}"
 
