@@ -34,7 +34,11 @@
       "hidePassword": "Hide password",
       "submit": "Sign in",
       "loading": "Signing in...",
-      "forgotPassword": "Forgot password"
+      "forgotPassword": "Forgot password",
+      "alreadyHaveAccount": "Don't have an account?",
+      "signUp": "Sign up",
+      "invalidInput": "Invalid input",
+      "loginFailed": "Login failed. Please try again."
     },
     "register": {
       "title": "Create an account",
@@ -50,10 +54,13 @@
       "nameLabel": "Full name",
       "emailLabel": "Email",
       "passwordLabel": "Password",
+      "passwordMinLength": "Min. 8 characters",
       "submit": "Create account",
       "loading": "Creating account...",
       "alreadyHaveAccount": "Already have an account?",
-      "signIn": "Sign in"
+      "signIn": "Sign in",
+      "invalidInput": "Invalid input",
+      "registrationFailed": "Registration failed. Please try again."
     },
     "registerCoach": {
       "title": "Coach account",
@@ -76,8 +83,6 @@
       "successTitle": "Check your inbox",
       "successMessage": "If the account exists, we sent a password reset link.",
       "backToLogin": "Back to login",
-      "heroTitle": "Reset Password",
-      "heroSubtitle": "Secure access to your account",
       "errorGeneric": "Invalid credentials",
       "unexpectedError": "An unexpected error occurred. Please try again.",
       "successFallback": "Reset link sent, check your inbox."
@@ -91,8 +96,6 @@
       "loading": "Setting...",
       "successMessage": "Password changed. You can now sign in.",
       "backToLogin": "Back to login",
-      "heroTitle": "New Password",
-      "heroSubtitle": "Set a new, secure password",
       "missingToken": "Missing reset link from your email.",
       "missingTokenOnSubmit": "Missing valid token.",
       "invalidToken": "The reset link is invalid or has expired.",
@@ -104,10 +107,7 @@
       "successTitle": "Password Changed",
       "loginNow": "Sign in now",
       "errorGeneric": "Invalid credentials",
-      "tokenExpired": "Password reset failed, the link may have expired.",
-      "heroHeadingPart1": "Security",
-      "heroHeadingHighlight": "confirmed",
-      "heroBody": "To protect sensitive data about your entire team's strengths, we only store hashed versions of passwords and never share them with anyone."
+      "tokenExpired": "Password reset failed, the link may have expired."
     },
     "join": {
       "title": "Accept invitation",
@@ -124,12 +124,21 @@
       "passwordMinLength": "Min. 8 characters",
       "invalidTokenTitle": "Invalid link",
       "confirmPasswordLabel": "Confirm password",
-      "heroWelcome": "Welcome to",
-      "heroSubtitle": "Your team invites you to a platform that will help you understand your Gallup talents and use them to build stronger relationships at work.",
-      "heroTalents": "Gallup Talents",
-      "heroDomains": "Domains",
-      "heroOpportunities": "Opportunities",
-      "missingToken": "Missing invitation token in the link."
+      "missingToken": "Missing invitation token in the link.",
+      "invalidInput": "Invalid input",
+      "activationFailed": "Activation failed. Please try again."
+    },
+    "panel": {
+      "titleLead": "Discover the potential of",
+      "titleHighlight": "talents",
+      "titleTail": "in your team",
+      "body": "TalentPilot helps managers understand each team member's unique Gallup talents, build stronger relationships, and maximize collaboration effectiveness.",
+      "coachTitleLead": "Coach your clients through their",
+      "coachTitleHighlight": "talents",
+      "coachBody": "TalentPilot helps coaches work with individual clients and teams — Gallup talent profiles, team matrices and ready-to-use session material.",
+      "statTalents": "Gallup Talents",
+      "statDomains": "Domains",
+      "statOpportunities": "Opportunities"
     }
   },
   "nav": {

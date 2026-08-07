@@ -34,7 +34,11 @@
       "hidePassword": "Ukryj hasło",
       "submit": "Zaloguj się",
       "loading": "Logowanie...",
-      "forgotPassword": "Nie pamiętam hasła"
+      "forgotPassword": "Nie pamiętam hasła",
+      "alreadyHaveAccount": "Nie masz konta?",
+      "signUp": "Zarejestruj się",
+      "invalidInput": "Nieprawidłowe dane",
+      "loginFailed": "Logowanie nie powiodło się. Spróbuj ponownie."
     },
     "register": {
       "title": "Stwórz konto",
@@ -50,10 +54,13 @@
       "nameLabel": "Imię i nazwisko",
       "emailLabel": "Email",
       "passwordLabel": "Hasło",
+      "passwordMinLength": "Min. 8 znaków",
       "submit": "Utwórz konto",
       "loading": "Tworzenie konta...",
       "alreadyHaveAccount": "Masz już konto?",
-      "signIn": "Zaloguj się"
+      "signIn": "Zaloguj się",
+      "invalidInput": "Nieprawidłowe dane",
+      "registrationFailed": "Rejestracja nie powiodła się. Spróbuj ponownie."
     },
     "registerCoach": {
       "title": "Konto coacha",
@@ -76,8 +83,6 @@
       "successTitle": "Sprawdź skrzynkę",
       "successMessage": "Jeśli konto istnieje, wysłaliśmy link do resetowania hasła.",
       "backToLogin": "Wróć do logowania",
-      "heroTitle": "Resetowanie hasła",
-      "heroSubtitle": "Bezpieczny dostęp do Twojego konta",
       "errorGeneric": "Błędne dane",
       "unexpectedError": "Wystąpił nieoczekiwany błąd. Spróbuj powtórnie.",
       "successFallback": "Wysłano link resetujący, sprawdź skrzynkę."
@@ -91,8 +96,6 @@
       "loading": "Ustawianie...",
       "successMessage": "Hasło zostało zmienione. Możesz się zalogować.",
       "backToLogin": "Wróć do logowania",
-      "heroTitle": "Nowe hasło",
-      "heroSubtitle": "Ustaw nowe, bezpieczne hasło",
       "missingToken": "Brakujący link do resetowania hasła z Twojego adresu e-mail.",
       "missingTokenOnSubmit": "Brak prawidłowego tokenu.",
       "invalidToken": "Link resetowania jest nieprawidłowy lub wygasł.",
@@ -104,10 +107,7 @@
       "successTitle": "Hasło Zmienione",
       "loginNow": "Zaloguj się teraz",
       "errorGeneric": "Błędne dane",
-      "tokenExpired": "Resetowanie hasła nie powiodło się, link mógł stracić ważność.",
-      "heroHeadingPart1": "Bezpieczeństwo",
-      "heroHeadingHighlight": "potwierdzone",
-      "heroBody": "Dla ochrony wrażliwych danych na temat mocnych stron całego Twojego zespołu, przechowujemy tylko zhashowane wersje haseł, nie udostępniając ich nikomu innemu."
+      "tokenExpired": "Resetowanie hasła nie powiodło się, link mógł stracić ważność."
     },
     "join": {
       "title": "Przyjmij zaproszenie",
@@ -124,12 +124,21 @@
       "passwordMinLength": "Min. 8 znaków",
       "invalidTokenTitle": "Nieprawidłowy link",
       "confirmPasswordLabel": "Potwierdź hasło",
-      "heroWelcome": "Witamy w",
-      "heroSubtitle": "Twój zespół zaprasza Cię do platformy, która pomoże Ci zrozumieć swoje talenty Gallupa i wykorzystać je do budowania silniejszych relacji w pracy.",
-      "heroTalents": "Talenty Gallupa",
-      "heroDomains": "Domeny",
-      "heroOpportunities": "Możliwości",
-      "missingToken": "Brak tokenu zaproszenia w linku."
+      "missingToken": "Brak tokenu zaproszenia w linku.",
+      "invalidInput": "Nieprawidłowe dane",
+      "activationFailed": "Aktywacja nie powiodła się. Spróbuj ponownie."
+    },
+    "panel": {
+      "titleLead": "Odkryj potencjał",
+      "titleHighlight": "talentów",
+      "titleTail": "w Twoim zespole",
+      "body": "TalentPilot pomaga menedżerom zrozumieć unikalne talenty Gallupa każdego członka zespołu, budować silniejsze relacje i maksymalizować efektywność współpracy.",
+      "coachTitleLead": "Prowadź klientów w oparciu o ich",
+      "coachTitleHighlight": "talenty",
+      "coachBody": "TalentPilot pomaga coachom pracować z klientami indywidualnymi i zespołami — profile talentów Gallupa, matryce zespołowe i gotowe materiały do sesji.",
+      "statTalents": "Talenty Gallupa",
+      "statDomains": "Domeny",
+      "statOpportunities": "Możliwości"
     }
   },
   "nav": {

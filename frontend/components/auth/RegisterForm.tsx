@@ -31,12 +31,12 @@ export function RegisterForm({ role, onRoleChange }: RegisterFormProps) {
             return detail;
         }
         if (Array.isArray(detail)) {
-            return detail.map((item) => item?.msg || "Invalid input").join(", ");
+            return detail.map((item) => item?.msg || t("invalidInput")).join(", ");
         }
         if (detail && typeof detail === "object") {
             return JSON.stringify(detail);
         }
-        return "Registration failed. Please try again.";
+        return t("registrationFailed");
     };
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -143,7 +143,7 @@ export function RegisterForm({ role, onRoleChange }: RegisterFormProps) {
                         className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-primary focus:bg-white focus:border-transparent transition-all outline-none text-slate-900"
                         placeholder="••••••••"
                     />
-                    <p className="text-[10px] text-slate-400 font-bold uppercase tracking-tight ml-1">Min. 8 characters</p>
+                    <p className="text-[10px] text-slate-400 font-bold uppercase tracking-tight ml-1">{t("passwordMinLength")}</p>
                 </div>
 
                 <button
