@@ -54,6 +54,8 @@
       "nameLabel": "Full name",
       "emailLabel": "Email",
       "passwordLabel": "Password",
+      "showPassword": "Show password",
+      "hidePassword": "Hide password",
       "passwordMinLength": "Min. 8 characters",
       "submit": "Create account",
       "loading": "Creating account...",
@@ -91,6 +93,8 @@
       "title": "New password",
       "subtitle": "Set a new password for your account",
       "passwordLabel": "New password",
+      "showPassword": "Show password",
+      "hidePassword": "Hide password",
       "confirmLabel": "Confirm password",
       "submit": "Set password",
       "loading": "Setting...",
@@ -114,6 +118,8 @@
       "subtitle": "You've been invited to a team on TalentPilot",
       "nameLabel": "Full name",
       "passwordLabel": "Password",
+      "showPassword": "Show password",
+      "hidePassword": "Hide password",
       "submit": "Join team",
       "loading": "Joining...",
       "invalidToken": "The invitation link is invalid or has expired.",
@@ -649,7 +655,12 @@
     "saveProfile": "Save profile",
     "saveOrg": "Save organization",
     "talentImport": "Import talents",
-    "importButton": "Import talents"
+    "importButton": "Import talents",
+    "gallup": {
+      "certifiedLabel": "I hold an official Gallup CliftonStrengths certification",
+      "profileUrlLabel": "Gallup profile link",
+      "profileUrlPlaceholder": "https://www.gallup.com/cliftonstrengths/en/your-profile.aspx"
+    }
   },
   "clients": {
     "tabOrgs": "Organizations",

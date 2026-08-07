@@ -62,6 +62,7 @@ _DEFAULT_SETTINGS = {
     "show_motivators": True,
     "show_blockers": False,
     "show_feedback_style": True,
+    "show_certification": True,
 }
 
 
@@ -132,6 +133,8 @@ def get_public_profile(slug_or_token: str, db: Session = Depends(get_db)):
         motivators_en=user.motivators_en if s.get("show_motivators", True) else None,
         blockers_en=user.blockers_en if s.get("show_blockers", False) else None,
         feedback_style_en=user.feedback_style_en if s.get("show_feedback_style", True) else None,
+        gallup_certified=user.gallup_certified if s.get("show_certification", True) else False,
+        gallup_profile_url=user.gallup_profile_url if s.get("show_certification", True) else None,
     )
 
 

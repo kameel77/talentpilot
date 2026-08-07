@@ -1,10 +1,32 @@
 """Pydantic schemas for request/response validation."""
-from pydantic import BaseModel, EmailStr, Field, model_validator
+from urllib.parse import urlparse
+
+from pydantic import BaseModel, EmailStr, Field, field_validator, model_validator
 from typing import List, Optional
 from datetime import datetime
 from enum import Enum
 
 from models import ReviewStatus
+
+
+def _validate_gallup_profile_url(value: Optional[str]) -> Optional[str]:
+    """Shared validation for Gallup profile links.
+
+    Accepts None/empty. Otherwise requires an https:// URL whose host is
+    gallup.com or a subdomain of gallup.com.
+    """
+    if value is None:
+        return None
+    trimmed = value.strip()
+    if not trimmed:
+        return None
+    parsed = urlparse(trimmed)
+    if parsed.scheme != "https":
+        raise ValueError("Gallup profile URL must start with https://")
+    host = (parsed.hostname or "").lower()
+    if host != "gallup.com" and not host.endswith(".gallup.com"):
+        raise ValueError("Gallup profile URL must point to gallup.com or a gallup.com subdomain")
+    return trimmed
 
 
 # Enums
@@ -104,6 +126,13 @@ class UserUpdate(BaseModel):
         description="Custom vanity slug for /aboutme/{slug}. Lowercase letters, numbers and hyphens only.",
     )
     language: Optional[str] = Field(default=None, pattern=r'^(pl|en)$')
+    gallup_certified: Optional[bool] = None
+    gallup_profile_url: Optional[str] = Field(default=None, max_length=500)
+
+    @field_validator("gallup_profile_url")
+    @classmethod
+    def _validate_gallup_profile_url_field(cls, value: Optional[str]) -> Optional[str]:
+        return _validate_gallup_profile_url(value)
 
 
 class PasswordChangeRequest(BaseModel):
@@ -128,6 +157,8 @@ class UserResponse(BaseModel):
     public_token: Optional[str] = None
     public_slug: Optional[str] = None
     language: str = "pl"
+    gallup_certified: bool = False
+    gallup_profile_url: Optional[str] = None
 
     # Relationships for admins
     organizations_access: Optional[List[int]] = None
@@ -708,6 +739,8 @@ class PublicProfileResponse(BaseModel):
     motivators_en: Optional[str] = None
     blockers_en: Optional[str] = None
     feedback_style_en: Optional[str] = None
+    gallup_certified: bool = False
+    gallup_profile_url: Optional[str] = None
 
 
 # -------- External Provision --------

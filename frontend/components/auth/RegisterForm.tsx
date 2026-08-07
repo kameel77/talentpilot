@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { api, tokenManager } from "@/lib/api";
 import { useRouter } from "next/navigation";
+import { Eye, EyeOff } from "lucide-react";
 
 interface RegisterFormProps {
     role: "coach" | "personal" | "company";
@@ -22,6 +23,7 @@ export function RegisterForm({ role, onRoleChange }: RegisterFormProps) {
     });
     const [error, setError] = useState("");
     const [loading, setLoading] = useState(false);
+    const [showPassword, setShowPassword] = useState(false);
 
     const getErrorMessage = (err: unknown) => {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -132,17 +134,27 @@ export function RegisterForm({ role, onRoleChange }: RegisterFormProps) {
                     <label htmlFor="password" className="block text-sm font-semibold text-slate-700 ml-1">
                         {t("passwordLabel")}
                     </label>
-                    <input
-                        id="password"
-                        name="password"
-                        type="password"
-                        value={formData.password}
-                        onChange={handleChange}
-                        required
-                        minLength={8}
-                        className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-primary focus:bg-white focus:border-transparent transition-all outline-none text-slate-900"
-                        placeholder="••••••••"
-                    />
+                    <div className="relative">
+                        <input
+                            id="password"
+                            name="password"
+                            type={showPassword ? "text" : "password"}
+                            value={formData.password}
+                            onChange={handleChange}
+                            required
+                            minLength={8}
+                            className="w-full px-4 py-3 pr-11 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-primary focus:bg-white focus:border-transparent transition-all outline-none text-slate-900"
+                            placeholder="••••••••"
+                        />
+                        <button
+                            type="button"
+                            onClick={() => setShowPassword((prev) => !prev)}
+                            aria-label={showPassword ? t("hidePassword") : t("showPassword")}
+                            className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700"
+                        >
+                            {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                        </button>
+                    </div>
                     <p className="text-[10px] text-slate-400 font-bold uppercase tracking-tight ml-1">{t("passwordMinLength")}</p>
                 </div>
 

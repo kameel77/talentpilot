@@ -118,6 +118,10 @@ class User(Base):
     public_token = Column(String(64), unique=True, nullable=True, index=True)
     public_slug = Column(String(64), unique=True, nullable=True, index=True)  # custom vanity slug
     public_profile_settings = Column(JSON, nullable=True)  # privacy toggles
+
+    # Gallup certification (coach only)
+    gallup_certified = Column(Boolean, nullable=False, default=False, server_default='false')
+    gallup_profile_url = Column(String(500), nullable=True)
     
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())

@@ -45,6 +45,27 @@ import { UserTalent } from "@/types/talent";
 import { api, tokenManager, type User as UserType, type Organization } from "@/lib/api";
 import { cn } from "@/lib/utils";
 
+/**
+ * Extracts a FastAPI/pydantic 422 validation message for a specific field
+ * from an axios error, falling back to null when nothing matches.
+ */
+function extractValidationError(err: unknown, fieldName: string): string | null {
+  const error = err as { response?: { data?: { detail?: unknown } } };
+  const detail = error?.response?.data?.detail;
+  if (Array.isArray(detail)) {
+    const issue = detail.find(
+      (item) => Array.isArray((item as { loc?: unknown[] })?.loc) && (item as { loc: unknown[] }).loc.includes(fieldName)
+    ) as { msg?: string } | undefined;
+    if (issue?.msg) {
+      return issue.msg.replace(/^Value error,\s*/, "");
+    }
+  }
+  if (typeof detail === "string") {
+    return detail;
+  }
+  return null;
+}
+
 export default function SettingsPage() {
   const router = useRouter();
   const t = useTranslations("settings");
@@ -68,6 +89,8 @@ export default function SettingsPage() {
   const [linkedin, setLinkedin] = useState("");
   const [jobTitle, setJobTitle] = useState("");
   const [jobTitleEn, setJobTitleEn] = useState("");
+  const [gallupCertified, setGallupCertified] = useState(false);
+  const [gallupProfileUrl, setGallupProfileUrl] = useState("");
   const [profileSaving, setProfileSaving] = useState(false);
   const [profileMsg, setProfileMsg] = useState<{ type: "success" | "error"; text: string } | null>(null);
 
@@ -200,6 +223,8 @@ export default function SettingsPage() {
     setLinkedin(u.linkedin_url ?? "");
     setJobTitle(u.job_title ?? "");
     setJobTitleEn(u.job_title_en ?? "");
+    setGallupCertified(Boolean(u.gallup_certified));
+    setGallupProfileUrl(u.gallup_profile_url ?? "");
   }
 
   const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -258,13 +283,16 @@ export default function SettingsPage() {
       if (!isCoach) {
         payload.job_title = jobTitle || undefined;
         payload.job_title_en = jobTitleEn || undefined;
+      } else {
+        payload.gallup_certified = gallupCertified;
+        payload.gallup_profile_url = gallupProfileUrl || undefined;
       }
       const updated = await api.users.update(currentUser.id, payload);
       tokenManager.setUser(updated);
       setCurrentUser(updated);
       setProfileMsg({ type: "success", text: "Dane zostały zapisane." });
-    } catch {
-      setProfileMsg({ type: "error", text: "Błąd zapisu. Spróbuj ponownie." });
+    } catch (err: unknown) {
+      setProfileMsg({ type: "error", text: extractValidationError(err, "gallup_profile_url") ?? "Błąd zapisu. Spróbuj ponownie." });
     } finally {
       setProfileSaving(false);
     }
@@ -610,6 +638,31 @@ export default function SettingsPage() {
                     value={jobTitleEn}
                     onChange={(e) => setJobTitleEn(e.target.value)}
                     placeholder="e.g. Senior Developer"
+                  />
+                </div>
+              </div>
+            )}
+            {currentUser?.role === "coach" && (
+              <div className="space-y-3 rounded-xl border border-slate-200 bg-slate-50 p-4">
+                <div className="flex items-center justify-between gap-3">
+                  <Label htmlFor="gallup-certified" className="text-sm font-medium text-slate-700">
+                    {t("gallup.certifiedLabel")}
+                  </Label>
+                  <Switch
+                    id="gallup-certified"
+                    checked={gallupCertified}
+                    onCheckedChange={setGallupCertified}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="gallup-profile-url">{t("gallup.profileUrlLabel")}</Label>
+                  <Input
+                    id="gallup-profile-url"
+                    type="url"
+                    value={gallupProfileUrl}
+                    onChange={(e) => setGallupProfileUrl(e.target.value)}
+                    disabled={!gallupCertified}
+                    placeholder={t("gallup.profileUrlPlaceholder")}
                   />
                 </div>
               </div>

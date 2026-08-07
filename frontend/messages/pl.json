@@ -54,6 +54,8 @@
       "nameLabel": "Imię i nazwisko",
       "emailLabel": "Email",
       "passwordLabel": "Hasło",
+      "showPassword": "Pokaż hasło",
+      "hidePassword": "Ukryj hasło",
       "passwordMinLength": "Min. 8 znaków",
       "submit": "Utwórz konto",
       "loading": "Tworzenie konta...",
@@ -91,6 +93,8 @@
       "title": "Nowe hasło",
       "subtitle": "Ustaw nowe hasło dla swojego konta",
       "passwordLabel": "Nowe hasło",
+      "showPassword": "Pokaż hasło",
+      "hidePassword": "Ukryj hasło",
       "confirmLabel": "Potwierdź hasło",
       "submit": "Ustaw hasło",
       "loading": "Ustawianie...",
@@ -114,6 +118,8 @@
       "subtitle": "Zostałeś zaproszony do zespołu w TalentPilot",
       "nameLabel": "Imię i nazwisko",
       "passwordLabel": "Hasło",
+      "showPassword": "Pokaż hasło",
+      "hidePassword": "Ukryj hasło",
       "submit": "Dołącz do zespołu",
       "loading": "Dołączanie...",
       "invalidToken": "Link zaproszenia jest nieprawidłowy lub wygasł.",
@@ -649,7 +655,12 @@
     "saveProfile": "Zapisz profil",
     "saveOrg": "Zapisz organizację",
     "talentImport": "Import talentów",
-    "importButton": "Importuj talenty"
+    "importButton": "Importuj talenty",
+    "gallup": {
+      "certifiedLabel": "Posiadam oficjalną certyfikację Gallup CliftonStrengths",
+      "profileUrlLabel": "Link do profilu Gallup",
+      "profileUrlPlaceholder": "https://www.gallup.com/cliftonstrengths/pl/twoj-profil.aspx"
+    }
   },
   "clients": {
     "tabOrgs": "Organizacje",

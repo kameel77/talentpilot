@@ -17,6 +17,7 @@ import {
   Brain,
   Mail,
   Phone,
+  BadgeCheck,
 } from "lucide-react";
 import { cn, isPlaceholderEmail } from "@/lib/utils";
 import { GALLUP_TALENTS, DOMAIN_CSS_KEY, GallupDomain } from "@/lib/gallup-data";
@@ -48,6 +49,8 @@ interface PublicProfile {
   motivators_en: string | null;
   blockers_en: string | null;
   feedback_style_en: string | null;
+  gallup_certified: boolean;
+  gallup_profile_url: string | null;
 }
 
 const DOMAIN_LABEL: Record<string, { pl: string; en: string }> = {
@@ -83,6 +86,7 @@ const T = {
     benefit3Title: "Porównaj talenty 1:1",
     benefit3Desc: "AI pokaże synergie z innymi i wskaże jak je efektywnie wykorzystać.",
     footerText: "TalentPilot — Manager Copilot oparty na CliftonStrengths",
+    gallupCertified: "Certyfikowany coach Gallup CliftonStrengths",
   },
   en: {
     notFound: "Profile not found",
@@ -109,6 +113,7 @@ const T = {
     benefit3Title: "Compare talents 1:1",
     benefit3Desc: "AI will show synergies with others and how to use them effectively.",
     footerText: "TalentPilot — Manager Copilot based on CliftonStrengths",
+    gallupCertified: "Certified Gallup CliftonStrengths Coach",
   }
 };
 
@@ -246,6 +251,24 @@ export default function WizytowkaPage() {
                 <h1 className="mt-3 text-2xl font-bold text-slate-900 leading-tight">{profile.full_name}</h1>
                 {displayJobTitle && (
                   <p className="text-[14px] font-medium text-slate-500 mt-1">{displayJobTitle}</p>
+                )}
+                {profile.gallup_certified && (
+                  profile.gallup_profile_url ? (
+                    <a
+                      href={profile.gallup_profile_url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="mt-2 inline-flex items-center gap-1.5 rounded-full border border-indigo-100 bg-indigo-50 px-3 py-1 text-[11px] font-semibold text-indigo-600 hover:bg-indigo-100 transition"
+                    >
+                      <BadgeCheck className="h-3.5 w-3.5" />
+                      {t.gallupCertified}
+                    </a>
+                  ) : (
+                    <span className="mt-2 inline-flex items-center gap-1.5 rounded-full border border-indigo-100 bg-indigo-50 px-3 py-1 text-[11px] font-semibold text-indigo-600">
+                      <BadgeCheck className="h-3.5 w-3.5" />
+                      {t.gallupCertified}
+                    </span>
+                  )
                 )}
 
                 {/* Contact details */}

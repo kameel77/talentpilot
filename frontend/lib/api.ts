@@ -26,6 +26,8 @@ export interface User {
     public_token?: string;
     public_slug?: string;
     language?: string;
+    gallup_certified?: boolean;
+    gallup_profile_url?: string;
     organizations_access?: number[];
 }
 
@@ -82,6 +84,8 @@ export interface UserUpdateData {
     blockers_en?: string;
     feedback_style_en?: string;
     language?: string;
+    gallup_certified?: boolean;
+    gallup_profile_url?: string;
 }
 
 export interface LoginCredentials {

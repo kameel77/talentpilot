@@ -212,6 +212,10 @@ def update_user(
                 detail="This slug is already taken. Please choose a different one.",
             )
         user.public_slug = slug
+    if data.gallup_certified is not None:
+        user.gallup_certified = data.gallup_certified
+    if data.gallup_profile_url is not None:
+        user.gallup_profile_url = data.gallup_profile_url
     if data.is_active is not None:
         # Only admins can toggle is_active
         if current_user.role != UserRole.ADMIN:
