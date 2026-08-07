@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { User as UserIcon, Building, ArrowRight, Loader2, CheckCircle2, Upload, Trash2, Copy, Check } from "lucide-react";
 import { api, tokenManager } from "@/lib/api";
-import { GALLUP_TALENTS } from "@/lib/gallup-data";
+import { GALLUP_TALENTS, DOMAIN_CSS_KEY, GallupDomain } from "@/lib/gallup-data";
 import { Button } from "@/components/ui/button";
 import { getLocaleFromCookie } from "@/lib/locale";
 
@@ -24,7 +24,7 @@ interface BulkPdfItem {
     name: string;
     status: "parsing" | "success" | "error";
     rankings?: Record<string, number>;
-    topTalents?: string[];
+    topTalents?: { code: string; name: string }[];
     error?: string;
 }
 
@@ -52,7 +52,7 @@ export default function CoachWizard() {
     const [personEmail, setPersonEmail] = useState("");
     const [talentSource, setTalentSource] = useState<TalentSource>("pdf");
     const [parsedRankings, setParsedRankings] = useState<Record<string, number> | null>(null);
-    const [topTalentsPreview, setTopTalentsPreview] = useState<string[]>([]);
+    const [topTalentsPreview, setTopTalentsPreview] = useState<{ code: string; name: string }[]>([]);
     
     // Bulk PDF state (E1)
     const [bulkPdfItems, setBulkPdfItems] = useState<BulkPdfItem[]>([]);
@@ -68,6 +68,11 @@ export default function CoachWizard() {
             return locale === "en" ? found.en : found.pl;
         }
         return code;
+    };
+
+    // Helper to resolve a talent's domain (for colouring badges)
+    const resolveTalentDomain = (code: string): GallupDomain => {
+        return GALLUP_TALENTS.find((gt) => gt.code === code)?.domain || "executing";
     };
 
     // Resume: derive the current step from existing data
@@ -127,11 +132,11 @@ export default function CoachWizard() {
             setPersonName(detectedName);
             setParsedRankings(parsed.rankings || null);
 
-            // Extract top 5 talent names for preview
+            // Extract top 5 talents (code + display name) for preview
             const sorted = Object.entries(parsed.rankings || {})
                 .sort((a, b) => (a[1] as number) - (b[1] as number))
                 .slice(0, 5)
-                .map(([code]) => resolveTalentName(code, parsed.translated_rankings));
+                .map(([code]) => ({ code, name: resolveTalentName(code, parsed.translated_rankings) }));
             setTopTalentsPreview(sorted);
         } catch {
             setError(t("pdfParseError"));
@@ -161,7 +166,7 @@ export default function CoachWizard() {
                 const sorted = Object.entries(parsed.rankings || {})
                     .sort((a, b) => (a[1] as number) - (b[1] as number))
                     .slice(0, 5)
-                    .map(([code]) => resolveTalentName(code, parsed.translated_rankings));
+                    .map(([code]) => ({ code, name: resolveTalentName(code, parsed.translated_rankings) }));
 
                 setBulkPdfItems((prev) =>
                     prev.map((item) =>
@@ -369,7 +374,7 @@ export default function CoachWizard() {
                     </label>
 
                     <label
-                        className={`flex items-center gap-2 p-3 rounded-xl border cursor-pointer text-sm font-medium transition-all ${
+                        className={`flex items-start gap-2 p-3 rounded-xl border cursor-pointer text-sm font-medium transition-all ${
                             talentSource === "invite"
                                 ? "border-primary bg-blue-50/60 text-primary"
                                 : "border-slate-200 text-slate-600 hover:border-slate-300"
@@ -380,13 +385,16 @@ export default function CoachWizard() {
                             name="talentSource"
                             checked={talentSource === "invite"}
                             onChange={() => setTalentSource("invite")}
-                            className="text-primary focus:ring-primary"
+                            className="text-primary focus:ring-primary mt-0.5"
                         />
-                        {t("talentSourceInvite")}
+                        <span className="flex flex-col">
+                            <span>{t("talentSourceInvite")}</span>
+                            <span className="text-xs font-normal opacity-70">{t("talentSourceInviteHint")}</span>
+                        </span>
                     </label>
 
                     <label
-                        className={`flex items-center gap-2 p-3 rounded-xl border cursor-pointer text-sm font-medium transition-all ${
+                        className={`flex items-start gap-2 p-3 rounded-xl border cursor-pointer text-sm font-medium transition-all ${
                             talentSource === "none"
                                 ? "border-primary bg-blue-50/60 text-primary"
                                 : "border-slate-200 text-slate-600 hover:border-slate-300"
@@ -397,9 +405,12 @@ export default function CoachWizard() {
                             name="talentSource"
                             checked={talentSource === "none"}
                             onChange={() => setTalentSource("none")}
-                            className="text-primary focus:ring-primary"
+                            className="text-primary focus:ring-primary mt-0.5"
                         />
-                        {t("talentSourceManual")}
+                        <span className="flex flex-col">
+                            <span>{t("talentSourceManual")}</span>
+                            <span className="text-xs font-normal opacity-70">{t("talentSourceManualHint")}</span>
+                        </span>
                     </label>
                 </div>
             </div>
@@ -431,10 +442,10 @@ export default function CoachWizard() {
                             <div className="flex flex-wrap gap-1">
                                 {topTalentsPreview.map((talent, idx) => (
                                     <span
-                                        key={talent}
-                                        className="text-[11px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200 px-2 py-0.5 rounded-md"
+                                        key={talent.code}
+                                        className={`text-[11px] font-semibold border px-2 py-0.5 rounded-md domain-${DOMAIN_CSS_KEY[resolveTalentDomain(talent.code)]}`}
                                     >
-                                        {idx + 1}. {talent}
+                                        {idx + 1}. {talent.name}
                                     </span>
                                 ))}
                             </div>
@@ -630,8 +641,15 @@ export default function CoachWizard() {
                                                             className="font-bold text-slate-900 bg-transparent border-b border-slate-200 focus:border-primary outline-none w-full"
                                                         />
                                                         {item.topTalents && item.topTalents.length > 0 && (
-                                                            <div className="text-[10px] text-emerald-600 font-semibold mt-0.5 truncate">
-                                                                ✓ {item.topTalents.slice(0, 3).join(", ")}...
+                                                            <div className="flex flex-wrap gap-1 mt-1">
+                                                                {item.topTalents.slice(0, 3).map((talent) => (
+                                                                    <span
+                                                                        key={talent.code}
+                                                                        className={`text-[10px] font-semibold border px-1.5 py-0.5 rounded-md domain-${DOMAIN_CSS_KEY[resolveTalentDomain(talent.code)]}`}
+                                                                    >
+                                                                        {talent.name}
+                                                                    </span>
+                                                                ))}
                                                             </div>
                                                         )}
                                                     </div>

@@ -202,11 +202,13 @@ function parseBulletList(value?: string): string[] {
 
 export default function UserProfilePage() {
     const t = useTranslations('users');
+    const tCommon = useTranslations('common');
     const locale = getLocaleFromCookie();
     const params = useParams();
     const userId = parseInt(params.id as string);
 
     const [user, setUser] = useState<UserProfile | null>(null);
+    const [loadError, setLoadError] = useState<'not_found' | 'no_access' | 'generic' | null>(null);
     const [memberTalents, setMemberTalents] = useState<UserTalent[]>([]);
     const [memberTalentResponse, setMemberTalentResponse] = useState<UserTalentResponse[]>([]);
     const [currentUserTalents, setCurrentUserTalents] = useState<UserTalent[]>([]);
@@ -237,13 +239,14 @@ export default function UserProfilePage() {
     const [replacingUser, setReplacingUser] = useState(false);
 
     useEffect(() => {
-        const loadUserData = async () => {
+        let cancelled = false;
+
+        // Talents are loaded independently from the profile: a failure here
+        // must not prevent the profile itself from rendering.
+        const loadTalents = async () => {
             try {
-                const [userData, talentsData] = await Promise.all([
-                    api.users.get(userId),
-                    api.talents.getUserTalents(userId),
-                ]);
-                setUser(userData);
+                const talentsData = await api.talents.getUserTalents(userId);
+                if (cancelled) return;
                 setMemberTalentResponse(talentsData);
                 setMemberTalents(
                     talentsData.map((ut: UserTalentResponse) => ({
@@ -251,6 +254,17 @@ export default function UserProfilePage() {
                         rank: ut.rank,
                     }))
                 );
+            } catch (err) {
+                console.error("Failed to load user talents", err);
+            }
+        };
+
+        const loadUser = async () => {
+            try {
+                const userData = await api.users.get(userId);
+                if (cancelled) return;
+                setUser(userData);
+                setLoadError(null);
 
                 // Check if current user can edit this profile
                 const currentUserData = tokenManager.getUser();
@@ -261,12 +275,28 @@ export default function UserProfilePage() {
                 }
             } catch (err) {
                 console.error("Failed to load user data", err);
+                if (cancelled) return;
+                const status = (err as { response?: { status?: number } })?.response?.status;
+                if (status === 403) {
+                    setLoadError('no_access');
+                } else if (status === 404) {
+                    setLoadError('not_found');
+                } else {
+                    setLoadError('generic');
+                }
             } finally {
-                setLoading(false);
+                if (!cancelled) setLoading(false);
             }
+
+            // Fire independently so a talents failure never blocks the profile.
+            loadTalents();
         };
 
-        loadUserData();
+        loadUser();
+
+        return () => {
+            cancelled = true;
+        };
     }, [userId]);
 
     useEffect(() => {
@@ -399,11 +429,17 @@ export default function UserProfilePage() {
     };
 
     if (loading) {
-        return <div className="text-gray-600">Loading profile...</div>;
+        return <div className="text-gray-600">{tCommon('loading')}</div>;
     }
 
     if (!user) {
-        return <div className="text-red-600">User not found</div>;
+        const errorKey =
+            loadError === 'no_access'
+                ? 'loadErrorNoAccess'
+                : loadError === 'not_found'
+                ? 'loadErrorNotFound'
+                : 'loadErrorGeneric';
+        return <div className="text-red-600">{t(errorKey)}</div>;
     }
 
     const strengths = parseBulletList(user.superpowers);

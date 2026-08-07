@@ -346,6 +346,11 @@ export const tokenManager = {
     setActiveOrgId: (orgId: number): void => {
         if (typeof window === 'undefined') return;
         localStorage.setItem(ACTIVE_ORG_KEY, orgId.toString());
+    },
+
+    clearActiveOrgId: (): void => {
+        if (typeof window === 'undefined') return;
+        localStorage.removeItem(ACTIVE_ORG_KEY);
     }
 };
 
@@ -442,6 +447,29 @@ apiClient.interceptors.response.use(
             // Redirect to login (you can customize this)
             if (typeof window !== 'undefined') {
                 window.location.href = '/login';
+            }
+            return Promise.reject(error);
+        }
+
+        // Handle 403 caused by a stale/invalid active organization context:
+        // clear it and retry the original request once without the header.
+        if (error.response?.status === 403) {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const detail = (error.response.data as any)?.detail;
+            const isStaleOrgContext =
+                typeof detail === 'string' &&
+                detail.includes('access to this organization context');
+
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const config = error.config as any;
+
+            if (isStaleOrgContext && config && !config.__orgRetried) {
+                tokenManager.clearActiveOrgId();
+                config.__orgRetried = true;
+                if (config.headers) {
+                    delete config.headers['X-Organization-Id'];
+                }
+                return apiClient.request(config);
             }
         }
 

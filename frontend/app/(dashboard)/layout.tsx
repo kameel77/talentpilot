@@ -71,17 +71,23 @@ export default function DashboardLayout({
             setUser(currentUser);
             
             try {
+                let orgs: Array<{id: number, name: string}> = [];
                 if (currentUser && (currentUser.role === 'coach' || currentUser.role === 'admin')) {
-                    const orgs = await api.auth.getMyOrganizations();
+                    orgs = await api.auth.getMyOrganizations();
                     setOrganizations(orgs);
                 } else if (currentUser) {
-                    setOrganizations([{id: currentUser.organization_id, name: t('myOrg')}]);
+                    orgs = [{id: currentUser.organization_id, name: t('myOrg')}];
+                    setOrganizations(orgs);
                 }
-                
+
                 const savedOrgId = tokenManager.getActiveOrgId();
-                if (savedOrgId) {
+                const accessibleIds = orgs.map((org) => org.id);
+                if (savedOrgId && accessibleIds.includes(savedOrgId)) {
                     setActiveOrgId(savedOrgId);
                 } else if (currentUser) {
+                    if (savedOrgId) {
+                        tokenManager.clearActiveOrgId();
+                    }
                     setActiveOrgId(currentUser.organization_id);
                 }
             } catch (error) {

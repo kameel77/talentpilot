@@ -34,7 +34,10 @@ def list_organizations(
         org_ids.update(org_id for (org_id,) in access_rows)
         if not org_ids:
             return []
-        organizations = db.query(Organization).filter(Organization.id.in_(org_ids)).all()
+        organizations = db.query(Organization).filter(
+            Organization.id.in_(org_ids),
+            Organization.is_workspace.is_(False),
+        ).all()
     else:
         if current_user.organization_id is None:
             return []
