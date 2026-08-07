@@ -174,7 +174,6 @@
     "knowledgeFaq": "FAQ",
     "knowledgeMerytoryka": "Merytoryka",
     "knowledgeInstructions": "Instrukcje",
-    "clients": "Klienci",
     "myWorkspace": "Mój workspace"
   },
   "dashboard": {
@@ -914,5 +913,16 @@
     "submitting": "Zapisywanie...",
     "cancel": "Anuluj",
     "error": "Nie udało się zapisać nazwy organizacji. Spróbuj ponownie."
+  },
+  "devCheckout": {
+    "title": "Symulacja płatności (dev)",
+    "subtitle": "To jest narzędzie deweloperskie zastępujące płatność Stripe w trybie testowym. Nie pobieramy żadnych danych karty.",
+    "sessionLabel": "Sesja",
+    "organizationLabel": "Organizacja",
+    "payButton": "Zapłać",
+    "declineButton": "Odrzuć kartę",
+    "processing": "Przetwarzanie...",
+    "error": "Nie udało się przetworzyć symulacji płatności. Spróbuj ponownie.",
+    "missingParams": "Brak parametrów sesji lub organizacji w adresie URL."
   }
 }

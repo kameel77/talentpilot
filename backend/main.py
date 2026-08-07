@@ -41,7 +41,7 @@ def health_check():
 
 
 # Import routers
-from routers import auth, organizations, teams, users, talents, gallup, invitations, assistant, admin, qa, compare, tips, public, dashboard
+from routers import auth, organizations, teams, users, talents, gallup, invitations, assistant, admin, qa, compare, tips, public, dashboard, billing
 
 app.include_router(auth.router, prefix="/api/auth", tags=["Authentication"])
 app.include_router(organizations.router, prefix="/api/organizations", tags=["Organizations"])
@@ -57,6 +57,14 @@ app.include_router(compare.router, prefix="/api", tags=["Compare"])
 app.include_router(tips.router, prefix="/api", tags=["Tips"])
 app.include_router(public.router, prefix="/api/public", tags=["Public Profile"])
 app.include_router(dashboard.router, prefix="/api/dashboard", tags=["Dashboard"])
+app.include_router(billing.router, prefix="/api/billing", tags=["Billing"])
+
+# Dev-only billing simulation endpoints (docs/BRIEF_BILLING_TRIAL.md §5).
+# Physically not registered in production — the module isn't even imported
+# outside this branch, not just gated behind a runtime flag.
+if settings.environment != "production":
+    from routers import dev_billing
+    app.include_router(dev_billing.router, prefix="/api/dev/billing", tags=["Dev Billing"])
 
 # External API — mounted as an isolated sub-application.
 # Has its own CORS policy, sanitized error handler, and Swagger docs at /api/external/docs.

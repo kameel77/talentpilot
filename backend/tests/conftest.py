@@ -12,6 +12,13 @@ os.environ.setdefault("DATABASE_URL", "sqlite:///:memory:")
 os.environ.setdefault("JWT_SECRET", "test-secret-key-for-testing-only")
 os.environ.setdefault("OPENAI_API_KEY", "test-openai-key")
 os.environ.setdefault("OPENROUTER_API_KEY", "test-openrouter-key")
+# Billing (docs/BRIEF_BILLING_TRIAL.md §5-6, Phase 2): tests default to the
+# fake provider so billing/dev_billing router tests can exercise the full
+# checkout -> webhook -> state-machine flow without Stripe. This is safe as
+# a suite-wide default — `environment` defaults to "development", so the
+# production boot guard in config.py never trips here.
+os.environ.setdefault("BILLING_PROVIDER", "fake")
+os.environ.setdefault("BILLING_WEBHOOK_SECRET", "test-billing-webhook-secret")
 
 from database import Base, get_db
 from main import app

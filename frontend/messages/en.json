@@ -174,7 +174,6 @@
     "knowledgeFaq": "FAQ",
     "knowledgeMerytoryka": "Content",
     "knowledgeInstructions": "Instructions",
-    "clients": "Clients",
     "myWorkspace": "My workspace"
   },
   "dashboard": {
@@ -914,5 +913,16 @@
     "submitting": "Saving...",
     "cancel": "Cancel",
     "error": "Failed to save organization name. Please try again."
+  },
+  "devCheckout": {
+    "title": "Payment simulation (dev)",
+    "subtitle": "This is a developer tool standing in for Stripe Checkout in test mode. No card data is collected.",
+    "sessionLabel": "Session",
+    "organizationLabel": "Organization",
+    "payButton": "Pay",
+    "declineButton": "Decline card",
+    "processing": "Processing...",
+    "error": "Failed to process the simulated payment. Please try again.",
+    "missingParams": "Missing session or organization parameters in the URL."
   }
 }

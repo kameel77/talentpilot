@@ -529,6 +529,18 @@ export interface CoachDashboardOverview {
     totals: CoachDashboardTotals;
 }
 
+// Billing (Phase 2 — provider abstraction + fake provider, no Stripe yet)
+export interface BillingCheckoutResponse {
+    url: string;
+    session_id: string;
+}
+
+export interface BillingPortalResponse {
+    url: string;
+}
+
+export type BillingCheckoutOutcome = 'success' | 'failed';
+
 // API methods
 export const api = {
     // Auth
@@ -1055,6 +1067,37 @@ export const api = {
         },
         coachOverview: async (): Promise<CoachDashboardOverview> => {
             const response = await apiClient.get<CoachDashboardOverview>('/api/dashboard/coach-overview');
+            return response.data;
+        },
+    },
+
+    // Billing (Phase 2 — provider abstraction + fake provider for
+    // dev/staging/CI, no Stripe calls yet)
+    billing: {
+        checkout: async (plan: 'pro' | 'studio' = 'pro'): Promise<BillingCheckoutResponse> => {
+            const response = await apiClient.post<BillingCheckoutResponse>('/api/billing/checkout', { plan });
+            return response.data;
+        },
+
+        portal: async (): Promise<BillingPortalResponse> => {
+            const response = await apiClient.get<BillingPortalResponse>('/api/billing/portal');
+            return response.data;
+        },
+
+        // Dev-only bridge for the fake-checkout stub page
+        // (app/dev/checkout/page.tsx) — reports the outcome of a simulated
+        // checkout so the backend can emit the matching webhook through the
+        // normal state machine. Only functional with BILLING_PROVIDER=fake.
+        checkoutCallback: async (
+            sessionId: string,
+            organizationId: number,
+            outcome: BillingCheckoutOutcome
+        ): Promise<{ status: string }> => {
+            const response = await apiClient.post('/api/billing/checkout/callback', {
+                session_id: sessionId,
+                organization_id: organizationId,
+                outcome,
+            });
             return response.data;
         },
     },

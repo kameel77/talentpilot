@@ -2,7 +2,7 @@
 from urllib.parse import urlparse
 
 from pydantic import BaseModel, EmailStr, Field, field_validator, model_validator
-from typing import List, Optional
+from typing import List, Literal, Optional
 from datetime import datetime
 from enum import Enum
 
@@ -106,6 +106,37 @@ class AdminBillingOverride(BaseModel):
     """
     plan: Optional[PlanTier] = None
     trial_ends_at: Optional[datetime] = None
+
+
+# Billing Schemas (Phase 2 — provider abstraction + fake provider,
+# see docs/BRIEF_BILLING_TRIAL.md §5-6. No Stripe calls anywhere yet.)
+class BillingCheckoutRequest(BaseModel):
+    plan: PlanTier = PlanTier.PRO
+
+
+class BillingCheckoutResponse(BaseModel):
+    url: str
+    session_id: str
+
+
+class BillingPortalResponse(BaseModel):
+    url: str
+
+
+class BillingCheckoutCallbackRequest(BaseModel):
+    """Bridge for the fake-provider checkout stub page (§3, §7).
+
+    Only meaningful when `BILLING_PROVIDER=fake` — see
+    `routers/billing.py::checkout_callback`.
+    """
+    session_id: str
+    organization_id: int
+    outcome: Literal["success", "failed"]
+
+
+class DevBillingActionRequest(BaseModel):
+    """Shared request body for backend/routers/dev_billing.py actions."""
+    organization_id: int
 
 
 # User Schemas

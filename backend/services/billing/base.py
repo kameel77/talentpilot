@@ -1,0 +1,133 @@
+"""Provider-neutral billing interface (docs/BRIEF_BILLING_TRIAL.md §5).
+
+`BillingProvider` is the only seam between our domain code and a payment
+provider. No router or service outside `services/billing/` may reference a
+concrete provider (Stripe, the fake, or anything else) — they go through
+`services.billing.provider.get_billing_provider()` and talk to whatever it
+returns purely through this interface.
+
+`CheckoutSession` and `BillingEvent` are deliberately thin and
+provider-agnostic: just the fields our state machine
+(`services/billing/webhook_handler.py`) actually needs. Anything
+provider-specific rides along in `BillingEvent.raw` instead of growing the
+shared dataclass.
+"""
+from abc import ABC, abstractmethod
+from dataclasses import dataclass, field
+from datetime import datetime
+from enum import Enum
+from typing import Any, ClassVar, Optional, TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from models import Organization, PlanTier, User
+
+
+class BillingEventType(str, Enum):
+    """Normalized webhook event types (docs/BRIEF_BILLING_TRIAL.md §6).
+
+    Stored as the lowercase `.value` in synthetic (fake-provider) payloads,
+    mirroring the `PlanTier`/`SubscriptionStatus` convention in models.py.
+    A real Stripe adapter would map Stripe's own event names
+    (`checkout.session.completed`, `customer.subscription.updated`, ...)
+    onto these four when it lands.
+    """
+
+    CHECKOUT_COMPLETED = "checkout_completed"
+    SUBSCRIPTION_UPDATED = "subscription_updated"
+    SUBSCRIPTION_DELETED = "subscription_deleted"
+    PAYMENT_FAILED = "payment_failed"
+
+
+@dataclass(frozen=True)
+class CheckoutSession:
+    """Result of `BillingProvider.create_checkout_session`."""
+
+    url: str
+    session_id: str
+
+
+@dataclass(frozen=True)
+class BillingEvent:
+    """Normalized webhook event, already verified and parsed.
+
+    `raw` carries the full provider-specific payload (dict) for anything
+    not promoted to a first-class field — e.g. the fake provider's
+    `plan`/`status`/`trial_ends_at` extras consumed by
+    `webhook_handler._apply_transition`. Real Stripe events would carry
+    their raw JSON here too.
+    """
+
+    event_id: str
+    type: BillingEventType
+    organization_id: Optional[int]
+    subscription_id: Optional[str]
+    customer_id: Optional[str]
+    current_period_end: Optional[datetime]
+    payment_method_last4: Optional[str]
+    raw: dict = field(default_factory=dict)
+
+
+class BillingProvider(ABC):
+    """Narrow interface every payment provider adapter implements.
+
+    See docs/BRIEF_BILLING_TRIAL.md §5: "Routery i logika domenowa nie
+    importują `stripe` bezpośrednio" — the same rule applies to any
+    concrete provider class, including the fake one.
+    """
+
+    #: HTTP header carrying the webhook signature, read by
+    #: `routers/billing.py` before calling `parse_webhook`. A real Stripe
+    #: adapter would override this to `"Stripe-Signature"`; kept on the
+    #: provider (not hardcoded in the router) so the router never needs to
+    #: know which concrete provider it's talking to.
+    webhook_signature_header: ClassVar[str] = "X-Billing-Signature"
+
+    @abstractmethod
+    def create_checkout_session(
+        self, organization: "Organization", user: "User", plan: "PlanTier"
+    ) -> CheckoutSession:
+        """Start a hosted checkout for `organization` onto `plan`."""
+        raise NotImplementedError
+
+    @abstractmethod
+    def cancel_subscription(self, organization: "Organization") -> None:
+        """Cancel `organization`'s active subscription with the provider."""
+        raise NotImplementedError
+
+    @abstractmethod
+    def get_portal_url(self, organization: "Organization") -> str:
+        """URL for `organization` to manage its subscription/payment method."""
+        raise NotImplementedError
+
+    @abstractmethod
+    def parse_webhook(self, payload: bytes, signature: str) -> BillingEvent:
+        """Verify `signature` over the raw `payload` and return the event.
+
+        Must raise (ValueError or PermissionError) on a bad/missing
+        signature or a malformed payload — callers
+        (`services/billing/webhook_handler.py`) treat any exception here as
+        "reject with 400, write nothing to the DB".
+        """
+        raise NotImplementedError
+
+    def build_dev_webhook(
+        self, event_type: BillingEventType, organization_id: int, **fields: Any
+    ) -> tuple[bytes, str]:
+        """Build + sign a synthetic webhook payload for dev/test tooling.
+
+        Deliberately NOT abstract: this is a fake-provider-only capability
+        (see `FakeBillingProvider.build_dev_webhook`), not part of the core
+        contract every provider must satisfy. A real provider has no way to
+        fabricate a webhook — Stripe's own test tooling (CLI / test clocks)
+        covers that instead — so the base implementation raises.
+
+        `backend/routers/dev_billing.py` and the checkout callback in
+        `backend/routers/billing.py` call this through
+        `get_billing_provider()` only, never by importing
+        `FakeBillingProvider` directly — that keeps "routers only use the
+        factory" true even for dev-only tooling.
+        """
+        raise NotImplementedError(
+            f"{type(self).__name__} does not support synthetic webhook "
+            "simulation — this is a fake-provider-only dev/test capability."
+        )
