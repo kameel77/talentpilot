@@ -120,9 +120,24 @@ def _apply_transition(organization: Organization, event: BillingEvent) -> None:
         # exists purely so `routers/dev_billing.py`'s advance-trial tool
         # can fast-forward `trial_ends_at` through this SAME handler
         # instead of writing to the DB directly (docs §5).
-        trial_ends_at_value = raw.get("trial_ends_at")
-        if trial_ends_at_value:
-            organization.trial_ends_at = _parse_datetime(trial_ends_at_value)
+        #
+        # Explicitly gated on `environment != "production"` (Phase 2b task
+        # brief §A), on top of `raw["trial_ends_at"]` never being emitted
+        # by `StripeBillingProvider.parse_webhook` in the first place. That
+        # emission-side omission is already sufficient in a correctly
+        # configured deployment, but this is a signed-payload code path —
+        # defense in depth belongs here too: without this gate, anyone able
+        # to produce a validly-signed webhook payload carrying this key
+        # (e.g. `routers/dev_billing.py` if it were ever mistakenly wired
+        # up in production, or a future provider bug) could extend any
+        # organization's trial arbitrarily. `routers/dev_billing.py` itself
+        # is never registered in production (main.py), so this branch is
+        # simply dead code there today — the gate just makes that
+        # inaccessibility structural instead of incidental.
+        if settings.environment != "production":
+            trial_ends_at_value = raw.get("trial_ends_at")
+            if trial_ends_at_value:
+                organization.trial_ends_at = _parse_datetime(trial_ends_at_value)
 
     elif event.type == BillingEventType.SUBSCRIPTION_DELETED:
         organization.plan = PlanTier.FREE

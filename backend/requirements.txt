@@ -30,3 +30,7 @@ httpx==0.26.0
 
 # PDF extraction
 pdfplumber==0.11.4
+
+# Billing (docs/BRIEF_BILLING_TRIAL.md §6) — only imported by
+# backend/services/billing/stripe_provider.py
+stripe==15.4.0

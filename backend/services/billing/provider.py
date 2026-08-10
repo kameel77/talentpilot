@@ -14,11 +14,21 @@ from .fake_provider import FakeBillingProvider
 def get_billing_provider() -> BillingProvider | None:
     """Return the configured billing provider, or None when billing is off.
 
-    `billing_provider="stripe"` cannot actually reach this function in a
-    running app — `Settings`' boot guard (`backend/config.py`) already
-    raises `NotImplementedError` the moment such a config is loaded, before
-    the app even starts. The branch below is defensive only, for callers
-    that construct/monkeypatch settings directly (e.g. tests).
+    `billing_provider="stripe"` without `stripe_secret_key`/
+    `stripe_webhook_secret` cannot actually reach this function in a running
+    app — `Settings`' boot guard (`backend/config.py`) already raises at
+    `Settings()` construction time, before the app even starts. The
+    `stripe` branch below is reachable in practice (a correctly configured
+    prod/staging deploy), unlike the old placeholder.
+
+    The `stripe_provider` import is intentionally local to this branch, not
+    at module top — `services/billing/stripe_provider.py` is the only
+    module in the codebase that imports the `stripe` SDK (see its
+    docstring and docs/BRIEF_BILLING_TRIAL.md §5). Keeping the import lazy
+    means `disabled`/`fake` deployments (and most of the test suite) never
+    load the `stripe` package at all, so a missing/broken `stripe`
+    installation can't break anything except an actual `billing_provider=
+    "stripe"` deployment.
     """
     provider = settings.billing_provider
 
@@ -29,10 +39,8 @@ def get_billing_provider() -> BillingProvider | None:
         return FakeBillingProvider()
 
     if provider == "stripe":
-        raise NotImplementedError(
-            "billing_provider='stripe' is not implemented yet — the Stripe "
-            "adapter (services/billing/stripe_provider.py) lands in the next "
-            "phase. See docs/BRIEF_BILLING_TRIAL.md §6."
-        )
+        from .stripe_provider import StripeBillingProvider
+
+        return StripeBillingProvider()
 
     raise ValueError(f"Unknown billing_provider setting: {provider!r}")

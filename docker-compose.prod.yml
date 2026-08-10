@@ -21,6 +21,17 @@ services:
       SMTP_PASSWORD: ${SMTP_PASSWORD:-}
       SMTP_FROM_EMAIL: ${SMTP_FROM_EMAIL:-}
       SMTP_FROM_NAME: ${SMTP_FROM_NAME:-TalentPilot}
+      # Billing (docs/BRIEF_BILLING_TRIAL.md §6). All optional-with-blank-
+      # default so today's deploy (BILLING_PROVIDER unset -> "disabled")
+      # keeps working unchanged until these are set from Coolify.
+      BILLING_PROVIDER: ${BILLING_PROVIDER:-disabled}
+      BILLING_WEBHOOK_SECRET: ${BILLING_WEBHOOK_SECRET:-}
+      STRIPE_SECRET_KEY: ${STRIPE_SECRET_KEY:-}
+      STRIPE_WEBHOOK_SECRET: ${STRIPE_WEBHOOK_SECRET:-}
+      STRIPE_PRICE_PRO_MONTHLY: ${STRIPE_PRICE_PRO_MONTHLY:-}
+      STRIPE_PRICE_PRO_YEARLY: ${STRIPE_PRICE_PRO_YEARLY:-}
+      STRIPE_PRICE_STUDIO_MONTHLY: ${STRIPE_PRICE_STUDIO_MONTHLY:-}
+      STRIPE_PRICE_STUDIO_YEARLY: ${STRIPE_PRICE_STUDIO_YEARLY:-}
     networks:
       - default
       - coolify

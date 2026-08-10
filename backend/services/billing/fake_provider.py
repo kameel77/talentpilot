@@ -62,7 +62,11 @@ def _parse_datetime(value: Any) -> Optional[datetime]:
 class FakeBillingProvider(BillingProvider):
     """Implements `BillingProvider` with synthetic, locally-signed events."""
 
-    def create_checkout_session(self, organization, user, plan) -> CheckoutSession:
+    def create_checkout_session(self, organization, user, plan, interval: str = "monthly") -> CheckoutSession:
+        # `interval` deliberately unused here — the fake provider has no
+        # price catalog to resolve against (see base.py's docstring on why
+        # this parameter exists at all). Accepted only so this stays a
+        # valid, call-compatible `BillingProvider` implementation.
         session_id = f"fake_cs_{secrets.token_urlsafe(16)}"
         base_url = settings.frontend_url.rstrip("/")
         url = f"{base_url}/dev/checkout?session={session_id}&org={organization.id}"

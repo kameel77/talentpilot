@@ -112,6 +112,10 @@ class AdminBillingOverride(BaseModel):
 # see docs/BRIEF_BILLING_TRIAL.md §5-6. No Stripe calls anywhere yet.)
 class BillingCheckoutRequest(BaseModel):
     plan: PlanTier = PlanTier.PRO
+    # "monthly" default matches every pre-Stripe caller/test that doesn't
+    # send this field — see services/billing/base.py's docstring on
+    # `create_checkout_session`'s `interval` parameter.
+    interval: Literal["monthly", "yearly"] = "monthly"
 
 
 class BillingCheckoutResponse(BaseModel):

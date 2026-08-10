@@ -44,7 +44,7 @@ def create_checkout(
     if organization is None:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="User has no billing organization")
 
-    session = provider.create_checkout_session(organization, current_user, payload.plan)
+    session = provider.create_checkout_session(organization, current_user, payload.plan, payload.interval)
     return BillingCheckoutResponse(url=session.url, session_id=session.session_id)
 
 

@@ -45,14 +45,55 @@ def test_fake_in_staging_is_allowed():
     assert s.billing_provider == "fake"
 
 
-def test_stripe_raises_not_implemented_in_development():
-    with pytest.raises(NotImplementedError):
+def test_stripe_without_secret_key_raises_at_boot():
+    """The Stripe adapter (Phase 2b) exists, but can't authenticate to
+    Stripe or verify webhook signatures without both secrets — fail loud at
+    boot rather than start into a provider that 500s on first use."""
+    with pytest.raises(RuntimeError):
+        _settings(
+            environment="development",
+            billing_provider="stripe",
+            stripe_webhook_secret="whsec_test",
+            # stripe_secret_key intentionally omitted
+        )
+
+
+def test_stripe_without_webhook_secret_raises_at_boot():
+    with pytest.raises(RuntimeError):
+        _settings(
+            environment="development",
+            billing_provider="stripe",
+            stripe_secret_key="sk_test_123",
+            # stripe_webhook_secret intentionally omitted
+        )
+
+
+def test_stripe_without_either_key_raises_at_boot():
+    with pytest.raises(RuntimeError):
         _settings(environment="development", billing_provider="stripe")
 
 
-def test_stripe_raises_not_implemented_in_production():
-    with pytest.raises(NotImplementedError):
-        _settings(environment="production", billing_provider="stripe")
+def test_stripe_with_both_keys_set_constructs_fine():
+    s = _settings(
+        environment="development",
+        billing_provider="stripe",
+        stripe_secret_key="sk_test_123",
+        stripe_webhook_secret="whsec_test",
+    )
+    assert s.billing_provider == "stripe"
+
+
+def test_stripe_with_both_keys_set_constructs_fine_in_production():
+    """`stripe` is the intended production provider — unlike `fake`, it is
+    not refused in production once properly configured."""
+    s = _settings(
+        environment="production",
+        billing_provider="stripe",
+        stripe_secret_key="sk_live_123",
+        stripe_webhook_secret="whsec_live",
+    )
+    assert s.billing_provider == "stripe"
+    assert s.environment == "production"
 
 
 def test_unknown_billing_provider_value_is_rejected():

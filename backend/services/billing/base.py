@@ -84,9 +84,25 @@ class BillingProvider(ABC):
 
     @abstractmethod
     def create_checkout_session(
-        self, organization: "Organization", user: "User", plan: "PlanTier"
+        self,
+        organization: "Organization",
+        user: "User",
+        plan: "PlanTier",
+        interval: str = "monthly",
     ) -> CheckoutSession:
-        """Start a hosted checkout for `organization` onto `plan`."""
+        """Start a hosted checkout for `organization` onto `plan`.
+
+        `interval` is `"monthly"` or `"yearly"` (default `"monthly"`,
+        matching every call site that predates yearly pricing — see
+        Phase 2b task brief §A). Added as an optional, defaulted parameter
+        rather than a new required one specifically so this stays a
+        backward-compatible interface change: every existing caller and
+        every existing concrete implementation (`FakeBillingProvider`)
+        keeps working unmodified in behavior when it doesn't pass/use
+        `interval`. Only `StripeBillingProvider` actually branches on it,
+        to resolve one of four configured Stripe price IDs
+        (`backend/config.py`: `stripe_price_{pro,studio}_{monthly,yearly}`).
+        """
         raise NotImplementedError
 
     @abstractmethod

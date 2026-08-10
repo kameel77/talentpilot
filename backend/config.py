@@ -51,6 +51,18 @@ class Settings(BaseSettings):
     billing_provider: str = "disabled"
     billing_webhook_secret: str | None = None
 
+    # Stripe (docs/BRIEF_BILLING_TRIAL.md §6). Only read when
+    # billing_provider="stripe" — see the boot guard below. Price IDs are
+    # deliberately the only pricing knob in this codebase: amounts (Pro 249
+    # PLN, Studio 499 PLN monthly + yearly discount) live in the Stripe
+    # Dashboard, never hardcoded here (backend/services/billing/stripe_provider.py).
+    stripe_secret_key: str | None = None
+    stripe_webhook_secret: str | None = None
+    stripe_price_pro_monthly: str | None = None
+    stripe_price_pro_yearly: str | None = None
+    stripe_price_studio_monthly: str | None = None
+    stripe_price_studio_yearly: str | None = None
+
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",
@@ -111,23 +123,34 @@ class Settings(BaseSettings):
            running fake billing in production would give every customer
            Pro for free with no signal until month-end reconciliation, so
            this raises instead of logging a warning.
-        2. `billing_provider="stripe"`, in any environment. The Stripe
-           adapter doesn't exist yet in this phase (only `base.py` and
-           `fake_provider.py` do) — this fails loud at boot instead of
-           starting into a provider that can't actually call anything.
+        2. `billing_provider="stripe"` without both `stripe_secret_key` and
+           `stripe_webhook_secret` set. The Stripe adapter
+           (`backend/services/billing/stripe_provider.py`) exists as of
+           Phase 2b, but it cannot authenticate to Stripe or verify webhook
+           signatures without these two secrets — better to fail loud at
+           boot than start into a provider that 500s on the first request.
         """
         if self.environment == "production" and self.billing_provider == "fake":
             raise RuntimeError(
                 "billing_provider='fake' is not allowed when environment='production'. "
-                "Use 'disabled' (no billing yet) or wait for the Stripe adapter."
+                "Use 'disabled' (no billing yet) or 'stripe' (with STRIPE_SECRET_KEY / "
+                "STRIPE_WEBHOOK_SECRET set)."
             )
         if self.billing_provider == "stripe":
-            raise NotImplementedError(
-                "billing_provider='stripe' is not implemented yet. The Stripe adapter "
-                "(backend/services/billing/stripe_provider.py) lands in the next phase — "
-                "see docs/BRIEF_BILLING_TRIAL.md §6. Use 'fake' for dev/staging/CI or "
-                "'disabled' for production today."
-            )
+            missing = [
+                env_name
+                for env_name, value in (
+                    ("STRIPE_SECRET_KEY", self.stripe_secret_key),
+                    ("STRIPE_WEBHOOK_SECRET", self.stripe_webhook_secret),
+                )
+                if not value
+            ]
+            if missing:
+                raise RuntimeError(
+                    "billing_provider='stripe' requires "
+                    + ", ".join(missing)
+                    + " to be set — see docs/BRIEF_BILLING_TRIAL.md §6."
+                )
         return self
 
 
