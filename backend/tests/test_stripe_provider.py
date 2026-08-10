@@ -14,7 +14,7 @@ prove `StripeBillingProvider.parse_webhook` produces the exact same
 `BillingEvent` shape the fake provider does, so no changes were needed
 there (docs/BRIEF_BILLING_TRIAL.md §5, Phase 2b task brief §A).
 """
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 
 import pytest
 import stripe
@@ -267,7 +267,8 @@ def test_invalid_signature_via_webhook_endpoint_returns_400_and_writes_nothing(
 
     db_session.expire_all()
     org_after = db_session.query(Organization).filter(Organization.id == org.id).first()
-    assert org_after.subscription_status == SubscriptionStatus.FREE
+    # Untouched by the rejected webhook — registration left it trialing.
+    assert org_after.subscription_status == SubscriptionStatus.TRIALING
     assert org_after.billing_customer_id is None
     assert db_session.query(ProcessedBillingEvent).count() == 0
 
@@ -334,7 +335,9 @@ def test_create_checkout_session_builds_expected_stripe_call(monkeypatch):
     assert captured["mode"] == "subscription"
     assert set(captured["payment_method_types"]) == {"card", "blik"}
     assert captured["line_items"] == [{"price": "price_pro_yearly", "quantity": 1}]
-    assert captured["subscription_data"]["trial_period_days"] == 14
+    # No product-led trial left on this org (status defaults to FREE), so
+    # Stripe is asked for no trial at all rather than a fresh 14 days.
+    assert "trial_period_days" not in captured["subscription_data"]
     assert captured["subscription_data"]["metadata"]["organization_id"] == "7"
     assert captured["payment_method_collection"] == "always"
     assert captured["tax_id_collection"] == {"enabled": True}
@@ -345,6 +348,43 @@ def test_create_checkout_session_builds_expected_stripe_call(monkeypatch):
 # ---------------------------------------------------------------------------
 # cancel_subscription / get_portal_url
 # ---------------------------------------------------------------------------
+
+
+def test_checkout_trial_is_the_remainder_of_the_product_led_trial(monkeypatch):
+    """Subscribing mid-trial buys the days that are left, never a new 14/30.
+
+    Guards the one way a customer could otherwise stack two free periods:
+    run the card-free trial to day 29, then enter a card and receive a
+    second full trial from Stripe.
+    """
+    _configure_stripe_keys(monkeypatch)
+    _configure_prices(monkeypatch)
+
+    captured = {}
+
+    class _FakeSession:
+        url = "https://checkout.stripe.com/pay/cs_test_trial"
+        id = "cs_test_trial"
+
+    monkeypatch.setattr(
+        stripe.checkout.Session,
+        "create",
+        staticmethod(lambda **kwargs: (captured.update(kwargs), _FakeSession())[1]),
+    )
+
+    provider = StripeBillingProvider()
+    fake_org = Organization(
+        id=9,
+        name="Org",
+        is_workspace=True,
+        subscription_status=SubscriptionStatus.TRIALING,
+        trial_ends_at=datetime.now(timezone.utc) + timedelta(days=10),
+    )
+    fake_user = User(id=1, email="coach@example.com", full_name="Coach", hashed_password="x", organization_id=9)
+
+    provider.create_checkout_session(fake_org, fake_user, PlanTier.PRO, "monthly")
+
+    assert captured["subscription_data"]["trial_period_days"] == 10
 
 
 def test_get_portal_url_without_customer_id_raises_clear_error(monkeypatch):

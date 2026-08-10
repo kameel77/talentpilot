@@ -9,19 +9,56 @@ from sqlalchemy.orm import Session
 from auth import check_org_access, get_current_user
 from database import get_db
 from models import Organization, User
+from config import settings
 from schemas import (
     BillingCheckoutCallbackRequest,
     BillingCheckoutRequest,
     BillingCheckoutResponse,
+    BillingPlanPrice,
     BillingPortalResponse,
+    BillingStatusResponse,
 )
 from services.billing.base import BillingEventType
 from services.billing.provider import get_billing_provider
+from services.billing.trial import remaining_trial_days
 from services.billing.webhook_handler import InvalidWebhookSignature, apply_webhook
 
 router = APIRouter()
 
 _BILLING_DISABLED_DETAIL = "Billing is not enabled (BILLING_PROVIDER=disabled)"
+
+
+@router.get("/status", response_model=BillingStatusResponse)
+def get_status(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Plan, trial countdown and the purchasable plan catalogue.
+
+    Deliberately answers even when billing is disabled: the trial lives on
+    our own `Organization` row, so the countdown and the Free-tier limits
+    are real regardless of whether a payment provider is configured.
+    `enabled=False` tells the UI to hide checkout and portal actions
+    instead of offering buttons that would 503.
+    """
+    organization = current_user.organization
+    if organization is None:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="User has no billing organization")
+
+    provider = get_billing_provider()
+    plans = [BillingPlanPrice(**vars(price)) for price in provider.list_prices()] if provider else []
+
+    return BillingStatusResponse(
+        enabled=provider is not None,
+        plan=organization.plan,
+        subscription_status=organization.subscription_status,
+        trial_ends_at=organization.trial_ends_at,
+        trial_days_left=remaining_trial_days(organization),
+        require_card_at_signup=settings.billing_require_card_at_signup,
+        payment_method_last4=organization.payment_method_last4,
+        current_period_end=organization.current_period_end,
+        plans=plans,
+    )
 
 
 @router.post("/checkout", response_model=BillingCheckoutResponse)

@@ -138,6 +138,33 @@ class BillingCheckoutCallbackRequest(BaseModel):
     outcome: Literal["success", "failed"]
 
 
+class BillingPlanPrice(BaseModel):
+    """One purchasable plan/interval, priced by the provider (never hardcoded)."""
+    plan: PlanTier
+    interval: Literal["monthly", "yearly"]
+    amount_minor: int
+    currency: str
+
+
+class BillingStatusResponse(BaseModel):
+    """Everything the billing screen needs in one call.
+
+    Returned even when `BILLING_PROVIDER=disabled` — the subscription and
+    trial fields are ours, not the provider's, so the app can still show a
+    trial countdown with no payment infrastructure live. `enabled=False`
+    simply means checkout and the portal are unavailable.
+    """
+    enabled: bool
+    plan: PlanTier
+    subscription_status: SubscriptionStatus
+    trial_ends_at: Optional[datetime] = None
+    trial_days_left: int = 0
+    require_card_at_signup: bool = False
+    payment_method_last4: Optional[str] = None
+    current_period_end: Optional[datetime] = None
+    plans: List[BillingPlanPrice] = []
+
+
 class DevBillingActionRequest(BaseModel):
     """Shared request body for backend/routers/dev_billing.py actions."""
     organization_id: int

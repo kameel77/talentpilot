@@ -47,6 +47,21 @@ class CheckoutSession:
 
 
 @dataclass(frozen=True)
+class PlanPrice:
+    """One purchasable plan/interval combination, priced by the provider.
+
+    Amounts are never hardcoded in this codebase (docs §6) — they are read
+    back from the provider so the app can only ever display what a customer
+    would actually be charged.
+    """
+
+    plan: str
+    interval: str
+    amount_minor: int
+    currency: str
+
+
+@dataclass(frozen=True)
 class BillingEvent:
     """Normalized webhook event, already verified and parsed.
 
@@ -109,6 +124,16 @@ class BillingProvider(ABC):
     def cancel_subscription(self, organization: "Organization") -> None:
         """Cancel `organization`'s active subscription with the provider."""
         raise NotImplementedError
+
+    def list_prices(self) -> list[PlanPrice]:
+        """Configured, purchasable plans with their live amounts.
+
+        Not abstract on purpose: a provider that cannot enumerate prices
+        returns nothing and the pricing UI simply shows no plans, rather
+        than every adapter being forced to grow a method it has no
+        meaningful answer for.
+        """
+        return []
 
     @abstractmethod
     def get_portal_url(self, organization: "Organization") -> str:

@@ -25,6 +25,7 @@ import {
     PenSquare
 } from "lucide-react";
 import { tokenManager, User, api } from "@/lib/api";
+import { BillingNotices } from "@/components/billing/BillingNotices";
 import { cn } from "@/lib/utils";
 
 export default function DashboardLayout({
@@ -485,6 +486,7 @@ export default function DashboardLayout({
 
                 {/* Content Area with its own scroll */}
                 <main className="flex-1 overflow-y-auto overflow-x-hidden p-4 sm:p-5 lg:p-6 bg-slate-50">
+                    <BillingNotices />
                     {children}
                 </main>
             </div>

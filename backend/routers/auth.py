@@ -22,6 +22,7 @@ from auth import (
     create_access_token,
     get_current_user
 )
+from services.billing.trial import start_trial
 from services.email_service import send_password_reset_email
 
 router = APIRouter()
@@ -61,6 +62,8 @@ def register(
             is_workspace=True,
             name_confirmed=False,
         )
+    # Product-led trial: full access from minute one, no card (docs §3).
+    start_trial(organization, UserRole.ADMIN)
     db.add(organization)
     db.flush()  # Get organization.id
     
@@ -103,6 +106,9 @@ def register_coach(
         )
 
     workspace = Organization(name=f"{data.full_name} — Coaching", is_workspace=True, name_confirmed=True)
+    # Coaches get the longer trial (docs §3) — their value moment takes
+    # more than importing a single report.
+    start_trial(workspace, UserRole.COACH)
     db.add(workspace)
     db.flush()  # get workspace.id
 

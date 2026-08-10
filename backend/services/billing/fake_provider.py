@@ -22,7 +22,7 @@ from typing import Any, Optional
 
 from config import settings
 
-from .base import BillingEvent, BillingEventType, BillingProvider, CheckoutSession
+from .base import BillingEvent, BillingEventType, BillingProvider, CheckoutSession, PlanPrice
 
 
 def _secret() -> str:
@@ -71,6 +71,20 @@ class FakeBillingProvider(BillingProvider):
         base_url = settings.frontend_url.rstrip("/")
         url = f"{base_url}/dev/checkout?session={session_id}&org={organization.id}"
         return CheckoutSession(url=url, session_id=session_id)
+
+    def list_prices(self) -> list[PlanPrice]:
+        """Synthetic catalogue so the pricing UI is exercisable locally.
+
+        These amounts exist only in fake mode. Real amounts always come
+        from the provider (`stripe_provider.list_prices`) and are never
+        hardcoded for production use.
+        """
+        return [
+            PlanPrice(plan="pro", interval="monthly", amount_minor=24900, currency="PLN"),
+            PlanPrice(plan="pro", interval="yearly", amount_minor=249000, currency="PLN"),
+            PlanPrice(plan="studio", interval="monthly", amount_minor=49900, currency="PLN"),
+            PlanPrice(plan="studio", interval="yearly", amount_minor=499000, currency="PLN"),
+        ]
 
     def cancel_subscription(self, organization) -> None:
         # No live subscription to reach out to in fake mode. Cancellation

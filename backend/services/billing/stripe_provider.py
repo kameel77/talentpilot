@@ -15,6 +15,7 @@ handle real Stripe webhooks. If implementing something here ever seems to
 require touching `webhook_handler.py`, that's a signal this mapping is
 wrong, not that the handler needs to grow Stripe-specific branches.
 """
+import time
 from datetime import datetime, timezone
 from typing import Any, Optional
 
@@ -23,7 +24,12 @@ import stripe
 from config import settings
 from models import PlanTier
 
-from .base import BillingEvent, BillingEventType, BillingProvider, CheckoutSession
+from .base import BillingEvent, BillingEventType, BillingProvider, CheckoutSession, PlanPrice
+from .trial import remaining_trial_days
+
+#: Price lookups are cached in-process as (fetched_at_monotonic, prices).
+_PRICE_CACHE_TTL_SECONDS = 600
+_price_cache: Optional[tuple[float, list[PlanPrice]]] = None
 
 
 class StripeConfigurationError(RuntimeError):
@@ -121,15 +127,36 @@ class StripeBillingProvider(BillingProvider):
     def create_checkout_session(
         self, organization, user, plan: PlanTier, interval: str = "monthly"
     ) -> CheckoutSession:
-        """Hosted Stripe Checkout, subscription mode, 14-day trial.
+        """Hosted Stripe Checkout, subscription mode.
 
         Card required up front (`payment_method_collection="always"`) —
         this is what makes "trial now, auto-charge later" possible without
         us building any 3DS/SCA handling ourselves (docs §6). NIP + billing
         address collection feed Fakturownia's Stripe integration (docs §7).
+
+        The trial handed to Stripe is whatever is *left* of the org's
+        product-led trial (`services/billing/trial.py`), not a fresh 14/30
+        days. Subscribing on day 3 of a 30-day coach trial therefore buys
+        the remaining 27 days, and subscribing after it expired charges
+        immediately — a customer can never stack two free periods by
+        timing when they enter a card.
         """
         price_id = _resolve_price_id(plan, interval)
         base_url = settings.frontend_url.rstrip("/")
+
+        subscription_data: dict = {
+            # Carried onto the created Subscription object, and — as of
+            # Stripe API 2022-11-15 — snapshotted onto every invoice's
+            # `subscription_details.metadata`. That lets `parse_webhook`
+            # resolve our internal `organization.id` straight from
+            # `customer.subscription.*` and `invoice.payment_failed` events
+            # without a DB round-trip (this module has no DB session to
+            # query with — see `BillingProvider.parse_webhook` in base.py).
+            "metadata": {"organization_id": str(organization.id)},
+        }
+        trial_days_left = remaining_trial_days(organization)
+        if trial_days_left > 0:
+            subscription_data["trial_period_days"] = trial_days_left
 
         session = stripe.checkout.Session.create(
             mode="subscription",
@@ -137,18 +164,7 @@ class StripeBillingProvider(BillingProvider):
             # for the PL market, per docs §6.
             payment_method_types=["card", "blik"],
             line_items=[{"price": price_id, "quantity": 1}],
-            subscription_data={
-                "trial_period_days": 14,
-                # Carried onto the created Subscription object, and — as of
-                # Stripe API 2022-11-15 — snapshotted onto every invoice's
-                # `subscription_details.metadata`. That lets
-                # `parse_webhook` resolve our internal `organization.id`
-                # straight from `customer.subscription.*` and
-                # `invoice.payment_failed` events without a DB round-trip
-                # (this module has no DB session to query with — see
-                # `BillingProvider.parse_webhook`'s signature in base.py).
-                "metadata": {"organization_id": str(organization.id)},
-            },
+            subscription_data=subscription_data,
             payment_method_collection="always",
             tax_id_collection={"enabled": True},
             billing_address_collection="required",
@@ -161,6 +177,41 @@ class StripeBillingProvider(BillingProvider):
             cancel_url=f"{base_url}/dashboard?checkout=cancelled",
         )
         return CheckoutSession(url=session.url, session_id=session.id)
+
+    def list_prices(self) -> list[PlanPrice]:
+        """Read the configured price IDs back from Stripe.
+
+        Cached in-process for `_PRICE_CACHE_TTL_SECONDS` so opening the
+        billing screen does not fan out four API calls per page view.
+        Prices change rarely and a stale entry self-heals within minutes;
+        a failed lookup is skipped rather than failing the whole screen.
+        """
+        global _price_cache
+        now = time.monotonic()
+        if _price_cache and now - _price_cache[0] < _PRICE_CACHE_TTL_SECONDS:
+            return _price_cache[1]
+
+        prices: list[PlanPrice] = []
+        for (plan, interval), price_id in _price_ids().items():
+            if not price_id:
+                continue
+            try:
+                price = stripe.Price.retrieve(price_id)
+            except Exception:  # noqa: BLE001 — one bad price must not hide the rest
+                continue
+            if price.get("unit_amount") is None:
+                continue
+            prices.append(
+                PlanPrice(
+                    plan=PlanTier(plan).value,
+                    interval=interval,
+                    amount_minor=int(price["unit_amount"]),
+                    currency=str(price.get("currency", "pln")).upper(),
+                )
+            )
+
+        _price_cache = (now, prices)
+        return prices
 
     def cancel_subscription(self, organization) -> None:
         if not organization.billing_subscription_id:

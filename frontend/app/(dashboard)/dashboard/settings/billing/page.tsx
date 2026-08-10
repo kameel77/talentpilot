@@ -1,14 +1,16 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { Info } from "lucide-react";
+import { CreditCard, Info, Loader2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { SettingsCard } from "@/components/settings/SettingsCard";
 import { UnsavedBar } from "@/components/settings/UnsavedBar";
+import { PlanPicker } from "@/components/billing/PlanPicker";
 import { useToast } from "@/components/ui/toast";
 import { useFormState } from "@/hooks/useFormState";
-import { api, tokenManager, type Organization } from "@/lib/api";
+import { api, tokenManager, type BillingStatus, type Organization } from "@/lib/api";
 import { cn } from "@/lib/utils";
 
 interface InvoiceForm {
@@ -50,8 +52,10 @@ function daysLeft(value: string): number {
 export default function BillingSettingsPage() {
     const { toast } = useToast();
     const [org, setOrg] = useState<Organization | null>(null);
+    const [billing, setBilling] = useState<BillingStatus | null>(null);
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
+    const [portalPending, setPortalPending] = useState(false);
     const { values, setField, isDirty, hydrate, commit, reset } = useFormState<InvoiceForm>(EMPTY_INVOICE);
 
     const hydrateFromOrg = useCallback(
@@ -72,12 +76,24 @@ export default function BillingSettingsPage() {
         const user = tokenManager.getUser();
         if (!user) return;
         const orgId = tokenManager.getActiveOrgId() ?? user.organization_id;
-        api.organizations
-            .get(orgId)
-            .then(hydrateFromOrg)
+        Promise.all([
+            api.organizations.get(orgId).then(hydrateFromOrg),
+            api.billing.status().then(setBilling),
+        ])
             .catch(() => toast("Nie udało się wczytać danych rozliczeniowych.", "error"))
             .finally(() => setLoading(false));
     }, [hydrateFromOrg, toast]);
+
+    const openPortal = async () => {
+        setPortalPending(true);
+        try {
+            const { url } = await api.billing.portal();
+            window.location.assign(url);
+        } catch {
+            toast("Portal płatności jest chwilowo niedostępny.", "error");
+            setPortalPending(false);
+        }
+    };
 
     const handleSave = async () => {
         if (!org) return;
@@ -100,9 +116,11 @@ export default function BillingSettingsPage() {
         }
     };
 
-    const plan = org?.plan ?? "free";
-    const status = org?.subscription_status ?? "free";
-    const trialEndsAt = org?.trial_ends_at ?? null;
+    const plan = billing?.plan ?? org?.plan ?? "free";
+    const status = billing?.subscription_status ?? org?.subscription_status ?? "free";
+    const trialEndsAt = billing?.trial_ends_at ?? org?.trial_ends_at ?? null;
+    const trialDaysLeft = billing?.trial_days_left ?? 0;
+    const hasPaymentMethod = Boolean(billing?.payment_method_last4);
 
     return (
         <div className="space-y-6">
@@ -126,14 +144,35 @@ export default function BillingSettingsPage() {
                     <div className="h-16 animate-pulse rounded-xl bg-slate-100" />
                 ) : (
                     <div className="space-y-4">
-                        <div className="flex items-baseline gap-2">
-                            <span className="text-2xl font-semibold text-slate-900">{PLAN_LABEL[plan] ?? "Free"}</span>
-                            {status === "trialing" && trialEndsAt && (
-                                <span className="text-sm text-muted-foreground">
-                                    do {formatDate(trialEndsAt)} · zostało {daysLeft(trialEndsAt)} dni
-                                </span>
+                        <div className="flex flex-wrap items-baseline justify-between gap-3">
+                            <div className="flex items-baseline gap-2">
+                                <span className="text-2xl font-semibold text-slate-900">{PLAN_LABEL[plan] ?? "Free"}</span>
+                                {status === "trialing" && trialEndsAt && (
+                                    <span className="text-sm text-muted-foreground">
+                                        do {formatDate(trialEndsAt)} · zostało {trialDaysLeft || daysLeft(trialEndsAt)} dni
+                                    </span>
+                                )}
+                            </div>
+                            {billing?.enabled && hasPaymentMethod && (
+                                <Button variant="outline" size="sm" onClick={openPortal} disabled={portalPending}>
+                                    {portalPending ? (
+                                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                    ) : (
+                                        <CreditCard className="mr-2 h-4 w-4" />
+                                    )}
+                                    Zarządzaj płatnością
+                                </Button>
                             )}
                         </div>
+
+                        {hasPaymentMethod && (
+                            <p className="text-sm text-muted-foreground">
+                                Karta kończąca się na {billing?.payment_method_last4}
+                                {billing?.current_period_end
+                                    ? ` · następne odnowienie ${formatDate(billing.current_period_end)}`
+                                    : ""}
+                            </p>
+                        )}
 
                         {status === "past_due" && (
                             <p className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
@@ -141,19 +180,34 @@ export default function BillingSettingsPage() {
                             </p>
                         )}
 
-                        <div className="flex items-start gap-3 rounded-xl border border-slate-200 bg-slate-50 p-4">
-                            <Info className="mt-0.5 h-4 w-4 shrink-0 text-slate-400" />
-                            <div className="text-sm text-slate-600">
-                                <p className="font-medium text-slate-700">Płatności kartą i faktury — wkrótce</p>
-                                <p className="mt-0.5">
-                                    Zmiana planu, metoda płatności i historia faktur pojawią się tutaj po uruchomieniu
-                                    płatności. Do tego czasu plan zmienia administrator.
-                                </p>
+                        {status === "free" && (
+                            <p className="rounded-xl border border-slate-200 bg-slate-50 p-3 text-sm text-slate-600">
+                                Plan Free: organizacje klienckie są niedostępne, a liczba klientów indywidualnych
+                                ograniczona do 3. Wybierz plan poniżej, aby zdjąć limity.
+                            </p>
+                        )}
+
+                        {!billing?.enabled && (
+                            <div className="flex items-start gap-3 rounded-xl border border-slate-200 bg-slate-50 p-4">
+                                <Info className="mt-0.5 h-4 w-4 shrink-0 text-slate-400" />
+                                <div className="text-sm text-slate-600">
+                                    <p className="font-medium text-slate-700">Płatności nie są jeszcze włączone</p>
+                                    <p className="mt-0.5">
+                                        Okres testowy i limity planu działają, ale wybór planu i metoda płatności będą
+                                        dostępne po skonfigurowaniu dostawcy płatności w tym środowisku.
+                                    </p>
+                                </div>
                             </div>
-                        </div>
+                        )}
                     </div>
                 )}
             </SettingsCard>
+
+            {billing?.enabled && (
+                <SettingsCard title="Plany" description="Rozliczenie miesięczne lub roczne — anulujesz w każdej chwili">
+                    <PlanPicker status={billing} onError={(message) => toast(message, "error")} />
+                </SettingsCard>
+            )}
 
             <SettingsCard
                 title="Dane do faktury"

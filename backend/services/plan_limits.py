@@ -13,38 +13,21 @@ counted (a client org, a profile) may live elsewhere.
 Enforcement is write-only (§8: "nie limitować odczytu"): call this only from
 the write paths listed in the brief, never from a GET/list endpoint.
 """
-from datetime import datetime, timezone
-
 from fastapi import HTTPException, status
 from sqlalchemy.orm import Session
 
-from models import Organization, OrganizationAccess, PlanTier, SubscriptionStatus, User, UserRole
+from models import Organization, OrganizationAccess, PlanTier, User, UserRole
+from services.billing.trial import is_trial_active
 
+# Free is what a coach lands on when the trial runs out: client
+# organizations are a paid capability outright, individual clients are
+# capped at three so the product stays usable (and demoable) without a
+# card. See docs/BRIEF_BILLING_TRIAL.md §8.
 PLAN_LIMITS = {
-    PlanTier.FREE: {"client_orgs": 1, "profiles": 5},
+    PlanTier.FREE: {"client_orgs": 0, "profiles": 3},
     PlanTier.PRO: {"client_orgs": None, "profiles": None},
     PlanTier.STUDIO: {"client_orgs": None, "profiles": None},
 }
-
-
-def _is_trial_active(organization: Organization) -> bool:
-    """A trialing organization is unlimited, regardless of `plan`.
-
-    Only while `trial_ends_at` is in the future. An expired trial
-    (subscription_status still TRIALING because no sync/cron has flipped it
-    yet) falls back to the plan's normal limits rather than staying
-    unlimited forever.
-    """
-    if organization.subscription_status != SubscriptionStatus.TRIALING:
-        return False
-    if organization.trial_ends_at is None:
-        return False
-    trial_ends_at = organization.trial_ends_at
-    if trial_ends_at.tzinfo is None:
-        # Defensive: columns are timezone-aware, but naive datetimes could
-        # slip in via direct DB writes/tests.
-        trial_ends_at = trial_ends_at.replace(tzinfo=timezone.utc)
-    return trial_ends_at > datetime.now(timezone.utc)
 
 
 def _owning_coach(db: Session, organization: Organization) -> User | None:
@@ -127,7 +110,8 @@ def assert_within_limit(db: Session, organization: Organization, resource: str) 
     "client_orgs" or "profiles".
 
     Never raises when:
-    - the organization is trialing with `trial_ends_at` in the future,
+    - the organization is trialing with `trial_ends_at` in the future
+      (`services/billing/trial.py::is_trial_active`),
     - the plan's limit for `resource` is None (unlimited plan),
     - no coach owns `organization` (nothing to meter — e.g. an
       organization not tied to any coach yet, such as one created via the
@@ -136,7 +120,7 @@ def assert_within_limit(db: Session, organization: Organization, resource: str) 
     if resource not in _COUNTERS:
         raise ValueError(f"Unknown plan-limited resource: {resource!r}")
 
-    if _is_trial_active(organization):
+    if is_trial_active(organization):
         return
 
     limit = PLAN_LIMITS.get(organization.plan, {}).get(resource)

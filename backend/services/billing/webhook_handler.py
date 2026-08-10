@@ -22,8 +22,6 @@ from models import Organization, PlanTier, ProcessedBillingEvent, SubscriptionSt
 
 from .base import BillingEvent, BillingEventType, BillingProvider
 
-TRIAL_DAYS = 14
-
 
 class InvalidWebhookSignature(Exception):
     """Raised for a bad signature OR a malformed payload.
@@ -100,10 +98,15 @@ def _apply_transition(organization: Organization, event: BillingEvent) -> None:
         if event.payment_method_last4:
             organization.payment_method_last4 = event.payment_method_last4
         organization.subscription_status = SubscriptionStatus.TRIALING
-        # A manually granted design-partner trial (admin override, §8) must
-        # never be shortened by a real checkout — only set when unset.
+        # A trial already on the row — granted at registration (docs §3) or
+        # manually for a design partner (admin override, §8) — must never
+        # be shortened by a real checkout. Only set when unset, which today
+        # means organizations created before the product-led trial existed
+        # or provisioned through the external API.
         if organization.trial_ends_at is None:
-            organization.trial_ends_at = datetime.now(timezone.utc) + timedelta(days=TRIAL_DAYS)
+            organization.trial_ends_at = datetime.now(timezone.utc) + timedelta(
+                days=settings.billing_trial_days_default
+            )
 
     elif event.type == BillingEventType.SUBSCRIPTION_UPDATED:
         plan_value = raw.get("plan")

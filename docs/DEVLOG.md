@@ -3,6 +3,28 @@
 > Dziennik decyzji i istotnych zmian. Wpisy od najnowszych.
 > Uwaga: docelowe miejsce devloga to vault (`/documents/vault/`) przez skill `/devlog-vault` — w tej sesji niedostępny (folder niepodmontowany), stąd wpis w repo. Do scalenia z vaultem przy okazji.
 
+## 2026-08-10 — Trial produktowy, limity Free i UI płatności (Brief #3, faza 2c)
+
+### Decyzje
+1. **Trial startuje przy rejestracji, bez karty.** Nowy workspace dostaje `TRIALING` + `trial_ends_at` od razu: **14 dni domyślnie, 30 dla coacha** (`BILLING_TRIAL_DAYS_DEFAULT` / `_COACH`). Wcześniej rejestracja zostawiała `subscription_status=free`, więc przy nowych limitach świeże konto nie mogłoby dodać ani jednej organizacji przed zapłatą.
+2. **Karta przy rejestracji jako flaga, nie decyzja w kodzie** — `BILLING_REQUIRE_CARD_AT_SIGNUP` (domyślnie `false`), zwracana do frontendu przez `/api/billing/status`. Pozwala testować lejek bez deployu nowej logiki.
+3. **Limity Free: 0 organizacji klienckich, 3 klientów indywidualnych** (było 1 / 5). Organizacje stają się w całości funkcją płatną.
+4. **Brak podwójnego triala.** `create_checkout_session` przekazuje Stripe'owi **pozostałe** dni triala produktowego zamiast nowych 14/30; po jego wygaśnięciu checkout obciąża natychmiast. Zamyka lukę „dodaj kartę ostatniego dnia i dostań drugi darmowy okres".
+5. **Jedno źródło prawdy o trialu** — `services/billing/trial.py` (`start_trial`, `is_trial_active`, `remaining_trial_days`). `plan_limits.py` i `webhook_handler.py` korzystają z niego zamiast własnych kopii; usunięto stałą `TRIAL_DAYS = 14` na rzecz konfiguracji.
+6. **Kwoty nadal nie istnieją w repo.** Nowy `GET /api/billing/status` zwraca katalog planów z cenami odczytanymi ze Stripe (`list_prices`, cache 10 min), status subskrypcji, licznik triala i flagę karty. Odpowiada też przy `BILLING_PROVIDER=disabled` — trial jest nasz, nie dostawcy — a `enabled=false` mówi UI, żeby ukryć checkout zamiast oferować przyciski zwracające 503.
+7. **Paywall: cennik w Rozliczeniach + przechwyt 402.** Interceptor w `lib/api.ts` rozgłasza `plan_limit_exceeded` jako zdarzenie okna; jeden `BillingNotices` w layoucie dashboardu pokazuje modal z konkretnym limitem, baner końca triala, baner `past_due` i wynik powrotu z Checkoutu (`?checkout=success|cancelled`).
+
+### Zmiany techniczne
+- Backend: `services/billing/trial.py` (nowy), `base.PlanPrice` + `list_prices()` (domyślnie pusta lista), `GET /api/billing/status`, `BillingStatusResponse`, trial w obu ścieżkach rejestracji.
+- Frontend: `components/billing/{PlanPicker,BillingNotices}.tsx`, `api.billing.status()`, `checkout(plan, interval)`, typy `BillingStatus` / `PlanLimitExceeded`.
+- Testy: nowy `tests/test_billing_status.py` (6 przypadków) + aktualizacja `test_plan_limits`, `test_billing_webhook`, `test_stripe_provider` do nowego modelu. `176 passed`; jedyna porażka (`test_gallup_api::test_parse_pdf_unauthorized`) jest wcześniejsza niż te zmiany — potwierdzone na worktree z HEAD.
+- Dokumentacja: `docs/BILLING_STRIPE_SETUP.md` — webhooki dla staginga (test) i produkcji (live), komplet zmiennych, kolejność wdrożenia i checklista weryfikacyjna. `.env.example` uzupełniony o sekcję billingu.
+
+### Nie zrobione
+Fakturownia/KSeF (świadomie odłożone). Przeterminowany trial traci limity natychmiast, ale `subscription_status` zostaje `trialing` do czasu webhooka — kosmetyka statusu, nie luka w limitach.
+
+---
+
 ## 2026-08-10 — Przebudowa ustawień: 4 zakładki zamiast jednego ekranu
 
 ### Problem

@@ -51,6 +51,22 @@ class Settings(BaseSettings):
     billing_provider: str = "disabled"
     billing_webhook_secret: str | None = None
 
+    # Product-led trial (docs/BRIEF_BILLING_TRIAL.md §3). A freshly
+    # registered workspace starts TRIALING immediately, with no card, and
+    # falls back to Free limits when `trial_ends_at` passes. Coaches get a
+    # longer runway because their value moment (importing client reports,
+    # running the first sessions) takes longer than a manager's.
+    billing_trial_days_default: int = 14
+    billing_trial_days_coach: int = 30
+
+    # When true, the app asks for a card up front instead of letting the
+    # product-led trial run card-free — the literal reading of §1's "karta
+    # wymagana przy starcie okresu testowego". Kept as a switch rather than
+    # a hardcoded decision so the signup funnel can be A/B'd without a
+    # deploy of new logic. Only the frontend acts on this today; the
+    # backend never blocks a trialing org on a missing card.
+    billing_require_card_at_signup: bool = False
+
     # Stripe (docs/BRIEF_BILLING_TRIAL.md §6). Only read when
     # billing_provider="stripe" — see the boot guard below. Price IDs are
     # deliberately the only pricing knob in this codebase: amounts (Pro 249

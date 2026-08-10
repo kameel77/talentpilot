@@ -495,6 +495,18 @@ apiClient.interceptors.response.use(
             }
         }
 
+        // Handle 402 Payment Required — the plan-limit guard
+        // (backend/services/plan_limits.py). Broadcast it so one dialog
+        // mounted in the dashboard layout can explain the limit, instead
+        // of every call site growing its own 402 handling.
+        if (error.response?.status === 402 && typeof window !== 'undefined') {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const detail = (error.response.data as any)?.detail;
+            if (detail?.code === 'plan_limit_exceeded') {
+                window.dispatchEvent(new CustomEvent(PLAN_LIMIT_EVENT, { detail }));
+            }
+        }
+
         return Promise.reject(error);
     }
 );
@@ -554,6 +566,40 @@ export interface BillingPortalResponse {
 }
 
 export type BillingCheckoutOutcome = 'success' | 'failed';
+
+export type BillingPlan = 'free' | 'pro' | 'studio';
+export type BillingInterval = 'monthly' | 'yearly';
+
+export interface BillingPlanPrice {
+    plan: Exclude<BillingPlan, 'free'>;
+    interval: BillingInterval;
+    /** Minor units (grosze), exactly as the provider prices it. */
+    amount_minor: number;
+    currency: string;
+}
+
+export interface BillingStatus {
+    /** False when BILLING_PROVIDER=disabled — hide checkout/portal actions. */
+    enabled: boolean;
+    plan: BillingPlan;
+    subscription_status: 'trialing' | 'active' | 'past_due' | 'canceled' | 'free';
+    trial_ends_at?: string | null;
+    trial_days_left: number;
+    require_card_at_signup: boolean;
+    payment_method_last4?: string | null;
+    current_period_end?: string | null;
+    plans: BillingPlanPrice[];
+}
+
+/** Payload of the `plan-limit-exceeded` window event (HTTP 402). */
+export interface PlanLimitExceeded {
+    code: 'plan_limit_exceeded';
+    resource: 'client_orgs' | 'profiles';
+    limit: number;
+    current: number;
+}
+
+export const PLAN_LIMIT_EVENT = 'talentpilot:plan-limit-exceeded';
 
 // API methods
 export const api = {
@@ -1088,13 +1134,21 @@ export const api = {
     // Billing (Phase 2 — provider abstraction + fake provider for
     // dev/staging/CI, no Stripe calls yet)
     billing: {
-        checkout: async (plan: 'pro' | 'studio' = 'pro'): Promise<BillingCheckoutResponse> => {
-            const response = await apiClient.post<BillingCheckoutResponse>('/api/billing/checkout', { plan });
+        checkout: async (
+            plan: 'pro' | 'studio' = 'pro',
+            interval: BillingInterval = 'monthly'
+        ): Promise<BillingCheckoutResponse> => {
+            const response = await apiClient.post<BillingCheckoutResponse>('/api/billing/checkout', { plan, interval });
             return response.data;
         },
 
         portal: async (): Promise<BillingPortalResponse> => {
             const response = await apiClient.get<BillingPortalResponse>('/api/billing/portal');
+            return response.data;
+        },
+
+        status: async (): Promise<BillingStatus> => {
+            const response = await apiClient.get<BillingStatus>('/api/billing/status');
             return response.data;
         },
 

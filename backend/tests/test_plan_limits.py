@@ -37,30 +37,50 @@ def _get_coach_org(db_session, coach_id):
     return db_session.query(Organization).filter(Organization.id == coach.organization_id).first()
 
 
+def _end_trial(db_session, coach_id):
+    """Drop a freshly registered coach onto Free.
+
+    Registration grants a product-led trial (docs §3), which is unlimited
+    — every Free-limit assertion below has to get past it first. Mirrors
+    what the SUBSCRIPTION_DELETED webhook does when a trial lapses.
+    """
+    org = _get_coach_org(db_session, coach_id)
+    org.plan = PlanTier.FREE
+    org.subscription_status = SubscriptionStatus.FREE
+    org.trial_ends_at = None
+    db_session.commit()
+    return org
+
+
 # ---------------------------------------------------------------------------
 # client_orgs limit
 # ---------------------------------------------------------------------------
 
-def test_free_org_at_client_orgs_limit_returns_402(client, db_session):
-    headers, _ = _register_coach(client, db_session)
+def test_free_org_cannot_create_any_client_org(client, db_session):
+    """Client organizations are a paid capability outright on Free."""
+    headers, coach_id = _register_coach(client, db_session)
+    _end_trial(db_session, coach_id)
 
-    first = _create_client_org(client, headers, "Acme")
-    assert first.status_code == 201, first.text
-
-    second = _create_client_org(client, headers, "Beta")
-    assert second.status_code == 402, second.text
-    assert second.json()["detail"] == {
+    response = _create_client_org(client, headers, "Acme")
+    assert response.status_code == 402, response.text
+    assert response.json()["detail"] == {
         "code": "plan_limit_exceeded",
         "resource": "client_orgs",
-        "limit": 1,
-        "current": 1,
+        "limit": 0,
+        "current": 0,
     }
 
 
-def test_free_org_under_client_orgs_limit_succeeds(client, db_session):
-    headers, _ = _register_coach(client, db_session)
-    response = _create_client_org(client, headers, "Acme")
-    assert response.status_code == 201, response.text
+def test_trial_granted_at_registration_allows_client_orgs(client, db_session):
+    """The trial from registration is unlimited — no card, no 402."""
+    headers, coach_id = _register_coach(client, db_session)
+    org = _get_coach_org(db_session, coach_id)
+    assert org.subscription_status == SubscriptionStatus.TRIALING
+    assert org.trial_ends_at is not None
+
+    for name in ("Acme", "Beta"):
+        response = _create_client_org(client, headers, name)
+        assert response.status_code == 201, response.text
 
 
 # ---------------------------------------------------------------------------
@@ -71,35 +91,37 @@ def test_free_org_at_profiles_limit_returns_402(client, db_session):
     headers, coach_id = _register_coach(client, db_session)
     coach = db_session.query(User).filter(User.id == coach_id).first()
     org_id = coach.organization_id
+    _end_trial(db_session, coach_id)
 
-    for i in range(5):
+    for i in range(3):
         response = _create_ghost(client, headers, org_id, f"Member {i}")
         assert response.status_code == 201, response.text
 
-    sixth = _create_ghost(client, headers, org_id, "Member 5")
-    assert sixth.status_code == 402, sixth.text
-    assert sixth.json()["detail"] == {
+    fourth = _create_ghost(client, headers, org_id, "Member 3")
+    assert fourth.status_code == 402, fourth.text
+    assert fourth.json()["detail"] == {
         "code": "plan_limit_exceeded",
         "resource": "profiles",
-        "limit": 5,
-        "current": 5,
+        "limit": 3,
+        "current": 3,
     }
 
 
 def test_bulk_import_at_boundary_leaves_no_partial_state(client, db_session):
-    """5 sequential creates succeed, the 6th 402s, and the DB ends up with
-    exactly 5 profiles — no partially written state from the failed 6th call.
+    """3 sequential creates succeed, the 4th 402s, and the DB ends up with
+    exactly 3 profiles — no partially written state from the failed 4th call.
     """
     headers, coach_id = _register_coach(client, db_session)
     coach = db_session.query(User).filter(User.id == coach_id).first()
     org_id = coach.organization_id
+    _end_trial(db_session, coach_id)
 
-    for i in range(5):
+    for i in range(3):
         response = _create_ghost(client, headers, org_id, f"Import {i}")
         assert response.status_code == 201, response.text
 
-    sixth = _create_ghost(client, headers, org_id, "Import 5")
-    assert sixth.status_code == 402, sixth.text
+    fourth = _create_ghost(client, headers, org_id, "Import 3")
+    assert fourth.status_code == 402, fourth.text
 
     db_session.expire_all()
     profile_count = (
@@ -107,7 +129,7 @@ def test_bulk_import_at_boundary_leaves_no_partial_state(client, db_session):
         .filter(User.organization_id == org_id, User.id != coach_id)
         .count()
     )
-    assert profile_count == 5
+    assert profile_count == 3
 
 
 # ---------------------------------------------------------------------------
@@ -147,16 +169,15 @@ def test_trialing_org_with_future_trial_end_is_unlimited(client, db_session):
 
 
 def test_trialing_org_with_past_trial_end_falls_back_to_plan_limit(client, db_session):
+    """An expired trial nobody downgraded yet must not stay unlimited."""
     headers, coach_id = _register_coach(client, db_session)
     org = _get_coach_org(db_session, coach_id)
     org.subscription_status = SubscriptionStatus.TRIALING
     org.trial_ends_at = datetime.now(timezone.utc) - timedelta(days=1)
     db_session.commit()
 
-    first = _create_client_org(client, headers, "Acme")
-    assert first.status_code == 201, first.text
-    second = _create_client_org(client, headers, "Beta")
-    assert second.status_code == 402, second.text
+    response = _create_client_org(client, headers, "Acme")
+    assert response.status_code == 402, response.text
 
 
 # ---------------------------------------------------------------------------
@@ -167,14 +188,15 @@ def test_reads_still_work_for_over_limit_org(client, db_session):
     headers, coach_id = _register_coach(client, db_session)
     coach = db_session.query(User).filter(User.id == coach_id).first()
     org_id = coach.organization_id
+    _end_trial(db_session, coach_id)
 
-    for i in range(5):
+    for i in range(3):
         assert _create_ghost(client, headers, org_id, f"Member {i}").status_code == 201
-    assert _create_ghost(client, headers, org_id, "Member 5").status_code == 402
+    assert _create_ghost(client, headers, org_id, "Member 3").status_code == 402
 
     users_response = client.get("/api/users", headers=headers)
     assert users_response.status_code == 200
-    assert len(users_response.json()) == 6  # 5 ghosts + the coach
+    assert len(users_response.json()) == 4  # 3 ghosts + the coach
 
     orgs_response = client.get("/api/organizations", headers=headers)
     assert orgs_response.status_code == 200

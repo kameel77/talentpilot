@@ -10,6 +10,7 @@ checkout -> TRIALING -> plan-limits -> advance-trial flow.
 import json
 from datetime import datetime, timedelta, timezone
 
+from config import settings
 from models import Organization, PlanTier, ProcessedBillingEvent, SubscriptionStatus, User
 from services.billing.base import BillingEventType
 from services.billing.fake_provider import FakeBillingProvider
@@ -66,7 +67,8 @@ def test_invalid_signature_returns_400_and_writes_nothing(client, db_session):
 
     db_session.expire_all()
     org_after = db_session.query(Organization).filter(Organization.id == org.id).first()
-    assert org_after.subscription_status == SubscriptionStatus.FREE
+    # Untouched by the rejected webhook — registration left it trialing.
+    assert org_after.subscription_status == SubscriptionStatus.TRIALING
     assert org_after.billing_customer_id is None
     assert db_session.query(ProcessedBillingEvent).count() == 0
 
@@ -103,7 +105,9 @@ def test_webhook_returns_404_when_billing_disabled(client, db_session, monkeypat
 def test_valid_signature_applies_checkout_completed_transition(client, db_session):
     headers, coach = _register_coach(client, db_session)
     org = _org_for(db_session, coach)
-    assert org.trial_ends_at is None
+    # Registration grants the product-led trial, so this org arrives at
+    # checkout already trialing rather than with an empty trial window.
+    assert org.trial_ends_at is not None
 
     payload, signature = _build_event(
         BillingEventType.CHECKOUT_COMPLETED,
@@ -123,7 +127,9 @@ def test_valid_signature_applies_checkout_completed_transition(client, db_sessio
     assert org_after.payment_method_last4 == "4242"
     assert org_after.trial_ends_at is not None
 
-    expected = datetime.now(timezone.utc) + timedelta(days=14)
+    # Checkout never shortens an existing trial: the coach's 30-day
+    # registration trial survives instead of being reset to the default.
+    expected = datetime.now(timezone.utc) + timedelta(days=settings.billing_trial_days_coach)
     assert abs((_aware(org_after.trial_ends_at) - expected).total_seconds()) < 60
 
 
