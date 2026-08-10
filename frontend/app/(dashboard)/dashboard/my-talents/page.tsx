@@ -633,15 +633,23 @@ export default function MyTalentsPage() {
                             <h3 className="font-semibold mb-2">{t('shareProfile')}</h3>
                             <p className="text-sm text-muted-foreground mb-4">{t('shareProfileDesc')}</p>
                             {currentUser?.public_token || currentUser?.public_slug ? (
-                                <Button variant="outline" className="w-full" asChild>
-                                    <Link href={`/aboutme/${currentUser.public_slug || currentUser.public_token}`} target="_blank">
-                                        {t('openBusinessCard')}
-                                        <ChevronRight className="h-4 w-4" />
+                                <div className="space-y-2">
+                                    <Button variant="outline" className="w-full" asChild>
+                                        <Link href={`/aboutme/${currentUser.public_slug || currentUser.public_token}`} target="_blank">
+                                            {t('openBusinessCard')}
+                                            <ChevronRight className="h-4 w-4" />
+                                        </Link>
+                                    </Button>
+                                    <Link
+                                        href="/dashboard/settings/public-profile"
+                                        className="block text-center text-xs text-muted-foreground hover:text-primary hover:underline"
+                                    >
+                                        {t('configureInSettings')}
                                     </Link>
-                                </Button>
+                                </div>
                             ) : (
                                 <Button variant="outline" className="w-full" asChild>
-                                    <Link href="/dashboard/settings">
+                                    <Link href="/dashboard/settings/public-profile">
                                         {t('configureInSettings')}
                                         <ChevronRight className="h-4 w-4" />
                                     </Link>

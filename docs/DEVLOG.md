@@ -3,6 +3,30 @@
 > Dziennik decyzji i istotnych zmian. Wpisy od najnowszych.
 > Uwaga: docelowe miejsce devloga to vault (`/documents/vault/`) przez skill `/devlog-vault` — w tej sesji niedostępny (folder niepodmontowany), stąd wpis w repo. Do scalenia z vaultem przy okazji.
 
+## 2026-08-10 — Przebudowa ustawień: 4 zakładki zamiast jednego ekranu
+
+### Problem
+`/dashboard/settings` był jedną stroną (1377 linii, 11 kart w siatce, bez nawigacji). Pięć niezależnych przycisków „Zapisz" z osobnymi komunikatami inline (w karcie wizytówki dwa naraz), duplikacja edycji talentów i instrukcji obsługi z `/dashboard/my-talents`, cztery karty bez backendu (powiadomienia, zarządzanie zespołem z zahardkodowanymi liczbami, 2FA/eksport, rozszerzenia) oraz bug: karta talentów startowała z `myTalents = []` i nigdy nie czytała z API, więc każdy widział „Brak zaimportowanych talentów".
+
+### Decyzje UX
+1. **Podział na 4 route'y** (`settings/account`, `billing`, `public-profile`, `organization`) + `settings/layout.tsx` z nawigacją: lewy rail na desktopie, przewijalne taby na mobile. `/dashboard/settings` przekierowuje na `account`.
+2. **Jeden zapis na zakładkę.** Sticky `UnsavedBar` pojawia się tylko przy dirty state (hook `useFormState` z baseline). Zmiana hasła zachowuje własny przycisk — to akcja, nie stan ustawień.
+3. **Przełączniki zapisują się natychmiast** (`ToggleRow`, optymistycznie z rollbackiem). Mieszanie switchy z przyciskiem „Zapisz" było głównym źródłem nieporozumień.
+4. **Komunikaty przez toast** (`components/ui/toast.tsx`, własny, bez nowej zależności) zamiast pięciu kolorowych `<p>` rozsianych po ekranie.
+5. **Rozdzielenie treści od udostępniania.** Talenty i instrukcja obsługi zostają wyłącznie w `/dashboard/my-talents`; zakładka wizytówki odpowiada tylko za adres, widoczność pól i **podgląd na żywo** (iframe publicznej wizytówki). Cross-linki w obie strony.
+6. **Ukrywanie zamiast blokowania.** Zakładka „Rozliczenia" widoczna wyłącznie dla `admin`/`manager`/`coach` (zgodnie z `require_role` na `PATCH /api/organizations/{id}`); członek bez uprawnień dostaje czytelne podsumowanie organizacji (`<dl>`), a nie formularz z `disabled`.
+7. **Usunięto atrapy.** Powiadomienia, zarządzanie zespołem, 2FA/eksport i rozszerzenia zniknęły. Liczby ról w organizacji liczone realnie z `api.users.list()`.
+8. **Rozliczenia bez Stripe.** Zakładka pokazuje realny `plan` / `subscription_status` / `trial_ends_at` (już zwracane przez `OrganizationResponse`) oraz edytowalne dane nabywcy z NIP-em — NIP przeniesiony z „Organizacji", bo tam się go szuka. Sekcja karty i faktur to jawny komunikat „wkrótce", bez klikalnych atrap. Zgodne z `docs/BRIEF_BILLING_TRIAL.md`.
+9. **Aktywna organizacja.** Zakładki czytają `tokenManager.getActiveOrgId() ?? user.organization_id` — wcześniej ustawienia zawsze edytowały macierzystą organizację użytkownika, ignorując przełącznik org w layoucie.
+
+### Zmiany techniczne
+- Nowe: `hooks/useFormState.ts`, `components/ui/toast.tsx`, `components/settings/{SettingsNav,SettingsCard,UnsavedBar,ToggleRow}.tsx`.
+- `lib/api.ts`: dodano typ `PublicProfileSettings` i podpięto go do `User.public_profile_settings` oraz `UserUpdateData` (usuwa rzutowania w komponentach).
+- Usunięto nieużywany już `components/dashboard/SettingsSection.tsx` (zastąpiony przez `SettingsCard`).
+- Dług: teksty zakładek pozostają zahardkodowane po polsku (tak jak w poprzedniej wersji ekranu) — migracja do `messages/*.json` osobno.
+
+---
+
 ## 2026-08-07 — Account model (personal → organization) & working share links (Brief #2)
 
 ### Decyzje architektoniczne & UX:

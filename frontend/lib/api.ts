@@ -25,6 +25,7 @@ export interface User {
     created_at: string;
     public_token?: string;
     public_slug?: string;
+    public_profile_settings?: Partial<PublicProfileSettings>;
     language?: string;
     gallup_certified?: boolean;
     gallup_profile_url?: string;
@@ -68,6 +69,19 @@ export interface OrganizationUpdateData {
     name_confirmed?: boolean;
 }
 
+/** Per-field visibility of the public business card (`/aboutme/{handle}`). */
+export interface PublicProfileSettings {
+    show_photo: boolean;
+    show_email: boolean;
+    show_phone: boolean;
+    show_talents: boolean;
+    talents_count: 5 | 15;
+    show_superpowers: boolean;
+    show_motivators: boolean;
+    show_blockers: boolean;
+    show_feedback_style: boolean;
+}
+
 export interface UserUpdateData {
     full_name?: string;
     email?: string;
@@ -79,7 +93,7 @@ export interface UserUpdateData {
     motivators?: string;
     blockers?: string;
     feedback_style?: string;
-    public_profile_settings?: Record<string, boolean | number>;
+    public_profile_settings?: PublicProfileSettings;
     public_slug?: string;
     job_title?: string;
     job_title_en?: string;
