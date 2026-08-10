@@ -1,9 +1,10 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { Camera, Lock } from "lucide-react";
+import { ArrowUpRight, Camera, Lock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -358,6 +359,29 @@ export default function AccountSettingsPage() {
                         </div>
                     )}
                 </div>
+            </SettingsCard>
+
+            <SettingsCard
+                title="Twoje talenty i instrukcja obsługi"
+                description="Import raportu Gallup i opis stylu współpracy"
+                aside={
+                    <Link
+                        href="/dashboard/my-talents"
+                        className="inline-flex items-center gap-1 text-sm font-medium text-primary hover:underline"
+                    >
+                        Otwórz
+                        <ArrowUpRight className="h-3.5 w-3.5" />
+                    </Link>
+                }
+            >
+                <p className="text-sm text-muted-foreground">
+                    Raport Gallup wgrywasz i edytujesz w „Moich talentach”. Tutaj zostają wyłącznie dane konta, a to,
+                    co z profilu pokazujesz publicznie, ustawiasz w zakładce{" "}
+                    <Link href="/dashboard/settings/public-profile" className="text-primary hover:underline">
+                        Moja wizytówka
+                    </Link>
+                    .
+                </p>
             </SettingsCard>
 
             <SettingsCard title={t("language.title")} description="Zmiana działa od razu — nie wymaga zapisu">

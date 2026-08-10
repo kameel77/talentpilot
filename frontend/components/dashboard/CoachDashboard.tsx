@@ -114,7 +114,7 @@ export default function CoachDashboard() {
                     title={tCoach("kpiClients")}
                     value={totals.clients}
                     icon={<Briefcase className="h-5 w-5" />}
-                    description={tCoach("kpiClientsDesc", { count: individual_clients })}
+                    description={tCoach("kpiClientsDesc")}
                 />
                 <KPICard
                     title={tCoach("kpiTeams")}
@@ -126,7 +126,10 @@ export default function CoachDashboard() {
                     title={tCoach("kpiPeople")}
                     value={totals.people}
                     icon={<UsersRound className="h-5 w-5" />}
-                    description={tCoach("kpiPeopleDesc")}
+                    description={tCoach("kpiPeopleDesc", {
+                        individual: individual_clients,
+                        inOrgs: totals.people - individual_clients,
+                    })}
                 />
                 <KPICard
                     title={tCoach("kpiCoverage")}
@@ -173,7 +176,7 @@ export default function CoachDashboard() {
                         ))}
                         {individual_clients > 0 && (
                             <Link
-                                href="/dashboard/organizations"
+                                href="/dashboard/organizations?tab=individuals"
                                 className="group bg-white p-6 rounded-3xl border border-slate-200/60 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all flex flex-col"
                             >
                                 <div className="flex items-center gap-4 mb-4">

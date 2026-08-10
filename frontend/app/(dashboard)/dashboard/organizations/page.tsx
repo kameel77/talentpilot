@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { api } from "@/lib/api";
 import { Building, Plus, Loader2, Save, Search } from "lucide-react";
@@ -32,10 +33,20 @@ interface Organization {
 }
 
 export default function OrganizationsPage() {
+    return (
+        <Suspense fallback={null}>
+            <OrganizationsPageContent />
+        </Suspense>
+    );
+}
+
+function OrganizationsPageContent() {
     const t = useTranslations('organizations');
     const tClients = useTranslations('clients');
     const { isCoach, orgsLabel } = useRoleLabels();
-    const [activeTab, setActiveTab] = useState<"orgs" | "individuals">("orgs");
+    // Deep link from the dashboard card: /dashboard/organizations?tab=individuals
+    const initialTab = useSearchParams().get("tab") === "individuals" ? "individuals" : "orgs";
+    const [activeTab, setActiveTab] = useState<"orgs" | "individuals">(initialTab);
     const [organizations, setOrganizations] = useState<Organization[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState("");

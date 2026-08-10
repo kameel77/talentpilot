@@ -146,8 +146,11 @@ export default function DashboardLayout({
 
     const navigation = [
         { name: t("overview"), href: "/dashboard", icon: LayoutDashboard },
-        // Self-as-member features are hidden for coaches — they work on clients, not on themselves
-        ...(!isCoach ? [{ name: t("myTalents"), href: "/dashboard/my-talents", icon: Sparkles }] : []),
+        // Coaches see this too: it is the only place to import their own Gallup
+        // report and edit the user manual behind their public business card,
+        // which is a selling asset for them (previously reachable only from the
+        // old monolithic settings screen).
+        { name: t("myTalents"), href: "/dashboard/my-talents", icon: Sparkles },
         { name: t("qa"), href: "/dashboard/qa", icon: MessageSquare },
         { name: isCoach ? t("coachTeams") : t("teams"), href: "/dashboard/teams", icon: Users },
         { name: t("compare"), href: "/dashboard/compare", icon: GitCompare },
