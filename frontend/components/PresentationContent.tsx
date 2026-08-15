@@ -544,7 +544,7 @@ export default function PresentationContent({ token }: { token: string }) {
                             <h3 style={{ fontSize: 16, fontWeight: 600, marginBottom: 16 }}>{t('domainStrength')} — Radar</h3>
                             {sourceMembers.length > 0 ? (
                                 <ResponsiveContainer width="100%" height={300}>
-                                    <RadarChart data={radarData} cx="50%" cy="50%" outerRadius={100}>
+                                    <RadarChart data={radarData} cx="50%" cy="50%" outerRadius={85} margin={{ top: 15, right: 35, bottom: 15, left: 35 }}>
                                         <PolarGrid stroke="var(--border-color)" />
                                         <PolarAngleAxis
                                             dataKey="domain"
@@ -552,7 +552,7 @@ export default function PresentationContent({ token }: { token: string }) {
                                                 if (!props.payload) return <text></text>;
                                                 const item = radarData.find(d => d.domain === props.payload!.value);
                                                 return (
-                                                    <text x={props.x} y={props.y} textAnchor={props.textAnchor} fill={item?.color || 'var(--text-secondary)'} fontSize={12} fontWeight={600} dy={typeof props.y === 'number' && props.y > 150 ? 12 : -4}>
+                                                    <text x={props.x} y={props.y} textAnchor={props.textAnchor} fill={item?.color || 'var(--text-secondary)'} fontSize={12} fontWeight={600} dy={typeof props.y === 'number' && props.y > 150 ? 14 : -6}>
                                                         {props.payload.value}
                                                     </text>
                                                 );

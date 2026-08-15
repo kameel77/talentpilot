@@ -375,7 +375,7 @@ export default function MatrixDashboard({ members, canSeeRisks = false, talents 
                             {membersWithResults.length > 0 ? (
                                 <div className="flex-1 min-h-[300px]">
                                     <ResponsiveContainer width="100%" height="100%">
-                                        <RadarChart data={radarData} cx="50%" cy="50%" outerRadius={100}>
+                                        <RadarChart data={radarData} cx="50%" cy="50%" outerRadius={85} margin={{ top: 15, right: 35, bottom: 15, left: 35 }}>
                                             <PolarGrid stroke="#e2e8f0" />
                                             <PolarAngleAxis
                                                 dataKey="domain"
@@ -383,7 +383,7 @@ export default function MatrixDashboard({ members, canSeeRisks = false, talents 
                                                     if (!props.payload) return <text></text>;
                                                     const item = radarData.find(d => d.domain === props.payload!.value);
                                                     return (
-                                                        <text x={props.x} y={props.y} textAnchor={props.textAnchor} fill={item?.color || '#64748b'} fontSize={12} fontWeight={600} dy={typeof props.y === 'number' && props.y > 150 ? 12 : -4}>
+                                                        <text x={props.x} y={props.y} textAnchor={props.textAnchor} fill={item?.color || '#64748b'} fontSize={12} fontWeight={600} dy={typeof props.y === 'number' && props.y > 150 ? 14 : -6}>
                                                             {props.payload.value}
                                                         </text>
                                                     );

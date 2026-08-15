@@ -11,6 +11,7 @@ import { UserTalent } from '@/types/talent';
 import { Card } from '@/components/ui/card';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { api, tokenManager, User, UserDetailResponse } from '@/lib/api';
+import { getApiErrorMessage } from '@/lib/utils';
 import {
     Upload,
     Sparkles,
@@ -375,8 +376,7 @@ export default function MyTalentsPage() {
             });
             setEditingManual(true);
         } catch (error: unknown) {
-            const err = error as { response?: { data?: { detail?: string } } };
-            const msg = err?.response?.data?.detail || 'Błąd generowania. Spróbuj ponownie.';
+            const msg = getApiErrorMessage(error, 'Błąd generowania. Spróbuj ponownie.');
             setGenerateError(msg);
         } finally {
             setGenerating(false);

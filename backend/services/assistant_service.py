@@ -187,7 +187,7 @@ def retrieve_knowledge_with_reranking(
 
 
 DOMAIN_LABELS = {
-    "executing": "Realizacja (Executing)",
+    "executing": "Wykonywanie (Executing)",
     "influencing": "Wywieranie wpływu (Influencing)",
     "relationship_building": "Budowanie relacji (Relationship Building)",
     "strategic_thinking": "Myślenie strategiczne (Strategic Thinking)",

@@ -78,13 +78,13 @@ def _synergy_score(shared: list, talents_a: list, talents_b: list) -> int:
 
 # Collaboration tip templates based on talent patterns
 COLLABORATION_TIPS_PL = {
-    "shared_executing": "Oboje silni w Realizacji — ustalcie jasny podział zadań, by nie dublować pracy.",
+    "shared_executing": "Oboje silni w Wykonywaniu — ustalcie jasny podział zadań, by nie dublować pracy.",
     "shared_influencing": "Wspólna siła we Wpływaniu — świetny duet do prezentacji i negocjacji. Uważajcie, by nie konkurować o uwagę.",
     "shared_relationship": "Oboje silni w relacjach — naturalne zrozumienie emocji. Pilnujcie, by decyzje nie były opóźniane przez empatię.",
-    "shared_strategic": "Oboje myślą strategicznie — burza mózgów będzie owocna. Potrzebujecie kogoś z Realizacji do wdrożenia pomysłów.",
-    "complement_exec_strat": "Jeden realizuje, drugi planuje — idealny tandem. Strategik niech daje Realizatorowi wyraźne priorytety.",
+    "shared_strategic": "Oboje myślą strategicznie — burza mózgów będzie owocna. Potrzebujecie kogoś z Wykonywania do wdrożenia pomysłów.",
+    "complement_exec_strat": "Jeden wykonuje, drugi planuje — idealny tandem. Strategik niech daje Wykonawcy wyraźne priorytety.",
     "complement_infl_rel": "Jeden wpływa, drugi buduje relacje — Wpływający niech inicjuje, Relacyjny niech buduje zaufanie.",
-    "complement_exec_rel": "Realizator + Relacyjny — jeden dowozi wyniki, drugi dba o ludzi. Idealne uzupełnienie w zespole.",
+    "complement_exec_rel": "Wykonawca + Relacyjny — jeden dowozi wyniki, drugi dba o ludzi. Idealne uzupełnienie w zespole.",
     "complement_infl_strat": "Wpływający + Strateg — Strateg planuje, Wpływający sprzedaje wizję. Razem porywają za sobą zespół.",
     "many_shared": "Wiele wspólnych talentów = naturalne porozumienie. Ryzyko: blind spots w brakujących domenach.",
     "few_shared": "Mało wspólnych talentów = silne uzupełnianie. Inwestujcie czas w zrozumienie perspektywy partnera.",

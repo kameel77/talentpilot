@@ -641,7 +641,7 @@ class ExternalDomain(BaseModel):
     model_config = {
         "json_schema_extra": {
             "examples": [
-                {"number": 1, "pl": "Realizowanie", "en": "Executing"},
+                {"number": 1, "pl": "Wykonywanie", "en": "Executing"},
                 {"number": 2, "pl": "Wywieranie wpływu", "en": None},
                 {"number": 3, "pl": None, "en": "Relationship Building"},
             ]
@@ -661,7 +661,7 @@ class ExternalTalent(BaseModel):
                 {
                     "rank": 1,
                     "talent": "achiever",
-                    "domain": {"number": 1, "pl": "Realizowanie", "en": "Executing"},
+                    "domain": {"number": 1, "pl": "Wykonywanie", "en": "Executing"},
                     "name": {"pl": "Osiąganie", "en": "Achiever"},
                 }
             ]
@@ -683,7 +683,7 @@ class ExternalGallupResponse(BaseModel):
                         {
                             "rank": 1,
                             "talent": "achiever",
-                            "domain": {"number": 1, "pl": "Realizowanie", "en": "Executing"},
+                            "domain": {"number": 1, "pl": "Wykonywanie", "en": "Executing"},
                             "name": {"pl": "Osiąganie", "en": "Achiever"},
                         },
                         {
@@ -700,7 +700,7 @@ class ExternalGallupResponse(BaseModel):
                         {
                             "rank": 1,
                             "talent": "achiever",
-                            "domain": {"number": 1, "pl": "Realizowanie", "en": None},
+                            "domain": {"number": 1, "pl": "Wykonywanie", "en": None},
                             "name": {"pl": "Osiąganie", "en": None},
                         }
                     ],

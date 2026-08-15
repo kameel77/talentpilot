@@ -22,7 +22,7 @@ interface KnowledgeEntryManagerProps {
 
 const DOMAIN_OPTIONS = [
     { value: "", label: "— brak —" },
-    { value: "executing", label: "Realizacja (Executing)" },
+    { value: "executing", label: "Wykonywanie (Executing)" },
     { value: "influencing", label: "Wywieranie wpływu (Influencing)" },
     { value: "relationship_building", label: "Budowanie relacji (Relationship Building)" },
     { value: "strategic_thinking", label: "Myślenie strategiczne (Strategic Thinking)" },
@@ -53,7 +53,7 @@ const LANGUAGE_OPTIONS = [
 ] as const;
 
 const DOMAIN_LABEL_MAP: Record<string, string> = {
-    executing: "Realizacja",
+    executing: "Wykonywanie",
     influencing: "Wpływ",
     relationship_building: "Relacje",
     strategic_thinking: "Strategia",

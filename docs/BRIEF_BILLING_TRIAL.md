@@ -149,19 +149,25 @@ PLAN_LIMITS = {
 }
 ```
 
-Egzekwowane **wyłącznie** w miejscach zapisu: `POST /api/organizations`, `POST /api/invitations/ghost` (obsługuje też import masowy — woła ghost invite per osoba), oraz ścieżka `external`, jeśli tworzy profile.
+Egzekwowane w miejscach zapisu: `POST /api/organizations`, `POST /api/invitations/ghost` (obsługuje też import masowy — woła ghost invite per osoba), ścieżka `external`, a także pre-check w `POST /api/gallup/parse-pdf` (blokuje kosztowne parsowanie PDF jeśli coach osiągnął już limit profili).
+
+**Pre-check i oszczędność transferu:**
+- Dedykowany lekki endpoint `GET /api/billing/check-limit?resource=profiles|client_orgs` pozwala na natychmiastową weryfikację uprawnień.
+- Frontend wywołuje `api.billing.checkLimit(...)` *przed* otwarciem okna wyboru plików PDF oraz *przed* otwarciem modalu dodawania nowej osoby/organizacji.
+- Jeśli limit jest wyczerpany, użytkownik natychmiast widzi modal informacyjny z propozycjami akcji i przyciskiem powrotu do Dashboardu, bez marnowania czasu na upload i parsowanie PDF.
 
 **Czego nie limitować: odczytu.** Coach po downgrade widzi wszystkich dotychczasowych klientów i wszystkie dane. Blokujemy wyłącznie *dodawanie ponad limit*. Odcięcie danych w środku współpracy z klientem kosztuje reputację w małej, gęstej społeczności — a to jedyny kanał dystrybucji z §6 strategii.
 
-Odpowiedź: HTTP **402** ze strukturalnym `detail` (`{"code": "plan_limit_exceeded", "resource": "profiles", "limit": 5}`), żeby frontend pokazał modal upgrade'u zamiast parsować tekst.
+Odpowiedź: HTTP **402** ze strukturalnym `detail` (`{"code": "plan_limit_exceeded", "resource": "profiles", "limit": 3, "current": 3, "plan": "free"}`), żeby frontend pokazał modal upgrade'u zamiast parsować tekst.
 
 ### Frontend
 
 1. **Krok karty** — redirect do Stripe Checkout, powrót na `/dashboard?checkout=success`. Umiejscowienie wg §3.
 2. **Pasek triala** — dyskretny, w layoucie dashboardu: „Okres testowy — pozostało X dni". Ton ostrzegawczy przy ≤3 dniach. **Nie modal**, nie blokuje pracy.
-3. **Modal limitu** — reakcja na 402: co zablokowane, jaki limit, jeden przycisk do planów.
-4. **Ustawienia → Rozliczenia** — plan, status, data odnowienia, końcówka karty, NIP, link do Customer Portal. Nie budujemy własnego zarządzania subskrypcją.
-5. **Panel admina** — `trial_ends_at` i override planu, żeby nadać design partnerom 90 dni bez dotykania bazy. Sekcja admina już istnieje (`/dashboard/admin/users`).
+3. **Modal limitu (`BillingNotices`)** — reakcja na 402 lub wynik `api.billing.checkLimit`: co zablokowane, dlaczego, dostępne akcje, przycisk do planów (gdy Stripe aktywny) lub informacja o wdrażaniu płatności oraz przycisk powrotu do `/dashboard`.
+4. **Pre-check w przyciskach** — przyciski „Importuj z PDF”, „+ Dodaj członka” i „Utwórz organizację” sprawdzają `checkLimit` przed akcją UI.
+5. **Ustawienia → Rozliczenia** — plan, status, data odnowienia, końcówka karty, NIP, link do Customer Portal. Nie budujemy własnego zarządzania subskrypcją.
+6. **Panel admina** — `trial_ends_at` i override planu, żeby nadać design partnerom 90 dni bez dotykania bazy. Sekcja admina już istnieje (`/dashboard/admin/users`).
 
 ### Definition of done
 

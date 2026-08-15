@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
 import { getLocaleFromCookie } from "@/lib/locale";
 import { api, User, CompareResponse } from "@/lib/api";
-import { cn } from "@/lib/utils";
+import { cn, getApiErrorMessage } from "@/lib/utils";
 import {
     ArrowRightLeft,
     Users,
@@ -181,8 +181,7 @@ export default function ComparePage() {
                 const data = await api.compare.users(userAId, userBId, getLocaleFromCookie());
                 setResult(data);
             } catch (err: unknown) {
-                const axiosErr = err as { response?: { data?: { detail?: string } } };
-                setError(axiosErr?.response?.data?.detail || t('compareError'));
+                setError(getApiErrorMessage(err, t('compareError')));
                 setResult(null);
             } finally {
                 setLoading(false);

@@ -12,7 +12,7 @@ import { UnsavedBar } from "@/components/settings/UnsavedBar";
 import { useToast } from "@/components/ui/toast";
 import { useFormState } from "@/hooks/useFormState";
 import { api, tokenManager, type PublicProfileSettings, type User as UserType } from "@/lib/api";
-import { cn } from "@/lib/utils";
+import { cn, getApiErrorMessage } from "@/lib/utils";
 
 const DEFAULT_SETTINGS: PublicProfileSettings = {
     show_photo: true,
@@ -112,8 +112,7 @@ export default function PublicProfileSettingsPage() {
             setPreviewKey((k) => k + 1);
             toast("Adres wizytówki zapisany.");
         } catch (e) {
-            const detail = (e as { response?: { data?: { detail?: string } } })?.response?.data?.detail;
-            setSlugError(detail ?? "Ten adres jest zajęty. Wybierz inny.");
+            setSlugError(getApiErrorMessage(e, "Ten adres jest zajęty. Wybierz inny."));
         } finally {
             setSlugSaving(false);
         }

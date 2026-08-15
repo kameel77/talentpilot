@@ -131,20 +131,59 @@ export function BillingNotices() {
             )}
 
             <Dialog open={limit !== null} onOpenChange={(open) => !open && setLimit(null)}>
-                <DialogContent className="sm:max-w-[460px]">
+                <DialogContent className="sm:max-w-[500px]">
                     <DialogHeader>
-                        <DialogTitle>{limit ? LIMIT_COPY[limit.resource].title : ""}</DialogTitle>
-                        <DialogDescription>{limit ? LIMIT_COPY[limit.resource].body : ""}</DialogDescription>
+                        <div className="flex items-center gap-3 mb-1">
+                            <div className="w-10 h-10 rounded-full bg-amber-100 flex items-center justify-center text-amber-600 shrink-0">
+                                <AlertTriangle className="w-5 h-5" />
+                            </div>
+                            <DialogTitle className="text-left text-lg font-semibold text-slate-900">
+                                {limit ? LIMIT_COPY[limit.resource]?.title : "Osiągnięto limit planu"}
+                            </DialogTitle>
+                        </div>
+                        <DialogDescription className="text-left text-slate-600 pt-2">
+                            {limit ? LIMIT_COPY[limit.resource]?.body : "Ta operacja nie może być zrealizowana ze względu na ograniczenia Twojego obecnego planu."}
+                        </DialogDescription>
                     </DialogHeader>
-                    <DialogFooter>
-                        <Button variant="outline" onClick={() => setLimit(null)}>
-                            Nie teraz
+
+                    <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 space-y-2 text-sm text-slate-700 mt-2">
+                        <p className="font-semibold text-slate-900">Co możesz teraz zrobić?</p>
+                        <ul className="list-disc pl-4 space-y-1 text-slate-600 text-xs sm:text-sm">
+                            {status?.enabled ? (
+                                <>
+                                    <li><strong>Wybierz wyższy plan</strong> (np. Pro lub Studio) w zakładce Rozliczenia, aby zdjąć ograniczenia.</li>
+                                    <li><strong>Zwolnij miejsce</strong>, usuwając niepotrzebne profile osób lub organizacje.</li>
+                                </>
+                            ) : (
+                                <>
+                                    <li><strong>Zwolnij miejsce</strong> w obecnym planie, usuwając niepotrzebne osoby lub zespoły.</li>
+                                    <li><strong>Skontaktuj się z administratorem</strong>, jeśli potrzebujesz zwiększenia limitów lub przedłużenia okresu próbnego.</li>
+                                </>
+                            )}
+                        </ul>
+                        {!status?.enabled && (
+                            <p className="text-xs text-amber-700 pt-1">
+                                ℹ️ Zakup planu online jest obecnie konfigurowany w tym środowisku.
+                            </p>
+                        )}
+                    </div>
+
+                    <DialogFooter className="flex flex-col sm:flex-row gap-2 mt-4">
+                        <Button variant="outline" onClick={() => setLimit(null)} className="w-full sm:w-auto">
+                            Zamknij
                         </Button>
-                        <Button variant="hero" asChild>
-                            <Link href={BILLING_HREF} onClick={() => setLimit(null)}>
-                                Zobacz plany
+                        <Button variant="outline" asChild className="w-full sm:w-auto">
+                            <Link href="/dashboard" onClick={() => setLimit(null)}>
+                                Wróć do Dashboardu
                             </Link>
                         </Button>
+                        {status?.enabled ? (
+                            <Button variant="hero" asChild className="w-full sm:w-auto">
+                                <Link href={BILLING_HREF} onClick={() => setLimit(null)}>
+                                    Zobacz plany
+                                </Link>
+                            </Button>
+                        ) : null}
                     </DialogFooter>
                 </DialogContent>
             </Dialog>

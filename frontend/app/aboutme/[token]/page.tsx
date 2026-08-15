@@ -54,7 +54,7 @@ interface PublicProfile {
 }
 
 const DOMAIN_LABEL: Record<string, { pl: string; en: string }> = {
-  executing:             { pl: "Realizowanie", en: "Executing" },
+  executing:             { pl: "Wykonywanie", en: "Executing" },
   influencing:           { pl: "Wpływ", en: "Influencing" },
   relationship_building: { pl: "Relacje", en: "Relationship Building" },
   strategic_thinking:    { pl: "Strategia", en: "Strategic Thinking" },

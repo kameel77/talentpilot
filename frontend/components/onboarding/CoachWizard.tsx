@@ -642,7 +642,7 @@ export default function CoachWizard() {
                                                         />
                                                         {item.topTalents && item.topTalents.length > 0 && (
                                                             <div className="flex flex-wrap gap-1 mt-1">
-                                                                {item.topTalents.slice(0, 3).map((talent) => (
+                                                                {item.topTalents.slice(0, 5).map((talent) => (
                                                                     <span
                                                                         key={talent.code}
                                                                         className={`text-[10px] font-semibold border px-1.5 py-0.5 rounded-md domain-${DOMAIN_CSS_KEY[resolveTalentDomain(talent.code)]}`}

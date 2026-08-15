@@ -77,7 +77,7 @@ def test_parse_gallup_external_default_both_languages(mock_extract, client, api_
     assert t["rank"] == 1
     assert t["talent"] == "achiever"
     assert t["domain"]["number"] == 1
-    assert t["domain"]["pl"] == "Realizowanie"
+    assert t["domain"]["pl"] == "Wykonywanie"
     assert t["domain"]["en"] == "Executing"
     assert t["name"]["pl"] == "Osiąganie"
     assert t["name"]["en"] == "Achiever"
@@ -102,7 +102,7 @@ def test_parse_gallup_external_language_pl(mock_extract, client, api_key, seed_t
     t = data["talents"][0]
     assert t["name"]["pl"] == "Osiąganie"
     assert t["name"]["en"] is None
-    assert t["domain"]["pl"] == "Realizowanie"
+    assert t["domain"]["pl"] == "Wykonywanie"
     assert t["domain"]["en"] is None
     assert t["domain"]["number"] == 1
 

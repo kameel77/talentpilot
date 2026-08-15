@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
 import { api, User, Organization } from "@/lib/api";
+import { getApiErrorMessage } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -230,8 +231,7 @@ export default function AdminUsersPage() {
             setUsers(users.map(u => u.id === editUser.id ? { ...u, ...updated } : u));
             setEditUser(null);
         } catch (error: unknown) {
-            const err = error as { response?: { data?: { detail?: string } } };
-            setEditError(err?.response?.data?.detail || t('updateUserError'));
+            setEditError(getApiErrorMessage(error, t('updateUserError')));
         } finally {
             setEditSaving(false);
         }
@@ -254,8 +254,7 @@ export default function AdminUsersPage() {
             setUsers(users.map(u => u.id === deleteTarget.id ? null : u).filter(Boolean) as User[]);
             setDeleteTarget(null);
         } catch (error: unknown) {
-            const err = error as { response?: { data?: { detail?: string } } };
-            alert(err?.response?.data?.detail || t('deleteUserError'));
+            alert(getApiErrorMessage(error, t('deleteUserError')));
         } finally {
             setDeleting(false);
         }

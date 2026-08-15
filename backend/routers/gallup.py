@@ -14,6 +14,7 @@ from services.gallup_pdf_parser import extract_gallup_rankings
 from auth import get_current_user, require_role, check_org_access
 from database import get_db
 from models import User, UserRole, Talent, TalentTranslation, UserTalent
+from services.plan_limits import assert_within_limit
 
 router = APIRouter()
 
@@ -26,6 +27,10 @@ def parse_gallup_pdf(
     current_user: User = Depends(get_current_user)
 ) -> GallupPdfParseResponse:
     """Parse Gallup PDF and return rankings with detected page index and translations."""
+    # Pre-check: if a coach has reached their profile limit, abort before expensive PDF parsing
+    if current_user.role == UserRole.COACH and current_user.organization is not None:
+        assert_within_limit(db, current_user.organization, "profiles")
+
     if not file.filename or not file.filename.lower().endswith(".pdf"):
         raise HTTPException(status_code=400, detail="Only PDF files are supported.")
 

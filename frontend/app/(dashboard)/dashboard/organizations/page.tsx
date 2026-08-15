@@ -21,6 +21,7 @@ import {
 } from "@/components/ui/dialog";
 
 import { useRoleLabels } from "@/hooks/useRoleLabels";
+import { getApiErrorMessage } from "@/lib/utils";
 
 interface Organization {
     id: number;
@@ -87,7 +88,9 @@ function OrganizationsPageContent() {
         }
     };
 
-    const openModal = () => {
+    const openModal = async () => {
+        const canAdd = await api.billing.checkLimit('client_orgs');
+        if (!canAdd) return;
         setName("");
         setStreet("");
         setPostalCode("");
@@ -113,9 +116,7 @@ function OrganizationsPageContent() {
             setOrganizations([created as Organization, ...organizations]);
             setOpen(false);
         } catch (err: unknown) {
-            const error = err as { response?: { data?: { detail?: unknown } } };
-            const detail = error?.response?.data?.detail;
-            setCreateError(typeof detail === "string" ? detail : t('createError'));
+            setCreateError(getApiErrorMessage(err, t('createError')));
         } finally {
             setCreating(false);
         }

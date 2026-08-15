@@ -9,13 +9,13 @@ import { api, tokenManager, Talent } from "@/lib/api";
 
 import MatrixDashboard from "@/components/dashboard/MatrixDashboard";
 import MemberReportUpload from "@/components/dashboard/MemberReportUpload";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { UserPlus, Trash2, ChevronDown, Check, Crown, Edit2, Upload, Search, FileText, X, Loader2, AlertTriangle } from "lucide-react";
-import { GALLUP_TALENTS } from "@/lib/gallup-data";
-import { isPlaceholderEmail } from "@/lib/utils";
+import { GALLUP_TALENTS, getDomainStyle, GallupDomain } from "@/lib/gallup-data";
+import { isPlaceholderEmail, getApiErrorMessage } from "@/lib/utils";
 
 
 interface MemberResult {
@@ -92,9 +92,24 @@ export default function TeamDetailPage() {
 
     // PDF Import State
     const pdfImportRef = useRef<HTMLInputElement>(null);
-    const triggerPdfImport = () => pdfImportRef.current?.click();
+    const triggerPdfImport = async () => {
+        const canAdd = await api.billing.checkLimit('profiles');
+        if (!canAdd) return;
+        pdfImportRef.current?.click();
+    };
+    const handleOpenAddMember = async () => {
+        const canAdd = await api.billing.checkLimit('profiles');
+        if (!canAdd) return;
+        setShowAddMember(true);
+    };
     type PdfImportStatus = 'pending' | 'processing' | 'success' | 'error';
-    type PdfImportItem = { fileName: string; name: string | null; status: PdfImportStatus; error?: string };
+    type PdfImportItem = {
+        fileName: string;
+        name: string | null;
+        status: PdfImportStatus;
+        error?: string;
+        topTalents?: Array<{ code: string; name: string; domain?: GallupDomain }>;
+    };
     const [pdfImportItems, setPdfImportItems] = useState<PdfImportItem[]>([]);
     const [showPdfImport, setShowPdfImport] = useState(false);
 
@@ -163,8 +178,8 @@ export default function TeamDetailPage() {
 
         } catch (err: unknown) {
             console.error(err);
-            const detail = (err as {response?: {data?: {detail?: string}}}).response?.data?.detail;
-            setError(detail || tCommon('error'));
+            const msg = getApiErrorMessage(err, tCommon('error'));
+            setError(msg);
         } finally {
             setSubmitLoading(false);
         }
@@ -194,8 +209,7 @@ export default function TeamDetailPage() {
                     return;
                 }
             }
-            const detail = axiosErr.response?.data?.detail;
-            const msg = typeof detail === 'string' ? detail : typeof detail === 'object' && detail?.message ? detail.message : tCommon('error');
+            const msg = getApiErrorMessage(err, tCommon('error'));
             setEditError(msg);
         }
     };
@@ -262,6 +276,19 @@ export default function TeamDetailPage() {
                     return { talent_id: found?.id || 0, rank: rank as number };
                 }).filter((t: { talent_id: number; rank: number }) => t.talent_id > 0);
 
+                const topTalents = Object.entries(rankingsData)
+                    .sort((a, b) => (a[1] as number) - (b[1] as number))
+                    .slice(0, 5)
+                    .map(([talentCode]) => {
+                        const found = currentTalents.find(at => at.code === talentCode || at.translation?.name === talentCode);
+                        const gt = GALLUP_TALENTS.find(g => g.code === talentCode);
+                        return {
+                            code: talentCode,
+                            name: found?.translation?.name || (locale === 'en' ? gt?.en : gt?.pl) || talentCode,
+                            domain: gt?.domain,
+                        };
+                    });
+
                 const payload: GhostInvitePayload = {
                     team_id: teamId,
                     full_name: name,
@@ -273,10 +300,10 @@ export default function TeamDetailPage() {
                 }
 
                 await api.invitations.createGhostInvite(payload);
-                setPdfImportItems(prev => prev.map((it, idx) => idx === i ? { ...it, name, status: 'success' } : it));
+                setPdfImportItems(prev => prev.map((it, idx) => idx === i ? { ...it, name, status: 'success', topTalents } : it));
             } catch (err: unknown) {
-                const errorObj = err as { response?: { data?: { detail?: string } }, message?: string };
-                const msg = errorObj.response?.data?.detail || errorObj.message || tCommon('error');
+                console.error(err);
+                const msg = getApiErrorMessage(err, tCommon('error'));
                 setPdfImportItems(prev => prev.map((it, idx) => idx === i ? { ...it, status: 'error', error: msg } : it));
             }
         }
@@ -409,13 +436,14 @@ export default function TeamDetailPage() {
                         <Upload className="h-4 w-4" />
                         {t('importPdf')}
                     </Button>
+                    <Button
+                        onClick={handleOpenAddMember}
+                        className="inline-flex items-center gap-2 rounded-xl bg-primary text-white shadow-sm"
+                    >
+                        <UserPlus className="h-4 w-4" />
+                        {t('addMember')}
+                    </Button>
                     <Dialog open={showAddMember} onOpenChange={setShowAddMember}>
-                        <DialogTrigger asChild>
-                            <Button className="inline-flex items-center gap-2 rounded-xl bg-primary text-white shadow-sm">
-                                <UserPlus className="h-4 w-4" />
-                                {t('addMember')}
-                            </Button>
-                        </DialogTrigger>
                         <DialogContent className="max-w-xl max-h-[90vh] overflow-y-auto">
                             <DialogHeader>
                                 <DialogTitle>{t('addMemberTitle')}</DialogTitle>
@@ -484,8 +512,16 @@ export default function TeamDetailPage() {
                                 </div>
 
                                 {error && (
-                                    <div className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-2 text-sm text-rose-700">
-                                        {error}
+                                    <div className="rounded-xl border border-rose-200 bg-rose-50 p-3 text-sm text-rose-700 space-y-2">
+                                        <p>{error}</p>
+                                        <div className="flex flex-wrap items-center gap-3 text-xs pt-1">
+                                            <Link href="/dashboard/settings/billing" className="font-semibold underline hover:text-rose-900">
+                                                Sprawdź plany i limity
+                                            </Link>
+                                            <Link href="/dashboard" className="text-slate-600 hover:underline">
+                                                Wróć do Dashboardu
+                                            </Link>
+                                        </div>
                                     </div>
                                 )}
                                 <div className="flex justify-end gap-3 mt-4 border-t pt-4">
@@ -780,8 +816,25 @@ export default function TeamDetailPage() {
                                     <p className="text-sm font-medium text-slate-900 truncate">
                                         {item.name || item.fileName}
                                     </p>
-                                    <p className={`text-xs ${
-                                        item.status === 'error' ? 'text-rose-600' : 'text-slate-500'
+                                    {item.topTalents && item.topTalents.length > 0 && (
+                                        <div className="flex flex-wrap gap-1 mt-1">
+                                            {item.topTalents.map((talent, tIdx) => (
+                                                <span
+                                                    key={talent.code || tIdx}
+                                                    className="text-[10px] font-semibold border px-1.5 py-0.5 rounded-md"
+                                                    style={{
+                                                        background: talent.domain ? getDomainStyle(talent.domain, 15) : '#f1f5f9',
+                                                        color: talent.domain ? getDomainStyle(talent.domain) : '#475569',
+                                                        borderColor: talent.domain ? getDomainStyle(talent.domain, 30) : '#cbd5e1',
+                                                    }}
+                                                >
+                                                    {tIdx + 1}. {talent.name}
+                                                </span>
+                                            ))}
+                                        </div>
+                                    )}
+                                    <p className={`text-xs mt-1 ${
+                                        item.status === 'error' ? 'text-rose-600 font-medium' : 'text-slate-500'
                                     }`}>
                                         {item.status === 'success' ? t('importSuccess') :
                                          item.status === 'error' ? (item.error || t('importError')) :
@@ -793,10 +846,37 @@ export default function TeamDetailPage() {
                         ))}
                     </div>
 
-                    <div className="mt-6 flex justify-end">
+                    {pdfImportItems.some(item => item.status === 'error') && (
+                        <div className="mt-4 rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs text-amber-900 space-y-1.5">
+                            <p className="font-semibold">Dlaczego wystąpił błąd?</p>
+                            <p>
+                                Dodanie niektórych osób mogło zostać zablokowane z powodu limitu Twojego obecnego planu (np. limit profili w planie Free) lub problemu z odczytem pliku PDF.
+                            </p>
+                            <div className="pt-1 flex flex-wrap items-center gap-3">
+                                <Link href="/dashboard/settings/billing" className="font-semibold underline hover:text-amber-950">
+                                    Sprawdź plany i limity
+                                </Link>
+                                <Link href="/dashboard" className="text-slate-600 hover:underline">
+                                    Wróć do Dashboardu
+                                </Link>
+                            </div>
+                        </div>
+                    )}
+
+                    <div className="mt-6 flex flex-col sm:flex-row items-center justify-end gap-2">
+                        <Button
+                            variant="outline"
+                            asChild
+                            className="w-full sm:w-auto"
+                        >
+                            <Link href="/dashboard">
+                                Wróć do Dashboardu
+                            </Link>
+                        </Button>
                         <Button
                             onClick={() => setShowPdfImport(false)}
                             disabled={pdfImportItems.some(i => i.status === 'processing' || i.status === 'pending')}
+                            className="w-full sm:w-auto"
                         >
                             {tCommon('close')}
                         </Button>

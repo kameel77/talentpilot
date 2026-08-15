@@ -8,7 +8,7 @@ from sqlalchemy.orm import Session
 
 from auth import check_org_access, get_current_user
 from database import get_db
-from models import Organization, User
+from models import Organization, User, UserRole
 from config import settings
 from schemas import (
     BillingCheckoutCallbackRequest,
@@ -22,10 +22,27 @@ from services.billing.base import BillingEventType
 from services.billing.provider import get_billing_provider
 from services.billing.trial import remaining_trial_days
 from services.billing.webhook_handler import InvalidWebhookSignature, apply_webhook
+from services.plan_limits import check_within_limit
+from fastapi import Query
 
 router = APIRouter()
 
 _BILLING_DISABLED_DETAIL = "Billing is not enabled (BILLING_PROVIDER=disabled)"
+
+
+@router.get("/check-limit")
+def check_limit(
+    resource: str = Query(..., pattern="^(profiles|client_orgs)$"),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Fast pre-check endpoint to verify if caller can add a resource.
+    
+    Returns `{ allowed: bool, resource: str, limit: int | None, current: int, plan: str | None }`
+    """
+    if current_user.role != UserRole.COACH or current_user.organization is None:
+        return {"allowed": True, "resource": resource, "limit": None, "current": 0}
+    return check_within_limit(db, current_user.organization, resource)
 
 
 @router.get("/status", response_model=BillingStatusResponse)

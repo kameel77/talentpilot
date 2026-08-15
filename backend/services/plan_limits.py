@@ -101,6 +101,39 @@ _COUNTERS = {
 }
 
 
+def check_within_limit(db: Session, organization: Organization, resource: str) -> dict:
+    """Check if `organization`'s owning coach is within plan limit for `resource`.
+    
+    Returns a dict with `allowed: bool` and metadata (limit, current, plan, code).
+    Does not raise HTTPException.
+    """
+    if resource not in _COUNTERS:
+        raise ValueError(f"Unknown plan-limited resource: {resource!r}")
+
+    if is_trial_active(organization):
+        return {"allowed": True, "resource": resource, "limit": None, "current": 0}
+
+    limit = PLAN_LIMITS.get(organization.plan, {}).get(resource)
+    if limit is None:
+        return {"allowed": True, "resource": resource, "limit": None, "current": 0}
+
+    coach = _owning_coach(db, organization)
+    if coach is None:
+        return {"allowed": True, "resource": resource, "limit": limit, "current": 0}
+
+    current = _COUNTERS[resource](db, coach)
+    if current >= limit:
+        return {
+            "allowed": False,
+            "code": "plan_limit_exceeded",
+            "resource": resource,
+            "limit": limit,
+            "current": current,
+            "plan": organization.plan.value if organization.plan else "free",
+        }
+    return {"allowed": True, "resource": resource, "limit": limit, "current": current}
+
+
 def assert_within_limit(db: Session, organization: Organization, resource: str) -> None:
     """Raise HTTP 402 if `organization`'s owning coach is already at (or
     over) their plan limit for `resource`.
@@ -117,28 +150,15 @@ def assert_within_limit(db: Session, organization: Organization, resource: str) 
       organization not tied to any coach yet, such as one created via the
       external provisioning API without an associated billing org).
     """
-    if resource not in _COUNTERS:
-        raise ValueError(f"Unknown plan-limited resource: {resource!r}")
-
-    if is_trial_active(organization):
-        return
-
-    limit = PLAN_LIMITS.get(organization.plan, {}).get(resource)
-    if limit is None:
-        return
-
-    coach = _owning_coach(db, organization)
-    if coach is None:
-        return
-
-    current = _COUNTERS[resource](db, coach)
-    if current >= limit:
+    check = check_within_limit(db, organization, resource)
+    if not check["allowed"]:
         raise HTTPException(
             status_code=status.HTTP_402_PAYMENT_REQUIRED,
             detail={
-                "code": "plan_limit_exceeded",
-                "resource": resource,
-                "limit": limit,
-                "current": current,
+                "code": check["code"],
+                "resource": check["resource"],
+                "limit": check["limit"],
+                "current": check["current"],
             },
         )
+

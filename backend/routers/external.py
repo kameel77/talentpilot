@@ -41,7 +41,7 @@ DOMAIN_NAMES_EN = {
 }
 
 DOMAIN_NAMES_PL = {
-    "executing": "Realizowanie",
+    "executing": "Wykonywanie",
     "influencing": "Wywieranie wpływu",
     "relationship_building": "Budowanie relacji",
     "strategic_thinking": "Myślenie strategiczne",

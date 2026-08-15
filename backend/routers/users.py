@@ -274,7 +274,7 @@ def generate_user_manual(
 
     DOMAIN_MAP = {
         "pl": {
-            "executing": "Realizowanie",
+            "executing": "Wykonywanie",
             "influencing": "Wywieranie wpływu",
             "relationship_building": "Budowanie relacji",
             "strategic_thinking": "Myślenie strategiczne",

@@ -1152,6 +1152,39 @@ export const api = {
             return response.data;
         },
 
+        checkLimit: async (resource: 'profiles' | 'client_orgs'): Promise<boolean> => {
+            try {
+                const response = await apiClient.get<{
+                    allowed: boolean;
+                    code?: string;
+                    resource: 'profiles' | 'client_orgs';
+                    limit?: number;
+                    current?: number;
+                    plan?: string;
+                }>(`/api/billing/check-limit?resource=${resource}`);
+                if (!response.data.allowed) {
+                    if (typeof window !== 'undefined') {
+                        window.dispatchEvent(
+                            new CustomEvent(PLAN_LIMIT_EVENT, {
+                                detail: {
+                                    code: 'plan_limit_exceeded',
+                                    resource: response.data.resource || resource,
+                                    limit: response.data.limit ?? 3,
+                                    current: response.data.current ?? 3,
+                                    plan: response.data.plan ?? 'free',
+                                },
+                            })
+                        );
+                    }
+                    return false;
+                }
+                return true;
+            } catch (err) {
+                console.error('Failed to pre-check plan limit:', err);
+                return true;
+            }
+        },
+
         // Dev-only bridge for the fake-checkout stub page
         // (app/dev/checkout/page.tsx) — reports the outcome of a simulated
         // checkout so the backend can emit the matching webhook through the

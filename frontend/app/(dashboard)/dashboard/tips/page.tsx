@@ -23,6 +23,8 @@ import {
     Handshake,
 } from "lucide-react";
 
+import { DOMAIN_LABELS } from "@/lib/gallup-data";
+
 const CONTEXT_ICONS: Record<string, React.FC<{ className?: string }>> = {
     general: Sparkles,
     feedback: MessageCircle,
@@ -32,10 +34,10 @@ const CONTEXT_ICONS: Record<string, React.FC<{ className?: string }>> = {
 };
 
 const DOMAIN_META: Record<string, { label: string; color: string; bg: string }> = {
-    executing: { label: "Realizacja", color: "text-domain-executing", bg: "bg-domain-executing" },
-    influencing: { label: "Wpływanie", color: "text-domain-influencing", bg: "bg-domain-influencing" },
-    relationship_building: { label: "Budowanie relacji", color: "text-domain-relationship", bg: "bg-domain-relationship" },
-    strategic_thinking: { label: "Myślenie strategiczne", color: "text-domain-strategic", bg: "bg-domain-strategic" },
+    executing: { label: DOMAIN_LABELS.executing.pl, color: "text-domain-executing", bg: "bg-domain-executing" },
+    influencing: { label: DOMAIN_LABELS.influencing.pl, color: "text-domain-influencing", bg: "bg-domain-influencing" },
+    relationship_building: { label: DOMAIN_LABELS.relationship_building.pl, color: "text-domain-relationship", bg: "bg-domain-relationship" },
+    strategic_thinking: { label: DOMAIN_LABELS.strategic_thinking.pl, color: "text-domain-strategic", bg: "bg-domain-strategic" },
 };
 
 function getInitials(name: string): string {
