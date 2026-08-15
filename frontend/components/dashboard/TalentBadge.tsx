@@ -1,7 +1,8 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { useTranslations } from "next-intl";
+import { DOMAIN_LABELS, GallupDomain } from "@/lib/gallup-data";
+import { getLocaleFromCookie } from "@/lib/locale";
 
 const domainColors: Record<string, string> = {
     executing: "var(--color-domain-executing)",
@@ -33,17 +34,10 @@ export default function TalentBadge({
     description?: string;
     hideDomainLabel?: boolean;
 }) {
-    const t = useTranslations('dashboard');
+    const locale = getLocaleFromCookie();
     const normalized = normalizeDomain(domain);
     const color = domainColors[normalized] || "var(--color-domain-executing)";
-
-    const domainLabelMap: Record<string, string> = {
-        executing: t('domains.executing'),
-        influencing: t('domains.influencing'),
-        relationship_building: t('domains.relationship_building'),
-        strategic_thinking: t('domains.strategic_thinking'),
-    };
-    const label = domainLabelMap[normalized] || normalized;
+    const label = DOMAIN_LABELS[normalized as GallupDomain]?.[locale] || normalized;
 
     return (
         <motion.div

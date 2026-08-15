@@ -101,64 +101,64 @@ _COUNTERS = {
 }
 
 
-def check_within_limit(db: Session, organization: Organization, resource: str) -> dict:
-    """Check if `organization`'s owning coach is within plan limit for `resource`.
+def check_within_limit(db: Session, organization: Organization, resource: str, count: int = 1) -> dict:
+    """Check if `organization`'s owning coach is within plan limit for `resource` when requesting `count` items.
     
-    Returns a dict with `allowed: bool` and metadata (limit, current, plan, code).
+    Returns a dict with `allowed: bool` and metadata (limit, current, remaining, requested, plan, code).
     Does not raise HTTPException.
     """
     if resource not in _COUNTERS:
         raise ValueError(f"Unknown plan-limited resource: {resource!r}")
 
     if is_trial_active(organization):
-        return {"allowed": True, "resource": resource, "limit": None, "current": 0}
+        return {"allowed": True, "resource": resource, "limit": None, "current": 0, "remaining": None, "requested": count}
 
     limit = PLAN_LIMITS.get(organization.plan, {}).get(resource)
     if limit is None:
-        return {"allowed": True, "resource": resource, "limit": None, "current": 0}
+        return {"allowed": True, "resource": resource, "limit": None, "current": 0, "remaining": None, "requested": count}
 
     coach = _owning_coach(db, organization)
     if coach is None:
-        return {"allowed": True, "resource": resource, "limit": limit, "current": 0}
+        return {"allowed": True, "resource": resource, "limit": limit, "current": 0, "remaining": limit, "requested": count}
 
     current = _COUNTERS[resource](db, coach)
-    if current >= limit:
+    remaining = max(0, limit - current)
+    if current + count > limit:
         return {
             "allowed": False,
             "code": "plan_limit_exceeded",
             "resource": resource,
             "limit": limit,
             "current": current,
+            "remaining": remaining,
+            "requested": count,
             "plan": organization.plan.value if organization.plan else "free",
         }
-    return {"allowed": True, "resource": resource, "limit": limit, "current": current}
+    return {
+        "allowed": True,
+        "resource": resource,
+        "limit": limit,
+        "current": current,
+        "remaining": remaining,
+        "requested": count,
+    }
 
 
-def assert_within_limit(db: Session, organization: Organization, resource: str) -> None:
-    """Raise HTTP 402 if `organization`'s owning coach is already at (or
-    over) their plan limit for `resource`.
+def assert_within_limit(db: Session, organization: Organization, resource: str, count: int = 1) -> None:
+    """Raise HTTP 402 if `organization`'s owning coach exceeds plan limit for `resource` when adding `count` items.
 
     `organization` must be the *billing* organization (the coach's own
     workspace) — never a client organization. Pass `resource` as either
     "client_orgs" or "profiles".
-
-    Never raises when:
-    - the organization is trialing with `trial_ends_at` in the future
-      (`services/billing/trial.py::is_trial_active`),
-    - the plan's limit for `resource` is None (unlimited plan),
-    - no coach owns `organization` (nothing to meter — e.g. an
-      organization not tied to any coach yet, such as one created via the
-      external provisioning API without an associated billing org).
     """
-    check = check_within_limit(db, organization, resource)
+    check = check_within_limit(db, organization, resource, count=count)
     if not check["allowed"]:
         raise HTTPException(
             status_code=status.HTTP_402_PAYMENT_REQUIRED,
             detail={
-                "code": check["code"],
+                "code": "plan_limit_exceeded",
                 "resource": check["resource"],
                 "limit": check["limit"],
                 "current": check["current"],
             },
         )
-

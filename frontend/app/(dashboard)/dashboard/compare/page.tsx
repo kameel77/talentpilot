@@ -19,6 +19,8 @@ import {
     Target,
 } from "lucide-react";
 
+import { DOMAIN_LABELS } from "@/lib/gallup-data";
+
 function getInitials(name: string): string {
     return name.split(" ").map(n => n[0]).join("").toUpperCase().slice(0, 2);
 }
@@ -139,12 +141,13 @@ function UserSelector({
 
 export default function ComparePage() {
     const t = useTranslations('compare');
+    const locale = getLocaleFromCookie();
 
     const DOMAIN_META: Record<string, { label: string; color: string; bg: string; icon: typeof Target }> = {
-        executing: { label: t('domainExecuting'), color: "text-domain-executing", bg: "bg-domain-executing", icon: Target },
-        influencing: { label: t('domainInfluencing'), color: "text-domain-influencing", bg: "bg-domain-influencing", icon: Zap },
-        relationship_building: { label: t('domainRelationship'), color: "text-domain-relationship", bg: "bg-domain-relationship", icon: Heart },
-        strategic_thinking: { label: t('domainStrategic'), color: "text-domain-strategic", bg: "bg-domain-strategic", icon: Lightbulb },
+        executing: { label: DOMAIN_LABELS.executing[locale], color: "text-domain-executing", bg: "bg-domain-executing", icon: Target },
+        influencing: { label: DOMAIN_LABELS.influencing[locale], color: "text-domain-influencing", bg: "bg-domain-influencing", icon: Zap },
+        relationship_building: { label: DOMAIN_LABELS.relationship_building[locale], color: "text-domain-relationship", bg: "bg-domain-relationship", icon: Heart },
+        strategic_thinking: { label: DOMAIN_LABELS.strategic_thinking[locale], color: "text-domain-strategic", bg: "bg-domain-strategic", icon: Lightbulb },
     };
 
     const [users, setUsers] = useState<User[]>([]);

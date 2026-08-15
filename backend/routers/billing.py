@@ -33,16 +33,17 @@ _BILLING_DISABLED_DETAIL = "Billing is not enabled (BILLING_PROVIDER=disabled)"
 @router.get("/check-limit")
 def check_limit(
     resource: str = Query(..., pattern="^(profiles|client_orgs)$"),
+    count: int = Query(1, ge=1),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    """Fast pre-check endpoint to verify if caller can add a resource.
+    """Fast pre-check endpoint to verify if caller can add `count` of a resource.
     
-    Returns `{ allowed: bool, resource: str, limit: int | None, current: int, plan: str | None }`
+    Returns `{ allowed: bool, resource: str, limit: int | None, current: int, remaining: int | None, requested: int, plan: str | None }`
     """
     if current_user.role != UserRole.COACH or current_user.organization is None:
-        return {"allowed": True, "resource": resource, "limit": None, "current": 0}
-    return check_within_limit(db, current_user.organization, resource)
+        return {"allowed": True, "resource": resource, "limit": None, "current": 0, "remaining": None, "requested": count}
+    return check_within_limit(db, current_user.organization, resource, count=count)
 
 
 @router.get("/status", response_model=BillingStatusResponse)

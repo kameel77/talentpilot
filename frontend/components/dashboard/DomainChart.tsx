@@ -8,26 +8,24 @@ import {
     Tooltip,
 } from "recharts";
 import { useTranslations } from "next-intl";
+import { DOMAIN_LABELS, GallupDomain } from "@/lib/gallup-data";
+import { getLocaleFromCookie } from "@/lib/locale";
 
 const DOMAIN_CONFIG = [
     {
-        key: "executing",
-        labelKey: "domains.executing" as const,
+        key: "executing" as GallupDomain,
         color: "var(--color-domain-executing)",
     },
     {
-        key: "influencing",
-        labelKey: "domains.influencing" as const,
+        key: "influencing" as GallupDomain,
         color: "var(--color-domain-influencing)",
     },
     {
-        key: "relationship_building",
-        labelKey: "domains.relationship_building" as const,
+        key: "relationship_building" as GallupDomain,
         color: "var(--color-domain-relationship)",
     },
     {
-        key: "strategic_thinking",
-        labelKey: "domains.strategic_thinking" as const,
+        key: "strategic_thinking" as GallupDomain,
         color: "var(--color-domain-strategic)",
     },
 ];
@@ -37,11 +35,11 @@ export default function DomainChart({
 }: {
     talents: { domain: string }[];
 }) {
-    const t = useTranslations('dashboard');
     const tTeams = useTranslations('teams');
+    const locale = getLocaleFromCookie();
 
     const data = DOMAIN_CONFIG.map((domain) => ({
-        name: t(domain.labelKey),
+        name: DOMAIN_LABELS[domain.key][locale],
         value: talents.filter((talent) =>
             talent.domain
                 ?.toLowerCase()

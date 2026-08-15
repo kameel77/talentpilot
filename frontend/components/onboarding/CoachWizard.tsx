@@ -152,7 +152,7 @@ export default function CoachWizard() {
     const handleBulkPdfSelect = async (files: FileList | File[]) => {
         const fileArray = Array.from(files);
         if (fileArray.length === 0) return;
-        const canAdd = await api.billing.checkLimit('profiles');
+        const canAdd = await api.billing.checkLimit('profiles', fileArray.length);
         if (!canAdd) return;
 
         const initialItems: BulkPdfItem[] = fileArray.map((f) => ({

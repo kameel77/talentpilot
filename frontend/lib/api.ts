@@ -1160,7 +1160,7 @@ export const api = {
             return response.data;
         },
 
-        checkLimit: async (resource: 'profiles' | 'client_orgs'): Promise<boolean> => {
+        checkLimit: async (resource: 'profiles' | 'client_orgs', count: number = 1): Promise<boolean> => {
             try {
                 const response = await apiClient.get<{
                     allowed: boolean;
@@ -1168,8 +1168,10 @@ export const api = {
                     resource: 'profiles' | 'client_orgs';
                     limit?: number;
                     current?: number;
+                    remaining?: number;
+                    requested?: number;
                     plan?: string;
-                }>(`/api/billing/check-limit?resource=${resource}`);
+                }>(`/api/billing/check-limit?resource=${resource}&count=${count}`);
                 if (!response.data.allowed) {
                     if (typeof window !== 'undefined') {
                         window.dispatchEvent(
@@ -1179,6 +1181,8 @@ export const api = {
                                     resource: response.data.resource || resource,
                                     limit: response.data.limit ?? 3,
                                     current: response.data.current ?? 3,
+                                    remaining: response.data.remaining ?? 0,
+                                    requested: response.data.requested ?? count,
                                     plan: response.data.plan ?? 'free',
                                 },
                             })

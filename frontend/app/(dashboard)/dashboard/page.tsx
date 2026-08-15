@@ -16,6 +16,8 @@ import {
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 import { api, tokenManager, DashboardOverview, User } from "@/lib/api";
+import { DOMAIN_LABELS } from "@/lib/gallup-data";
+import { getLocaleFromCookie } from "@/lib/locale";
 import CoachDashboard from "@/components/dashboard/CoachDashboard";
 
 interface DashboardData extends DashboardOverview {
@@ -41,6 +43,7 @@ export default function DashboardPage() {
 function TeamDashboard() {
     const t = useTranslations("dashboard");
     const tCommon = useTranslations("common");
+    const locale = getLocaleFromCookie();
 
     const [data, setData] = useState<DashboardData | null>(null);
     const [loading, setLoading] = useState(true);
@@ -164,10 +167,10 @@ function TeamDashboard() {
                     ) : (
                         <>
                             <div className="space-y-6">
-                                <DomainProgress label={t("domains.executing")} value={domainPercentages.executing} color="bg-domain-executing" />
-                                <DomainProgress label={t("domains.influencing")} value={domainPercentages.influencing} color="bg-domain-influencing" />
-                                <DomainProgress label={t("domains.relationship_building")} value={domainPercentages.relationship_building} color="bg-domain-relationship" />
-                                <DomainProgress label={t("domains.strategic_thinking")} value={domainPercentages.strategic_thinking} color="bg-domain-strategic" />
+                                <DomainProgress label={DOMAIN_LABELS.executing[locale]} value={domainPercentages.executing} color="bg-domain-executing" />
+                                <DomainProgress label={DOMAIN_LABELS.influencing[locale]} value={domainPercentages.influencing} color="bg-domain-influencing" />
+                                <DomainProgress label={DOMAIN_LABELS.relationship_building[locale]} value={domainPercentages.relationship_building} color="bg-domain-relationship" />
+                                <DomainProgress label={DOMAIN_LABELS.strategic_thinking[locale]} value={domainPercentages.strategic_thinking} color="bg-domain-strategic" />
                             </div>
 
                             <div className="mt-8 flex gap-3">

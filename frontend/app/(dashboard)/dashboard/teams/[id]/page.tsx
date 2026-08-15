@@ -314,6 +314,8 @@ export default function TeamDetailPage() {
         const files = Array.from(e.target.files || []);
         e.target.value = '';
         if (files.length === 0) return;
+        const canAdd = await api.billing.checkLimit('profiles', files.length);
+        if (!canAdd) return;
         await handleBatchUpload(files);
     };
 

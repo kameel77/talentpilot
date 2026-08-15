@@ -204,7 +204,8 @@ def create_item(item: ItemCreate, db: Session = Depends(get_db)):
 
 ### Gallup & Domain Rules (Single Source of Truth)
 - **Backend:** Jedyne źródło prawdy dla nazw i tłumaczeń domen to `services.domains` (`DOMAIN_NAMES`, `DOMAIN_NAMES_SHORT`, `DOMAIN_LABELS_BILINGUAL`). Nigdy nie twórz lokalnych słowników domen w routerach ani serwisach.
-- **Frontend:** Jedyne źródło prawdy to `@/lib/gallup-data` (`DOMAIN_LABELS`, `DOMAIN_LABELS_SHORT`, `DOMAIN_OPTIONS`, `DOMAIN_LABEL_MAP`).
+- **Frontend:** Jedyne źródło prawdy to `@/lib/gallup-data` (`DOMAIN_LABELS`, `DOMAIN_LABELS_SHORT`, `DOMAIN_OPTIONS`, `DOMAIN_LABEL_MAP`). Komponenty pobierają nazwy domen **wyłącznie** z `gallup-data.ts`, a nie z plików `messages/*.json`.
+- **Test SSoT:** Plik `backend/tests/test_domain_ssot.py` automatycznie weryfikuje pełną synchronizację domen między backendem a frontendem.
 - **Oficjalne polskie nazwy domen:**
   - `executing` → **Wykonywanie**
   - `influencing` → **Wywieranie wpływu** (skrót: **Wpływ**)
@@ -212,7 +213,8 @@ def create_item(item: ItemCreate, db: Session = Depends(get_db)):
   - `strategic_thinking` → **Myślenie strategiczne** (skrót: **Strategia**)
 - **Billing & Plan Limits:**
   - `POST /api/gallup/parse-pdf` przyjmuje parametr `intent: 'new_profile' | 'existing'`. Guard `assert_within_limit` wykonuje się **tylko** przy `intent="new_profile"` (tworzenie nowej osoby). Aktualizacja istniejącego członka czy własnego profilu używa `intent="existing"` i nie jest blokowana.
-  - `api.billing.checkLimit(resource)` na frontendzie to optymalizacja UX (fail-open przy błędach sieciowych).
+  - `api.billing.checkLimit(resource, count)` oraz `GET /api/billing/check-limit?resource=...&count=...` obsługuje sprawdzanie całych partii (batch import), weryfikując `current + count <= limit` *przed* rozpoczęciem przetwarzania plików.
+  - `api.billing.checkLimit` na frontendzie to optymalizacja UX (fail-open przy błędach sieciowych), podczas gdy backend zawsze transakcyjnie egzekwuje limit.
 
 ## 11) Komunikacja i raportowanie
 Po każdej iteracji agent zwraca:

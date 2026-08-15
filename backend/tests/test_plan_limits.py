@@ -329,3 +329,42 @@ def test_parse_pdf_intent_guard_only_blocks_new_profile(mock_extract, client, db
         headers=headers,
     )
     assert res_default.status_code == 200, res_default.text
+
+
+def test_check_limit_with_batch_count(client, db_session):
+    """Test batch pre-check: a coach with 2/3 profiles can add 1, but not 2 or 5."""
+    headers, coach_id = _register_coach(client, db_session)
+    coach = db_session.query(User).filter(User.id == coach_id).first()
+    org_id = coach.organization_id
+    _end_trial(db_session, coach_id)
+
+    # Add 2 members (current = 2 / 3)
+    for i in range(2):
+        assert _create_ghost(client, headers, org_id, f"Member {i}").status_code == 201
+
+    # count=1 is within remaining limit (2 + 1 = 3 <= 3)
+    res_1 = client.get("/api/billing/check-limit?resource=profiles&count=1", headers=headers)
+    assert res_1.status_code == 200
+    data_1 = res_1.json()
+    assert data_1["allowed"] is True
+    assert data_1["current"] == 2
+    assert data_1["remaining"] == 1
+    assert data_1["requested"] == 1
+
+    # count=2 exceeds limit (2 + 2 = 4 > 3)
+    res_2 = client.get("/api/billing/check-limit?resource=profiles&count=2", headers=headers)
+    assert res_2.status_code == 200
+    data_2 = res_2.json()
+    assert data_2["allowed"] is False
+    assert data_2["code"] == "plan_limit_exceeded"
+    assert data_2["current"] == 2
+    assert data_2["remaining"] == 1
+    assert data_2["requested"] == 2
+
+    # count=5 (uploading 5 PDFs when only 1 spot left) is immediately rejected
+    res_5 = client.get("/api/billing/check-limit?resource=profiles&count=5", headers=headers)
+    assert res_5.status_code == 200
+    data_5 = res_5.json()
+    assert data_5["allowed"] is False
+    assert data_5["remaining"] == 1
+    assert data_5["requested"] == 5
