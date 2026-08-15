@@ -267,7 +267,7 @@ export default function TeamDetailPage() {
         for (let i = 0; i < files.length; i++) {
             setPdfImportItems(prev => prev.map((it, idx) => idx === i ? { ...it, status: 'processing' } : it));
             try {
-                const data = await api.gallup.parsePdf(files[i]);
+                const data = await api.gallup.parsePdf(files[i], locale, 'new_profile');
                 const name = `${data.first_name || ''} ${data.last_name || ''}`.trim() || files[i].name.replace('.pdf', '');
 
                 const rankingsData = data.rankings || {};

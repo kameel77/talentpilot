@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { api, GhostInviteRequest, Talent, Team, tokenManager, Organization } from "@/lib/api";
-import { cn } from "@/lib/utils";
+import { cn, getApiErrorMessage } from "@/lib/utils";
 import { KPICard } from "@/components/ui/KPICard";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -190,6 +190,9 @@ export default function UsersPage() {
         setInviteError("");
         setInviteToken(null);
 
+        const canAdd = await api.billing.checkLimit('profiles');
+        if (!canAdd) return;
+
         if (!inviteData.email || !inviteData.full_name || !inviteData.team_id) {
             setInviteError("Email, name, and team are required.");
             return;
@@ -225,11 +228,24 @@ export default function UsersPage() {
             const response = await api.invitations.createGhostInvite(payload);
             setInviteToken(response.invite_token);
             await loadUsers();
-        } catch {
-            setInviteError("Failed to create invite. Please try again.");
+        } catch (err: unknown) {
+            const msg = getApiErrorMessage(err, "Failed to create invite. Please try again.");
+            setInviteError(msg);
         } finally {
             setInviteLoading(false);
         }
+    };
+
+    const handleOpenInvite = async () => {
+        const canAdd = await api.billing.checkLimit('profiles');
+        if (!canAdd) return;
+
+        if (currentUser?.role === "admin" && activeOrg?.is_workspace) {
+            setPendingAction("invite");
+            setUpgradeModalOpen(true);
+            return;
+        }
+        setInviteOpen(true);
     };
 
     const inviteLink = inviteToken && typeof window !== "undefined"
@@ -274,14 +290,7 @@ export default function UsersPage() {
                     </Button>
 
                     <Button
-                        onClick={() => {
-                            if (currentUser?.role === "admin" && activeOrg?.is_workspace) {
-                                setPendingAction("invite");
-                                setUpgradeModalOpen(true);
-                                return;
-                            }
-                            setInviteOpen(true);
-                        }}
+                        onClick={handleOpenInvite}
                         className="inline-flex items-center gap-2 rounded-xl bg-primary px-5 py-2.5 text-sm font-semibold text-white hover:bg-blue-700 transition-all shadow-sm hover:shadow-md active:scale-95"
                     >
                         <UserPlus className="h-4 w-4" />
@@ -534,7 +543,7 @@ export default function UsersPage() {
                     </p>
                     <button
                         className="mt-6 inline-flex items-center gap-2 rounded-xl bg-primary px-6 py-3 text-sm font-semibold text-white hover:bg-blue-700 transition-all shadow-sm hover:shadow-md"
-                        onClick={() => setInviteOpen(true)}
+                        onClick={handleOpenInvite}
                     >
                         <UserPlus className="h-4 w-4" />
                         {t('addUser')}

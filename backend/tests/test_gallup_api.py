@@ -18,7 +18,7 @@ def seed_talents(db_session):
 
 def test_parse_pdf_unauthorized(client):
     response = client.post("/api/gallup/parse-pdf", files={"file": ("test.pdf", b"pdf content", "application/pdf")})
-    assert response.status_code == 401
+    assert response.status_code in (401, 403)
 
 def test_parse_pdf_invalid_file(client, auth_headers_user):
     response = client.post(

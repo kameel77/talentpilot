@@ -11,6 +11,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { TagInput } from "@/components/knowledge/TagInput";
+import { DOMAIN_OPTIONS, DOMAIN_LABEL_MAP } from "@/lib/gallup-data";
 
 interface KnowledgeEntryManagerProps {
     section: "faq" | "merytoryka" | "instructions";
@@ -19,14 +20,6 @@ interface KnowledgeEntryManagerProps {
 }
 
 // --- Constants ---
-
-const DOMAIN_OPTIONS = [
-    { value: "", label: "— brak —" },
-    { value: "executing", label: "Wykonywanie (Executing)" },
-    { value: "influencing", label: "Wywieranie wpływu (Influencing)" },
-    { value: "relationship_building", label: "Budowanie relacji (Relationship Building)" },
-    { value: "strategic_thinking", label: "Myślenie strategiczne (Strategic Thinking)" },
-] as const;
 
 const CONTENT_TYPE_OPTIONS = [
     { value: "", label: "— brak —" },
@@ -51,13 +44,6 @@ const LANGUAGE_OPTIONS = [
     { value: "es", label: "🇪🇸 ES" },
     { value: "fr", label: "🇫🇷 FR" },
 ] as const;
-
-const DOMAIN_LABEL_MAP: Record<string, string> = {
-    executing: "Wykonywanie",
-    influencing: "Wpływ",
-    relationship_building: "Relacje",
-    strategic_thinking: "Strategia",
-};
 
 const CONTENT_TYPE_LABEL_MAP: Record<string, string> = {
     profile: "Profil",

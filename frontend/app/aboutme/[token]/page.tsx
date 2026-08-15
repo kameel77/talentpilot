@@ -20,7 +20,7 @@ import {
   BadgeCheck,
 } from "lucide-react";
 import { cn, isPlaceholderEmail } from "@/lib/utils";
-import { GALLUP_TALENTS, DOMAIN_CSS_KEY, GallupDomain } from "@/lib/gallup-data";
+import { GALLUP_TALENTS, DOMAIN_CSS_KEY, GallupDomain, DOMAIN_LABELS_SHORT as DOMAIN_LABEL } from "@/lib/gallup-data";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
@@ -52,13 +52,6 @@ interface PublicProfile {
   gallup_certified: boolean;
   gallup_profile_url: string | null;
 }
-
-const DOMAIN_LABEL: Record<string, { pl: string; en: string }> = {
-  executing:             { pl: "Wykonywanie", en: "Executing" },
-  influencing:           { pl: "Wpływ", en: "Influencing" },
-  relationship_building: { pl: "Relacje", en: "Relationship Building" },
-  strategic_thinking:    { pl: "Strategia", en: "Strategic Thinking" },
-};
 
 const T = {
   pl: {
@@ -356,7 +349,7 @@ export default function WizytowkaPage() {
                           style={{ backgroundColor: `var(--color-domain-${cssKey})` }}
                         />
                         <span className="text-xs text-slate-500 truncate">
-                          {DOMAIN_LABEL[domain]?.[lang] ?? domain}
+                          {DOMAIN_LABEL[domain as GallupDomain]?.[lang] ?? domain}
                           <span className="font-semibold text-slate-700 ml-1">×{count}</span>
                         </span>
                       </div>

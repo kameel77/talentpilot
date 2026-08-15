@@ -26,6 +26,8 @@ from models import (
 
 router = APIRouter()
 
+from services.domains import DOMAIN_NAMES
+
 DOMAIN_NUMBERS = {
     "executing": 1,
     "influencing": 2,
@@ -33,19 +35,8 @@ DOMAIN_NUMBERS = {
     "strategic_thinking": 4,
 }
 
-DOMAIN_NAMES_EN = {
-    "executing": "Executing",
-    "influencing": "Influencing",
-    "relationship_building": "Relationship Building",
-    "strategic_thinking": "Strategic Thinking",
-}
-
-DOMAIN_NAMES_PL = {
-    "executing": "Wykonywanie",
-    "influencing": "Wywieranie wpływu",
-    "relationship_building": "Budowanie relacji",
-    "strategic_thinking": "Myślenie strategiczne",
-}
+DOMAIN_NAMES_EN = DOMAIN_NAMES["en"]
+DOMAIN_NAMES_PL = DOMAIN_NAMES["pl"]
 
 
 @router.post(

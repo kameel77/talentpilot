@@ -272,23 +272,9 @@ def generate_user_manual(
     top5 = [t for t in talents if t["rank"] <= 5]
     talent_list = ", ".join(f"{t['name']} (#{t['rank']})" for t in top5)
 
-    DOMAIN_MAP = {
-        "pl": {
-            "executing": "Wykonywanie",
-            "influencing": "Wywieranie wpływu",
-            "relationship_building": "Budowanie relacji",
-            "strategic_thinking": "Myślenie strategiczne",
-        },
-        "en": {
-            "executing": "Executing",
-            "influencing": "Influencing",
-            "relationship_building": "Relationship Building",
-            "strategic_thinking": "Strategic Thinking",
-        }
-    }
-    
+    from services.domains import DOMAIN_NAMES
     lang_key = "en" if language == "en" else "pl"
-    domain_map = DOMAIN_MAP[lang_key]
+    domain_map = DOMAIN_NAMES.get(lang_key, DOMAIN_NAMES["pl"])
     domain_summary = {}
     for t in talents[:15]:
         d = domain_map.get(t["domain"], t["domain"])

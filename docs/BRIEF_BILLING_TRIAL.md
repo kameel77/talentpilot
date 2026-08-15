@@ -149,11 +149,12 @@ PLAN_LIMITS = {
 }
 ```
 
-Egzekwowane w miejscach zapisu: `POST /api/organizations`, `POST /api/invitations/ghost` (obsługuje też import masowy — woła ghost invite per osoba), ścieżka `external`, a także pre-check w `POST /api/gallup/parse-pdf` (blokuje kosztowne parsowanie PDF jeśli coach osiągnął już limit profili).
+Egzekwowane w miejscach zapisu: `POST /api/organizations`, `POST /api/invitations/ghost` (obsługuje też import masowy — woła ghost invite per osoba), ścieżka `external`, a także pre-check w `POST /api/gallup/parse-pdf` (blokuje kosztowne parsowanie PDF wyłącznie dla intencji `intent=new_profile`, tj. tworzenia nowej osoby; aktualizacja raportu istniejącego członka czy własnego profilu używa domyślnego `intent=existing` i nie jest blokowana).
 
 **Pre-check i oszczędność transferu:**
 - Dedykowany lekki endpoint `GET /api/billing/check-limit?resource=profiles|client_orgs` pozwala na natychmiastową weryfikację uprawnień.
 - Frontend wywołuje `api.billing.checkLimit(...)` *przed* otwarciem okna wyboru plików PDF oraz *przed* otwarciem modalu dodawania nowej osoby/organizacji.
+- **Fail-open jako optymalizacja UX:** `api.billing.checkLimit` w razie błędu sieciowego świadomie zwraca `true` (fail-open) — jest optymalizacją UX oszczędzającą upload/czas użytkownika, a nie barierą bezpieczeństwa (twardy backendowy guard w transakcji bazy danych i tak bezwzględnie zablokuje nieuprawniony zapis kodem 402).
 - Jeśli limit jest wyczerpany, użytkownik natychmiast widzi modal informacyjny z propozycjami akcji i przyciskiem powrotu do Dashboardu, bez marnowania czasu na upload i parsowanie PDF.
 
 **Czego nie limitować: odczytu.** Coach po downgrade widzi wszystkich dotychczasowych klientów i wszystkie dane. Blokujemy wyłącznie *dodawanie ponad limit*. Odcięcie danych w środku współpracy z klientem kosztuje reputację w małej, gęstej społeczności — a to jedyny kanał dystrybucji z §6 strategii.

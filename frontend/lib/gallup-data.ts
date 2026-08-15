@@ -58,6 +58,28 @@ export const DOMAIN_LABELS: Record<GallupDomain, { en: string; pl: string }> = {
     strategic_thinking: { en: 'Strategic Thinking', pl: 'Myślenie strategiczne' },
 };
 
+export const DOMAIN_LABELS_SHORT: Record<GallupDomain, { en: string; pl: string }> = {
+    executing: { en: 'Executing', pl: 'Wykonywanie' },
+    influencing: { en: 'Influence', pl: 'Wpływ' },
+    relationship_building: { en: 'Relationships', pl: 'Relacje' },
+    strategic_thinking: { en: 'Strategy', pl: 'Strategia' },
+};
+
+export const DOMAIN_OPTIONS = [
+    { value: '', label: '— brak —' },
+    { value: 'executing', label: 'Wykonywanie (Executing)' },
+    { value: 'influencing', label: 'Wywieranie wpływu (Influencing)' },
+    { value: 'relationship_building', label: 'Budowanie relacji (Relationship Building)' },
+    { value: 'strategic_thinking', label: 'Myślenie strategiczne (Strategic Thinking)' },
+] as const;
+
+export const DOMAIN_LABEL_MAP: Record<string, string> = {
+    executing: DOMAIN_LABELS_SHORT.executing.pl,
+    influencing: DOMAIN_LABELS_SHORT.influencing.pl,
+    relationship_building: DOMAIN_LABELS_SHORT.relationship_building.pl,
+    strategic_thinking: DOMAIN_LABELS_SHORT.strategic_thinking.pl,
+};
+
 export const GALLUP_TALENTS: GallupTalent[] = [
     // Executing
         { code: 'achiever', en: 'Achiever', pl: 'Osiąganie', en_desc: 'Great stamina for hard work', pl_desc: 'Wielka wytrzymałość w ciężkiej pracy', domain: 'executing' },

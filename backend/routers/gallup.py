@@ -23,12 +23,16 @@ router = APIRouter()
 def parse_gallup_pdf(
     file: UploadFile = File(...),
     language: str = "pl",
+    intent: str = Query("existing", pattern="^(new_profile|existing)$"),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ) -> GallupPdfParseResponse:
-    """Parse Gallup PDF and return rankings with detected page index and translations."""
-    # Pre-check: if a coach has reached their profile limit, abort before expensive PDF parsing
-    if current_user.role == UserRole.COACH and current_user.organization is not None:
+    """Parse Gallup PDF and return rankings with detected page index and translations.
+    
+    `intent="new_profile"` checks the coach's plan profile limit upfront.
+    `intent="existing"` (default) allows updating existing members or personal profile without limit errors.
+    """
+    if intent == "new_profile" and current_user.role == UserRole.COACH and current_user.organization is not None:
         assert_within_limit(db, current_user.organization, "profiles")
 
     if not file.filename or not file.filename.lower().endswith(".pdf"):

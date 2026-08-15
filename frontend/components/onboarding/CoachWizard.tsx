@@ -124,10 +124,12 @@ export default function CoachWizard() {
 
     // Instant PDF parser for single file
     const handlePdfSelect = async (file: File) => {
+        const canAdd = await api.billing.checkLimit('profiles');
+        if (!canAdd) return;
         setParsingPdf(true);
         setError("");
         try {
-            const parsed = await api.gallup.parsePdf(file);
+            const parsed = await api.gallup.parsePdf(file, 'pl', 'new_profile');
             const detectedName = `${parsed.first_name || ""} ${parsed.last_name || ""}`.trim() || file.name.replace(/\.pdf$/i, "");
             setPersonName(detectedName);
             setParsedRankings(parsed.rankings || null);
@@ -150,6 +152,8 @@ export default function CoachWizard() {
     const handleBulkPdfSelect = async (files: FileList | File[]) => {
         const fileArray = Array.from(files);
         if (fileArray.length === 0) return;
+        const canAdd = await api.billing.checkLimit('profiles');
+        if (!canAdd) return;
 
         const initialItems: BulkPdfItem[] = fileArray.map((f) => ({
             file: f,
@@ -161,7 +165,7 @@ export default function CoachWizard() {
         for (let i = 0; i < fileArray.length; i++) {
             const file = fileArray[i];
             try {
-                const parsed = await api.gallup.parsePdf(file);
+                const parsed = await api.gallup.parsePdf(file, 'pl', 'new_profile');
                 const detectedName = `${parsed.first_name || ""} ${parsed.last_name || ""}`.trim() || file.name.replace(/\.pdf$/i, "");
                 const sorted = Object.entries(parsed.rankings || {})
                     .sort((a, b) => (a[1] as number) - (b[1] as number))
@@ -199,6 +203,8 @@ export default function CoachWizard() {
 
     const submitPerson = async (targetTeamId: number | null) => {
         if (!me) return;
+        const canAdd = await api.billing.checkLimit('profiles');
+        if (!canAdd) return;
         setBusy(true);
         setError("");
         try {
@@ -245,6 +251,8 @@ export default function CoachWizard() {
 
     const submitBulkPeople = async () => {
         if (!me || !teamId) return;
+        const canAdd = await api.billing.checkLimit('profiles');
+        if (!canAdd) return;
         setBusy(true);
         setError("");
         try {
@@ -274,6 +282,8 @@ export default function CoachWizard() {
     };
 
     const submitOrg = async () => {
+        const canAdd = await api.billing.checkLimit('client_orgs');
+        if (!canAdd) return;
         setBusy(true);
         setError("");
         try {

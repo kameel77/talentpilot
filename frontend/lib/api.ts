@@ -891,13 +891,21 @@ export const api = {
 
     // Gallup
     gallup: {
-        parsePdf: async (file: File, language: string = 'pl') => {
+        parsePdf: async (
+            file: File,
+            language: string = 'pl',
+            intent: 'new_profile' | 'existing' = 'existing'
+        ) => {
             const formData = new FormData();
             formData.append('file', file);
             formData.append('language', language);
-            const response = await apiClient.post('/api/gallup/parse-pdf', formData, {
-                headers: { 'Content-Type': 'multipart/form-data' },
-            });
+            const response = await apiClient.post(
+                `/api/gallup/parse-pdf?language=${encodeURIComponent(language)}&intent=${encodeURIComponent(intent)}`,
+                formData,
+                {
+                    headers: { 'Content-Type': 'multipart/form-data' },
+                }
+            );
             return response.data;
         },
 

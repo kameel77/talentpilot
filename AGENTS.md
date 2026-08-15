@@ -202,6 +202,18 @@ def create_item(item: ItemCreate, db: Session = Depends(get_db)):
 - **Constants:** UPPER_SNAKE_CASE (e.g., `DATABASE_URL`)
 - **Files:** snake_case (e.g., `user_service.py`)
 
+### Gallup & Domain Rules (Single Source of Truth)
+- **Backend:** Jedyne źródło prawdy dla nazw i tłumaczeń domen to `services.domains` (`DOMAIN_NAMES`, `DOMAIN_NAMES_SHORT`, `DOMAIN_LABELS_BILINGUAL`). Nigdy nie twórz lokalnych słowników domen w routerach ani serwisach.
+- **Frontend:** Jedyne źródło prawdy to `@/lib/gallup-data` (`DOMAIN_LABELS`, `DOMAIN_LABELS_SHORT`, `DOMAIN_OPTIONS`, `DOMAIN_LABEL_MAP`).
+- **Oficjalne polskie nazwy domen:**
+  - `executing` → **Wykonywanie**
+  - `influencing` → **Wywieranie wpływu** (skrót: **Wpływ**)
+  - `relationship_building` → **Budowanie relacji** (skrót: **Relacje**)
+  - `strategic_thinking` → **Myślenie strategiczne** (skrót: **Strategia**)
+- **Billing & Plan Limits:**
+  - `POST /api/gallup/parse-pdf` przyjmuje parametr `intent: 'new_profile' | 'existing'`. Guard `assert_within_limit` wykonuje się **tylko** przy `intent="new_profile"` (tworzenie nowej osoby). Aktualizacja istniejącego członka czy własnego profilu używa `intent="existing"` i nie jest blokowana.
+  - `api.billing.checkLimit(resource)` na frontendzie to optymalizacja UX (fail-open przy błędach sieciowych).
+
 ## 11) Komunikacja i raportowanie
 Po każdej iteracji agent zwraca:
 - Co zrobił (2–6 punktów)

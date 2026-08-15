@@ -186,12 +186,7 @@ def retrieve_knowledge_with_reranking(
     return [item for _, item in scored[:top_k]]
 
 
-DOMAIN_LABELS = {
-    "executing": "Wykonywanie (Executing)",
-    "influencing": "Wywieranie wpływu (Influencing)",
-    "relationship_building": "Budowanie relacji (Relationship Building)",
-    "strategic_thinking": "Myślenie strategiczne (Strategic Thinking)",
-}
+from services.domains import DOMAIN_LABELS_BILINGUAL as DOMAIN_LABELS
 
 
 def retrieve_instruction(db: Session, intent: str, language: str) -> tuple[str | None, str]:

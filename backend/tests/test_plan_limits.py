@@ -246,3 +246,86 @@ def test_admin_override_requires_admin_role(client, db_session):
         headers=headers,
     )
     assert response.status_code == 403
+
+
+# ---------------------------------------------------------------------------
+# GET /api/billing/check-limit & parse-pdf intent guard
+# ---------------------------------------------------------------------------
+
+def test_check_limit_endpoint_profiles_and_client_orgs(client, db_session):
+    headers, coach_id = _register_coach(client, db_session)
+    coach = db_session.query(User).filter(User.id == coach_id).first()
+    org_id = coach.organization_id
+    _end_trial(db_session, coach_id)
+
+    # Free coach starts with 0 profiles (the coach themselves does not count against the 3 ghost profiles limit)
+    res = client.get("/api/billing/check-limit?resource=profiles", headers=headers)
+    assert res.status_code == 200, res.text
+    data = res.json()
+    assert data["allowed"] is True
+    assert data["resource"] == "profiles"
+    assert data["limit"] == 3
+    assert data["current"] == 0
+
+    # Add 3 members to reach the limit
+    for i in range(3):
+        assert _create_ghost(client, headers, org_id, f"Member {i}").status_code == 201
+
+    # Now profiles limit is reached
+    res = client.get("/api/billing/check-limit?resource=profiles", headers=headers)
+    assert res.status_code == 200, res.text
+    data = res.json()
+    assert data["allowed"] is False
+    assert data["code"] == "plan_limit_exceeded"
+    assert data["current"] == 3
+
+    # Client orgs is 0 on Free plan
+    res = client.get("/api/billing/check-limit?resource=client_orgs", headers=headers)
+    assert res.status_code == 200, res.text
+    data = res.json()
+    assert data["allowed"] is False
+    assert data["limit"] == 0
+
+
+from unittest.mock import patch
+from services.gallup_pdf_parser import GallupPersonInfo
+
+@patch("routers.gallup.extract_gallup_rankings")
+def test_parse_pdf_intent_guard_only_blocks_new_profile(mock_extract, client, db_session):
+    mock_extract.return_value = ({"achiever": 1}, 5, GallupPersonInfo())
+    headers, coach_id = _register_coach(client, db_session)
+    coach = db_session.query(User).filter(User.id == coach_id).first()
+    org_id = coach.organization_id
+    _end_trial(db_session, coach_id)
+
+    # Fill 3 profiles to hit limit
+    for i in range(3):
+        assert _create_ghost(client, headers, org_id, f"Member {i}").status_code == 201
+
+    pdf_content = b"%PDF-1.4 test content"
+
+    # intent=new_profile should be blocked with 402
+    res_new = client.post(
+        "/api/gallup/parse-pdf?intent=new_profile",
+        files={"file": ("test.pdf", pdf_content, "application/pdf")},
+        headers=headers,
+    )
+    assert res_new.status_code == 402, res_new.text
+    assert res_new.json()["detail"]["code"] == "plan_limit_exceeded"
+
+    # intent=existing (updating existing member / own talents) must be allowed
+    res_existing = client.post(
+        "/api/gallup/parse-pdf?intent=existing",
+        files={"file": ("test.pdf", pdf_content, "application/pdf")},
+        headers=headers,
+    )
+    assert res_existing.status_code == 200, res_existing.text
+    assert res_existing.json()["rankings"]["achiever"] == 1
+
+    # Default (no query param) defaults to existing -> allowed
+    res_default = client.post(
+        "/api/gallup/parse-pdf",
+        files={"file": ("test.pdf", pdf_content, "application/pdf")},
+        headers=headers,
+    )
+    assert res_default.status_code == 200, res_default.text
