@@ -57,17 +57,17 @@ export default function MatrixDashboard({ members, canSeeRisks = false, talents 
         y: number;
     } | null>(null);
 
-    const membersWithResults = members.filter(m => m.results.length > 0);
+    const membersWithResults = (members || []).filter(m => (m?.results ?? []).length > 0);
 
     const matrixQ = matrixSearch.trim().toLowerCase();
     const filteredMembersForMatrix = matrixQ
-        ? membersWithResults.filter(m => m.name.toLowerCase().includes(matrixQ))
+        ? membersWithResults.filter(m => (m?.name ?? '').toLowerCase().includes(matrixQ))
         : membersWithResults;
 
     const talentCodes = GALLUP_TALENTS.map(t => t.code);
     const membersRankMaps = membersWithResults.map(m => {
         const map: Record<string, number> = {};
-        m.results.forEach(r => { map[r.talent] = r.rank; });
+        (m?.results ?? []).forEach(r => { if (r?.talent) map[r.talent] = r.rank; });
         return map;
     });
 

@@ -40,8 +40,9 @@ const DOMAIN_META: Record<string, { label: string; color: string; bg: string }> 
     strategic_thinking: { label: DOMAIN_LABELS.strategic_thinking.pl, color: "text-domain-strategic", bg: "bg-domain-strategic" },
 };
 
-function getInitials(name: string): string {
-    return name.split(" ").map(n => n[0]).join("").toUpperCase().slice(0, 2);
+function getInitials(name?: string | null): string {
+    if (!name) return "—";
+    return name.split(" ").map(n => n[0]).filter(Boolean).join("").toUpperCase().slice(0, 2) || "—";
 }
 
 function FeedbackButtons({

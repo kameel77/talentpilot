@@ -348,9 +348,9 @@ export default function TeamDetailPage() {
         setSelectedTalents(newTalents);
     };
 
-    const filteredMembers = members.filter(m =>
-        m.name.toLowerCase().includes(membersSearch.toLowerCase()) ||
-        (m.role || '').toLowerCase().includes(membersSearch.toLowerCase())
+    const filteredMembers = (members || []).filter(m =>
+        (m?.name || '').toLowerCase().includes(membersSearch.toLowerCase()) ||
+        (m?.role || '').toLowerCase().includes(membersSearch.toLowerCase())
     );
 
     const getStatusBadge = (member: TeamMember) => {

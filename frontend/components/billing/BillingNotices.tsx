@@ -113,8 +113,8 @@ export function BillingNotices() {
                     cta="Wybierz plan"
                     onClose={() => setDismissed(true)}
                 >
-                    Okres testowy kończy się za {status!.trial_days_left}{" "}
-                    {status!.trial_days_left === 1 ? "dzień" : "dni"}.
+                    Okres testowy kończy się za {status?.trial_days_left ?? 0}{" "}
+                    {(status?.trial_days_left ?? 0) === 1 ? "dzień" : "dni"}.
                 </Banner>
             )}
 
@@ -138,11 +138,15 @@ export function BillingNotices() {
                                 <AlertTriangle className="w-5 h-5" />
                             </div>
                             <DialogTitle className="text-left text-lg font-semibold text-slate-900">
-                                {limit ? LIMIT_COPY[limit.resource]?.title : "Osiągnięto limit planu"}
+                                {limit && limit.resource && LIMIT_COPY[limit.resource]
+                                    ? LIMIT_COPY[limit.resource].title
+                                    : "Osiągnięto limit planu"}
                             </DialogTitle>
                         </div>
                         <DialogDescription className="text-left text-slate-600 pt-2">
-                            {limit ? LIMIT_COPY[limit.resource]?.body : "Ta operacja nie może być zrealizowana ze względu na ograniczenia Twojego obecnego planu."}
+                            {limit && limit.resource && LIMIT_COPY[limit.resource]
+                                ? LIMIT_COPY[limit.resource].body
+                                : "Ta operacja nie może być zrealizowana ze względu na ograniczenia Twojego obecnego planu."}
                         </DialogDescription>
                     </DialogHeader>
 

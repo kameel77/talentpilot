@@ -46,8 +46,9 @@ export default function MemberProfileCards({ members, topN }: MemberProfileCards
                     const d = r.domain as GallupDomain;
                     if (domainProfile[d] !== undefined) domainProfile[d]++;
                 });
-                const topDomain = (Object.entries(domainProfile) as [GallupDomain, number][])
-                    .sort((a, b) => b[1] - a[1])[0];
+                const sortedDomains = (Object.entries(domainProfile) as [GallupDomain, number][])
+                    .sort((a, b) => b[1] - a[1]);
+                const topDomainKey: GallupDomain = sortedDomains[0]?.[0] || 'executing';
 
                 const rankMap: Record<string, number> = {};
                 member.results.forEach(r => { rankMap[r.talent] = r.rank; });
@@ -57,24 +58,24 @@ export default function MemberProfileCards({ members, topN }: MemberProfileCards
                     <div key={member.id} className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6">
                         <div className="flex items-start justify-between mb-4">
                             <div>
-                                <h3 className="text-sm font-semibold text-slate-900">{member.name}</h3>
+                                <h3 className="text-sm font-semibold text-slate-900">{member.name || '—'}</h3>
                                 {member.role && <p className="text-xs text-slate-500">{member.role}</p>}
                             </div>
                             <div className="relative inline-flex">
                                 <span
                                     className="px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wide"
                                     style={{
-                                        background: getDomainStyle(topDomain[0], 15),
-                                        color: getDomainStyle(topDomain[0]),
+                                        background: getDomainStyle(topDomainKey, 15),
+                                        color: getDomainStyle(topDomainKey),
                                     }}
                                 >
-                                    {locale === 'en' ? DOMAIN_LABELS[topDomain[0]]?.en : DOMAIN_LABELS[topDomain[0]]?.pl}
+                                    {locale === 'en' ? DOMAIN_LABELS[topDomainKey]?.en : DOMAIN_LABELS[topDomainKey]?.pl}
                                 </span>
                                 {specialist.isSpecialist && (
                                     <span
                                         className="absolute -top-2 -right-2 cursor-help"
                                         title={t('specialistTooltip')}
-                                        style={{ color: getDomainStyle(topDomain[0]) }}
+                                        style={{ color: getDomainStyle(topDomainKey) }}
                                     >
                                         <Star className="w-3.5 h-3.5" fill="currentColor" />
                                     </span>

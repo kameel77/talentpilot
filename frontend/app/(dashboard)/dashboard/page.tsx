@@ -308,13 +308,15 @@ function MemberCard({ id, name, role, email, initials, activeLabel, viewProfileL
     );
 }
 
-function getInitials(name: string): string {
+function getInitials(name?: string | null): string {
+    if (!name) return "—";
     return name
         .split(" ")
         .map((n) => n[0])
+        .filter(Boolean)
         .join("")
         .toUpperCase()
-        .slice(0, 2);
+        .slice(0, 2) || "—";
 }
 
 function roleLabel(role: string, t: (key: string) => string): string {

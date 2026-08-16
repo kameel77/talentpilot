@@ -21,8 +21,9 @@ import {
 
 import { DOMAIN_LABELS } from "@/lib/gallup-data";
 
-function getInitials(name: string): string {
-    return name.split(" ").map(n => n[0]).join("").toUpperCase().slice(0, 2);
+function getInitials(name?: string | null): string {
+    if (!name) return "—";
+    return name.split(" ").map(n => n[0]).filter(Boolean).join("").toUpperCase().slice(0, 2) || "—";
 }
 
 function SynergyGauge({ score, highLabel, mediumLabel, lowLabel }: { score: number; highLabel: string; mediumLabel: string; lowLabel: string }) {
