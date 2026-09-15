@@ -47,8 +47,9 @@ export default function PresentationLinkModal({
     const [copied, setCopied] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
-    // Toggle anonymized for creating new link when empty
+    // Toggle anonymized & show_risks for creating new link when empty
     const [emptyAnonymized, setEmptyAnonymized] = useState(false);
+    const [emptyShowRisks, setEmptyShowRisks] = useState(false);
 
     // Confirmation dialogs
     const [confirmRotate, setConfirmRotate] = useState(false);
@@ -58,8 +59,14 @@ export default function PresentationLinkModal({
         try {
             setLoading(true);
             setError(null);
-            const res = await api.teams.getPresentationLink(teamId);
-            setLinkData(res);
+            const data = await api.teams.getPresentationLink(teamId);
+            setLinkData(data);
+            if (data.anonymized !== null && data.anonymized !== undefined) {
+                setEmptyAnonymized(data.anonymized);
+            }
+            if (data.show_risks !== null && data.show_risks !== undefined) {
+                setEmptyShowRisks(data.show_risks);
+            }
         } catch (err) {
             console.error("Failed to load presentation link", err);
             setError(t('loadPresentationError'));
@@ -71,17 +78,15 @@ export default function PresentationLinkModal({
     useEffect(() => {
         if (isOpen) {
             loadLink();
-            setCopied(false);
             setConfirmRotate(false);
             setConfirmRevoke(false);
+            setCopied(false);
         }
     }, [isOpen, loadLink]);
 
     const getFullUrl = (token: string) => {
-        if (typeof window !== 'undefined') {
-            return `${window.location.origin}/presentation/${token}`;
-        }
-        return linkData?.url || `/presentation/${token}`;
+        if (typeof window === 'undefined') return `/presentation/${token}`;
+        return `${window.location.origin}/presentation/${token}`;
     };
 
     const handleCopy = async () => {
@@ -99,7 +104,10 @@ export default function PresentationLinkModal({
         try {
             setActionLoading(true);
             setError(null);
-            const res = await api.teams.createPresentationLink(teamId, emptyAnonymized);
+            const res = await api.teams.createPresentationLink(teamId, {
+                anonymized: emptyAnonymized,
+                show_risks: emptyShowRisks,
+            });
             setLinkData(res);
         } catch (err) {
             console.error("Failed to create presentation link", err);
@@ -114,10 +122,25 @@ export default function PresentationLinkModal({
         try {
             setActionLoading(true);
             setError(null);
-            const res = await api.teams.updatePresentationLink(teamId, checked);
+            const res = await api.teams.updatePresentationLink(teamId, { anonymized: checked });
             setLinkData(res);
         } catch (err) {
             console.error("Failed to update anonymization", err);
+            setError(t('updatePresentationError'));
+        } finally {
+            setActionLoading(false);
+        }
+    };
+
+    const handleToggleShowRisks = async (checked: boolean) => {
+        if (!linkData?.token) return;
+        try {
+            setActionLoading(true);
+            setError(null);
+            const res = await api.teams.updatePresentationLink(teamId, { show_risks: checked });
+            setLinkData(res);
+        } catch (err) {
+            console.error("Failed to update risk analysis visibility", err);
             setError(t('updatePresentationError'));
         } finally {
             setActionLoading(false);
@@ -129,7 +152,11 @@ export default function PresentationLinkModal({
             setActionLoading(true);
             setError(null);
             const currentAnonymized = linkData?.anonymized ?? false;
-            const res = await api.teams.createPresentationLink(teamId, currentAnonymized);
+            const currentShowRisks = linkData?.show_risks ?? false;
+            const res = await api.teams.createPresentationLink(teamId, {
+                anonymized: currentAnonymized,
+                show_risks: currentShowRisks,
+            });
             setLinkData(res);
             setConfirmRotate(false);
             setCopied(false);
@@ -150,6 +177,7 @@ export default function PresentationLinkModal({
                 token: null,
                 url: null,
                 anonymized: null,
+                show_risks: null,
                 created_at: null,
             });
             setConfirmRevoke(false);
@@ -273,6 +301,27 @@ export default function PresentationLinkModal({
                             />
                         </div>
 
+                        {/* Toggle Risk Analysis (PATCH) */}
+                        <div className="flex items-center justify-between rounded-xl border border-slate-200 bg-slate-50/70 p-4">
+                            <div className="space-y-0.5 pr-4">
+                                <label
+                                    htmlFor="show-risks-toggle"
+                                    className="text-sm font-medium text-slate-800 cursor-pointer"
+                                >
+                                    {t('showRisksToggleTitle')}
+                                </label>
+                                <p className="text-xs text-slate-500">
+                                    {t('showRisksToggleDesc')}
+                                </p>
+                            </div>
+                            <Switch
+                                id="show-risks-toggle"
+                                checked={linkData?.show_risks ?? false}
+                                onCheckedChange={handleToggleShowRisks}
+                                disabled={actionLoading}
+                            />
+                        </div>
+
                         {/* Public Access Warning */}
                         <div className="flex items-start gap-2.5 rounded-xl border border-amber-200 bg-amber-50/80 p-3.5 text-xs text-amber-800">
                             <ShieldAlert className="h-4 w-4 shrink-0 text-amber-600 mt-0.5" />
@@ -381,6 +430,26 @@ export default function PresentationLinkModal({
                                 id="empty-anonymize-toggle"
                                 checked={emptyAnonymized}
                                 onCheckedChange={setEmptyAnonymized}
+                                disabled={actionLoading}
+                            />
+                        </div>
+
+                        <div className="flex items-center justify-between rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+                            <div className="space-y-0.5 pr-4">
+                                <label
+                                    htmlFor="empty-show-risks-toggle"
+                                    className="text-sm font-medium text-slate-800 cursor-pointer"
+                                >
+                                    {t('showRisksToggleTitle')}
+                                </label>
+                                <p className="text-xs text-slate-500">
+                                    {t('showRisksToggleDesc')}
+                                </p>
+                            </div>
+                            <Switch
+                                id="empty-show-risks-toggle"
+                                checked={emptyShowRisks}
+                                onCheckedChange={setEmptyShowRisks}
                                 disabled={actionLoading}
                             />
                         </div>

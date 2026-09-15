@@ -25,6 +25,7 @@ def test_factory_returns_stripe_provider_instance(monkeypatch):
     Stripe secrets configured — this test bypasses that guard the same way
     the other tests in this file do (direct monkeypatch of the settings
     singleton) to exercise the factory branch itself in isolation."""
+    pytest.importorskip("stripe")
     from services.billing.stripe_provider import StripeBillingProvider
 
     monkeypatch.setattr(config.settings, "billing_provider", "stripe")

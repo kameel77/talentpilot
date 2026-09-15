@@ -323,6 +323,7 @@ def get_presentation_link(
             token=None,
             url=None,
             anonymized=None,
+            show_risks=None,
             created_at=None,
         )
     url = f"{settings.frontend_url.rstrip('/')}/presentation/{team.presentation_token}"
@@ -330,6 +331,7 @@ def get_presentation_link(
         token=team.presentation_token,
         url=url,
         anonymized=team.presentation_anonymized,
+        show_risks=team.presentation_show_risks,
         created_at=team.presentation_created_at,
     )
 
@@ -358,6 +360,7 @@ def create_or_rotate_presentation_link(
     now = datetime.now(timezone.utc)
     team.presentation_token = new_token
     team.presentation_anonymized = data.anonymized
+    team.presentation_show_risks = data.show_risks
     team.presentation_created_at = now
     db.commit()
     db.refresh(team)
@@ -366,18 +369,19 @@ def create_or_rotate_presentation_link(
         token=team.presentation_token,
         url=url,
         anonymized=team.presentation_anonymized,
+        show_risks=team.presentation_show_risks,
         created_at=team.presentation_created_at,
     )
 
 
 @router.patch("/{team_id}/presentation-link", response_model=TeamPresentationLinkResponse)
-def update_presentation_link_anonymized(
+def update_presentation_link_settings(
     team_id: int,
     data: TeamPresentationLinkUpdate,
     db: Session = Depends(get_db),
     current_user: User = Depends(require_role(["admin", "manager", "coach"])),
 ):
-    """Update only the anonymized flag on an existing presentation link. Keeps token and created_at."""
+    """Update settings (anonymized, show_risks) on an existing presentation link. Keeps token and created_at."""
     team = db.query(Team).filter(Team.id == team_id).first()
     if not team:
         raise HTTPException(
@@ -395,7 +399,10 @@ def update_presentation_link_anonymized(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Presentation link not found"
         )
-    team.presentation_anonymized = data.anonymized
+    if data.anonymized is not None:
+        team.presentation_anonymized = data.anonymized
+    if data.show_risks is not None:
+        team.presentation_show_risks = data.show_risks
     db.commit()
     db.refresh(team)
     url = f"{settings.frontend_url.rstrip('/')}/presentation/{team.presentation_token}"
@@ -403,6 +410,7 @@ def update_presentation_link_anonymized(
         token=team.presentation_token,
         url=url,
         anonymized=team.presentation_anonymized,
+        show_risks=team.presentation_show_risks,
         created_at=team.presentation_created_at,
     )
 
@@ -428,6 +436,7 @@ def delete_presentation_link(
         )
     team.presentation_token = None
     team.presentation_anonymized = False
+    team.presentation_show_risks = False
     team.presentation_created_at = None
     db.commit()
     return None

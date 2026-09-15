@@ -152,6 +152,7 @@ export interface TeamPresentationLinkResponse {
     token: string | null;
     url: string | null;
     anonymized: boolean | null;
+    show_risks: boolean | null;
     created_at: string | null;
 }
 
@@ -171,6 +172,7 @@ export interface PublicPresentationResponse {
     team_name: string;
     organization_name: string | null;
     anonymized: boolean;
+    show_risks: boolean;
     members: PublicPresentationMember[];
     talents: Talent[];
 }
@@ -759,13 +761,13 @@ export const api = {
             return response.data;
         },
 
-        createPresentationLink: async (id: number, anonymized: boolean = false): Promise<TeamPresentationLinkResponse> => {
-            const response = await apiClient.post<TeamPresentationLinkResponse>(`/api/teams/${id}/presentation-link`, { anonymized });
+        createPresentationLink: async (id: number, payload?: { anonymized?: boolean; show_risks?: boolean }): Promise<TeamPresentationLinkResponse> => {
+            const response = await apiClient.post<TeamPresentationLinkResponse>(`/api/teams/${id}/presentation-link`, payload || {});
             return response.data;
         },
 
-        updatePresentationLink: async (id: number, anonymized: boolean): Promise<TeamPresentationLinkResponse> => {
-            const response = await apiClient.patch<TeamPresentationLinkResponse>(`/api/teams/${id}/presentation-link`, { anonymized });
+        updatePresentationLink: async (id: number, payload: { anonymized?: boolean; show_risks?: boolean }): Promise<TeamPresentationLinkResponse> => {
+            const response = await apiClient.patch<TeamPresentationLinkResponse>(`/api/teams/${id}/presentation-link`, payload);
             return response.data;
         },
 

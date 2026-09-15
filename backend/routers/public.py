@@ -245,6 +245,7 @@ def get_presentation(
         team_name=team.name,
         organization_name=org_name,
         anonymized=is_anonymized,
+        show_risks=team.presentation_show_risks,
         members=presentation_members,
         talents=talents_response,
     )

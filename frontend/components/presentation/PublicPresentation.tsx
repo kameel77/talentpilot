@@ -160,11 +160,11 @@ export default function PublicPresentation({ token }: PublicPresentationProps) {
                     </div>
                 </header>
 
-                {/* Matrix Dashboard with risks disabled */}
+                {/* Matrix Dashboard with manager-controlled risks visibility */}
                 <MatrixDashboard
                     members={mappedMembers}
                     talents={data.talents}
-                    canSeeRisks={false}
+                    canSeeRisks={Boolean(data.show_risks)}
                 />
             </div>
         </main>

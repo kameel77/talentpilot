@@ -488,3 +488,105 @@ def test_public_rate_limit_not_bypassable_by_xff(client, sample_team_setup):
     assert statuses[:30] == [200] * 30
     # Remaining 10 requests should be 429 because last element (10.0.0.1) was constant
     assert statuses[30:] == [429] * 10
+
+
+# 14. test_presentation_link_partial_patch_isolation_and_empty_patch
+def test_presentation_link_partial_patch_isolation_and_empty_patch(client, sample_team_setup):
+    """Partial PATCH modifies only the specified field without clearing the other; empty PATCH is a no-op."""
+    team = sample_team_setup["team"]
+    manager = sample_team_setup["manager"]
+    headers = _auth_header(manager)
+
+    # Init: anonymized=True, show_risks=False
+    res_init = client.post(
+        f"/api/teams/{team.id}/presentation-link",
+        json={"anonymized": True, "show_risks": False},
+        headers=headers,
+    )
+    assert res_init.status_code == 200
+    init_data = res_init.json()
+    token = init_data["token"]
+    created_at = init_data["created_at"]
+    assert init_data["anonymized"] is True
+    assert init_data["show_risks"] is False
+
+    # PATCH only show_risks -> anonymized must stay True
+    res_patch1 = client.patch(
+        f"/api/teams/{team.id}/presentation-link",
+        json={"show_risks": True},
+        headers=headers,
+    )
+    assert res_patch1.status_code == 200
+    patch1_data = res_patch1.json()
+    assert patch1_data["token"] == token
+    assert patch1_data["created_at"] == created_at
+    assert patch1_data["show_risks"] is True
+    assert patch1_data["anonymized"] is True  # preserved!
+
+    # PATCH only anonymized -> show_risks must stay True
+    res_patch2 = client.patch(
+        f"/api/teams/{team.id}/presentation-link",
+        json={"anonymized": False},
+        headers=headers,
+    )
+    assert res_patch2.status_code == 200
+    patch2_data = res_patch2.json()
+    assert patch2_data["token"] == token
+    assert patch2_data["created_at"] == created_at
+    assert patch2_data["anonymized"] is False
+    assert patch2_data["show_risks"] is True  # preserved!
+
+    # PATCH empty object -> neither field changes
+    res_patch3 = client.patch(
+        f"/api/teams/{team.id}/presentation-link",
+        json={},
+        headers=headers,
+    )
+    assert res_patch3.status_code == 200
+    patch3_data = res_patch3.json()
+    assert patch3_data["token"] == token
+    assert patch3_data["anonymized"] is False
+    assert patch3_data["show_risks"] is True
+
+    # Public endpoint reflects show_risks=True
+    pub = client.get(f"/api/public/presentations/{token}")
+    assert pub.status_code == 200
+    pub_data = pub.json()
+    assert pub_data["show_risks"] is True
+    assert pub_data["anonymized"] is False
+
+
+# 15. test_presentation_link_delete_resets_show_risks
+def test_presentation_link_delete_resets_show_risks(client, db_session, sample_team_setup):
+    """Deleting presentation link resets presentation_show_risks to False."""
+    team = sample_team_setup["team"]
+    manager = sample_team_setup["manager"]
+    headers = _auth_header(manager)
+
+    # Create link with show_risks=True
+    res_post = client.post(
+        f"/api/teams/{team.id}/presentation-link",
+        json={"anonymized": True, "show_risks": True},
+        headers=headers,
+    )
+    assert res_post.status_code == 200
+    assert res_post.json()["show_risks"] is True
+
+    # DELETE link
+    res_del = client.delete(f"/api/teams/{team.id}/presentation-link", headers=headers)
+    assert res_del.status_code == 204
+
+    # Check GET presentation-link returns None
+    res_get = client.get(f"/api/teams/{team.id}/presentation-link", headers=headers)
+    assert res_get.status_code == 200
+    get_data = res_get.json()
+    assert get_data["token"] is None
+    assert get_data["show_risks"] is None
+
+    # Verify directly in DB that presentation_show_risks was reset to False
+    db_session.expire_all()
+    from models import Team
+    refreshed_team = db_session.query(Team).filter(Team.id == team.id).first()
+    assert refreshed_team.presentation_show_risks is False
+    assert refreshed_team.presentation_anonymized is False
+

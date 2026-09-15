@@ -921,6 +921,7 @@ class PublicPresentationResponse(BaseModel):
     team_name: str
     organization_name: Optional[str] = None
     anonymized: bool
+    show_risks: bool = False
     members: List[PublicPresentationMember]
     talents: List[TalentResponse]
 
@@ -931,15 +932,18 @@ class TeamPresentationLinkResponse(BaseModel):
     token: Optional[str] = None
     url: Optional[str] = None
     anonymized: Optional[bool] = None
+    show_risks: Optional[bool] = None
     created_at: Optional[datetime] = None
 
 
 class TeamPresentationLinkCreate(BaseModel):
     anonymized: bool = False
+    show_risks: bool = False
 
 
 class TeamPresentationLinkUpdate(BaseModel):
-    anonymized: bool
+    anonymized: Optional[bool] = None
+    show_risks: Optional[bool] = None
 
 
 # ─────────────────────────────────────────────────────────────────────

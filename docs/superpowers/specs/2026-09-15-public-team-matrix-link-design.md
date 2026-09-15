@@ -68,8 +68,11 @@ odebrania dostępu; datę ważności można dodać później bez zmiany kontrakt
 Dodanie limitu planowego później jest łatwe; odebranie działającej funkcji
 użytkownikom — nie.
 
-**Analiza ryzyk niedostępna publicznie.** `canSeeRisks={false}` — SPOF, słabe
-punkty zespołu i odporność to materiał wewnętrzny.
+**Kontrola analizy ryzyk przez managera (domyślnie wyłączona).**
+Początkowo rozważano sztywne `canSeeRisks={false}` (SPOF, słabe punkty zespołu i odporność jako materiał wewnętrzny).
+W decyzji z 2026-09-15 wprowadzono pełną kontrolę managera: pole `presentation_show_risks` (Boolean, default `False`),
+sterowane osobnym przełącznikiem w modalu udostępniania i modyfikowane przez PATCH bez unieważniania tokenu.
+Gdy flaga jest wyłączona, odbiorca widzi tylko wykresy potencjału; gdy włączona – pełną analizę luk kompetencyjnych i par synergii.
 
 ## Backend
 
@@ -78,11 +81,14 @@ punkty zespołu i odporność to materiał wewnętrzny.
 ```
 Team:
   presentation_token        String(64), unique, index, nullable   # JUŻ ISTNIEJE
-  presentation_anonymized   Boolean, not null, default False      # nowe
-  presentation_created_at   DateTime, nullable                    # nowe
+  presentation_anonymized   Boolean, not null, default False      # dodane
+  presentation_show_risks   Boolean, not null, default False      # dodane (decyzja 2026-09-15 v2)
+  presentation_created_at   DateTime, nullable                    # dodane
 ```
 
-Jedna migracja Alembica, `down_revision = 'y4z5a6b7c8d9'`.
+Migracje Alembica:
+1. `b2c3d4e5f6a7` (`down_revision = 'y4z5a6b7c8d9'`) – `presentation_anonymized`, `presentation_created_at`.
+2. `c3d4e5f6a7b8` (`down_revision = 'b2c3d4e5f6a7'`) – `presentation_show_risks`.
 `presentation_created_at` służy audytowi („kiedy ten link powstał") i jest
 pokazywane w modalu.
 
@@ -235,7 +241,7 @@ Reużycie `MatrixDashboard` jest wykonalne, bo:
 Nowy, cienki `PublicPresentation.tsx`: fetch → stany loading / 404 / 429 →
 
 ```tsx
-<MatrixDashboard members={members} talents={talents} canSeeRisks={false} />
+<MatrixDashboard members={members} talents={talents} canSeeRisks={Boolean(data.show_risks)} />
 ```
 
 `components/PresentationContent.tsx` (761 linii) zostaje **usunięty**.

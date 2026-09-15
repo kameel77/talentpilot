@@ -214,6 +214,7 @@ class Team(Base):
     description = Column(Text, nullable=True)
     presentation_token = Column(String(64), unique=True, index=True, nullable=True)
     presentation_anonymized = Column(Boolean, nullable=False, default=False, server_default="false")
+    presentation_show_risks = Column(Boolean, nullable=False, default=False, server_default="false")
     presentation_created_at = Column(DateTime(timezone=True), nullable=True)
     
     # Multi-tenancy
