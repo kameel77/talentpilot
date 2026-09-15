@@ -98,14 +98,21 @@ być pokryte testem.
 |---|---|---|
 | `GET` | `/api/teams/{team_id}/presentation-link` | Zwraca `{token, url, anonymized, created_at}` lub `{token: null}` |
 | `POST` | `/api/teams/{team_id}/presentation-link` | Body `{anonymized: bool}`. Tworzy **lub rotuje** token, ustawia `presentation_created_at = now()`. Rotacja unieważnia poprzedni link. |
+| `PATCH` | `/api/teams/{team_id}/presentation-link` | Body `{anonymized: bool}`. Zmienia **wyłącznie tryb anonimizacji**, token i `created_at` bez zmian. `404` gdy linku nie ma. |
 | `DELETE` | `/api/teams/{team_id}/presentation-link` | `presentation_token = NULL`, `presentation_created_at = NULL`. `204`. |
 
 Token: `secrets.token_urlsafe(32)`.
 
-`POST` jest jawnie **rotujący**, nie idempotentny — inaczej niż we wzorcu.
-Przełączenie `anonymized` na istniejącym linku to też `POST`; zmiana trybu
-udostępniania wystawia nowy token, bo stary link był wypuszczony na innych
-warunkach prywatności.
+Rozdzielenie `POST` i `PATCH` jest celowe. Przełącznik „Ukryj nazwiska"
+w modalu wywołuje `PATCH` i **nie unieważnia** linku — raz wysłany klientowi
+adres działa dalej, zmienia się tylko to, co pod nim widać. Rotacja jest
+osobną, jawną akcją użytkownika (`POST`, przycisk „Wygeneruj nowy link").
+
+Konsekwencja do zaakceptowania: odbiorca, który dostał link nieanonimowy
+i zapisał go sobie, po przełączeniu zobaczy wersję anonimową — ale widział
+już nazwiska. `PATCH` chroni przed przyszłym ujawnieniem, nie cofa
+przeszłego. Kto chce odciąć dotychczasowych odbiorców, używa rotacji
+albo unieważnienia.
 
 ### Nowe schematy publiczne — `schemas.py`
 
@@ -184,6 +191,24 @@ zależności) jako dependency **na całym routerze `/api/public`** — obejmuje
 zarówno prezentacje zespołów, jak i istniejące publiczne wizytówki
 użytkowników. Limit: **30 żądań / minutę / IP**, odpowiedź `429` z `Retry-After`.
 
+**Identyfikacja klienta za reverse proxy.** Produkcja stoi za Traefikiem
+(Coolify) i Cloudflare, więc `request.client.host` to adres proxy — bez
+obsługi nagłówków jeden IP Traefika wyczerpałby limit dla wszystkich.
+Kolejność odczytu:
+
+1. `CF-Connecting-IP` — Cloudflare **nadpisuje** ten nagłówek, więc klient
+   go nie podrobi.
+2. **Ostatni** element `X-Forwarded-For` — nie pierwszy. Traefik *dopisuje*
+   do listy, więc przy żądaniu z podrobionym `X-Forwarded-For: 1.2.3.4`
+   nagłówek ma postać `1.2.3.4, <prawdziwy_IP>`; wzięcie elementu `[0]`
+   oddałoby atakującemu pełną kontrolę nad kluczem limitu i pozwoliło
+   omijać go w nieskończoność przez losowanie wartości.
+3. `request.client.host`.
+
+Słownik musi czyścić klucze, których wszystkie znaczniki czasu wypadły
+poza okno — inaczej rośnie w nieskończoność przy ruchu z wielu IP.
+Limiter wystawia `reset_rate_limiter()` na potrzeby testów.
+
 `slowapi` + Redis dokładamy dopiero, gdy backend pójdzie w wiele replik —
 przy jednym procesie byłaby to zależność bez zysku.
 
@@ -233,8 +258,10 @@ otwiera nową kartę, a link trzeba ręcznie przepisać z paska adresu.
 Zamiast tego modal:
 
 - URL w polu read-only + przycisk **Kopiuj do schowka** z potwierdzeniem,
-- przełącznik **Ukryj nazwiska** (`anonymized`) — zmiana wystawia nowy token,
-  z jawnym ostrzeżeniem, że poprzedni link przestanie działać,
+- przełącznik **Ukryj nazwiska** (`anonymized`) — `PATCH`, natychmiastowy,
+  bez potwierdzenia i bez unieważniania linku,
+- **Wygeneruj nowy link** (`POST`) — osobny przycisk, z potwierdzeniem,
+  że dotychczasowy adres przestanie działać,
 - **Otwórz podgląd** (nowa karta),
 - **Unieważnij link** z potwierdzeniem,
 - data utworzenia linku,
@@ -249,6 +276,7 @@ anonimizacji przed wygenerowaniem.
 - `api.public.getPresentation(token, lang)` — dodany parametr `lang`,
 - nowe `api.teams.getPresentationLink(id)`,
   `api.teams.createPresentationLink(id, anonymized)`,
+  `api.teams.updatePresentationLink(id, anonymized)`,
   `api.teams.deletePresentationLink(id)`.
 
 Uwaga: globalny interceptor `apiClient` dokleja `Authorization: Bearer`,
@@ -267,6 +295,7 @@ Backend, `backend/tests/`:
 | `test_presentation_link_requires_role` | rola `user` → `403` |
 | `test_presentation_link_cross_org_denied` | admin z innej organizacji → `403` (regresja na wadę nr 2) |
 | `test_presentation_link_rotates` | drugi `POST` zwraca inny token; stary → `404` |
+| `test_presentation_link_patch_keeps_token` | `PATCH` zmienia `anonymized`, a `token` i `created_at` pozostają bez zmian; stary link nadal działa |
 | `test_presentation_link_delete_revokes` | po `DELETE` publiczny `GET` → `404` |
 | `test_public_presentation_returns_matrix` | poprawna liczba członków i rang; brak `NameError` (regresja na martwy endpoint) |
 | `test_public_presentation_leaks_no_pii` | surowy JSON nie zawiera `@`, `email`, `nip`, `is_ghost`, `invited_at` (regresja na wadę nr 1) |
@@ -274,7 +303,8 @@ Backend, `backend/tests/`:
 | `test_public_presentation_anonymized_order_is_by_id` | numeracja niezależna od alfabetu |
 | `test_public_presentation_lang_en` | `lang=en` zwraca angielskie nazwy talentów |
 | `test_public_presentation_unknown_token` | `404` |
-| `test_public_rate_limit` | przekroczenie progu → `429` |
+| `test_public_rate_limit` | przekroczenie progu → `429` z `Retry-After` |
+| `test_public_rate_limit_not_bypassable_by_xff` | 40 żądań z losowym `X-Forwarded-For` przy stałym adresie peera nadal kończy się `429` |
 
 `backend/tests/conftest.py` nadpisuje `get_db` dla **obu** aplikacji
 (`app` i `external_app`) — nowe testy publiczne idą przez `app`.
@@ -293,11 +323,12 @@ Backend, `backend/tests/`:
 
 ## Ryzyka
 
-- **Ten sam przycisk, dwa różne mechanizmy.** W panelu istnieje już
-  `generate-matrix`, delegujące do zewnętrznej aplikacji. Nowy przycisk musi
-  być nazwany i umiejscowiony tak, by nie było wątpliwości, który jest który —
-  albo stary trzeba ukryć, jeśli integracja jest nieskonfigurowana
-  (dziś zwraca `501`).
+- **`generate-matrix` — martwy kod, nie konflikt.** Endpoint
+  `POST /api/teams/{id}/generate-matrix` (delegujący do zewnętrznej aplikacji
+  `talentpilot-team` przez `X-API-Key`, dziś `501` bo integracja jest
+  nieskonfigurowana) **nie ma żadnego wywołania w UI** — zweryfikowane grepem
+  po `teams/[id]/page.tsx`. Nie ma więc ryzyka dwóch mylących przycisków
+  i nie ma czego ukrywać. Endpoint zostaje nietknięty.
 - **Token w URL trafia do historii przeglądarki i Referera.** `noindex`
   ogranicza indeksowanie, ale link przesłany dalej działa dla każdego.
   Modal musi to komunikować wprost.
