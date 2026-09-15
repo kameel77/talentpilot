@@ -1,21 +1,22 @@
-"""Public profile endpoints — no authentication required."""
-from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy.orm import Session
+from fastapi import APIRouter, Depends, HTTPException, Response, status
+from sqlalchemy.orm import Session, selectinload, joinedload
 
 from database import get_db
-from models import User, UserTalent, Team, Organization
+from models import User, UserTalent, Team, Organization, Talent, TalentTranslation
 from schemas import (
     PublicProfileResponse, 
     PublicTalentItem,
-    PublicTeamPresentationResponse,
-    PresentationMember,
-    PresentationTalentResult,
-    PresentationOrg
+    PublicPresentationResponse,
+    PublicPresentationMember,
+    PublicPresentationTalent,
+    TalentResponse,
+    TalentTranslationResponse
 )
+from rate_limiter import public_rate_limiter
 
 import sqlalchemy as sa
 
-router = APIRouter()
+router = APIRouter(dependencies=[Depends(public_rate_limiter)])
 
 # Source of truth — mirrors frontend/data/gallupTalents.ts
 _NAMES_PL: dict[str, str] = {
@@ -138,59 +139,112 @@ def get_public_profile(slug_or_token: str, db: Session = Depends(get_db)):
     )
 
 
-@router.get("/presentations/{token}", response_model=PublicTeamPresentationResponse)
-def get_presentation(token: str, db: Session = Depends(get_db)):
-    """Fetch team presentation data using a public token."""
-    team = db.query(Team).filter(Team.presentation_token == token).first()
-    if not team:
+@router.get("/presentations/{token}", response_model=PublicPresentationResponse)
+def get_presentation(
+    token: str,
+    lang: str = "pl",
+    db: Session = Depends(get_db),
+    response: Response = None,
+):
+    """Fetch team presentation data using a public token (zero PII, rate-limited, optimized query)."""
+    if lang not in {"pl", "en"}:
+        lang = "pl"
+
+    # Eager load organization, members, user_talents, and talents to prevent N+1 queries
+    team = (
+        db.query(Team)
+        .options(
+            joinedload(Team.organization),
+            selectinload(Team.members)
+            .selectinload(User.user_talents)
+            .joinedload(UserTalent.talent),
+        )
+        .filter(Team.presentation_token == token)
+        .first()
+    )
+    if not team or not team.presentation_token:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Presentation not found")
 
-    organization = db.query(Organization).filter(Organization.id == team.organization_id).first()
-    if not organization:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Organization not found")
+    if response is not None:
+        response.headers["X-Robots-Tag"] = "noindex, nofollow"
 
-    members = db.query(TeamMember).filter(TeamMember.team_id == team.id).all()
-    user_ids = [m.user_id for m in members]
-    
-    users = db.query(User).filter(User.id.in_(user_ids), User.is_active == True).all()
-    user_map = {u.id: u for u in users}
+    # Filter active members with talents
+    active_members = [
+        m for m in team.members
+        if m.is_active and len(m.user_talents) > 0
+    ]
+    # Sort strictly by member.id ascending to avoid leaking identity via alphabetical ordering
+    active_members.sort(key=lambda m: m.id)
 
-    # Fetch talents for all these users
-    user_talents = db.query(UserTalent).filter(UserTalent.user_id.in_(user_ids)).all()
-    talent_map = {}
-    for ut in user_talents:
-        if ut.user_id not in talent_map:
-            talent_map[ut.user_id] = []
-        talent_map[ut.user_id].append(ut)
+    is_anonymized = team.presentation_anonymized
+    org_name = None if is_anonymized else (team.organization.name if team.organization else None)
+    person_prefix = "Person" if lang == "en" else "Osoba"
 
     presentation_members = []
-    for member in members:
-        user = user_map.get(member.user_id)
-        if not user:
-            continue
-            
+    for idx, member in enumerate(active_members, start=1):
+        display_name = f"{person_prefix} {idx}" if is_anonymized else member.full_name
+        is_leader = (team.manager_id == member.id)
+
         results = []
-        uts = talent_map.get(user.id, [])
-        for ut in uts:
+        for ut in sorted(member.user_talents, key=lambda x: x.rank):
             t = ut.talent
-            results.append(PresentationTalentResult(
-                id=str(ut.id),
-                rank=ut.rank,
-                talent=t.code,
-                domain=t.domain.value
-            ))
-            
-        presentation_members.append(PresentationMember(
-            id=str(user.id),
-            name=user.full_name,
-            email=user.email,
-            role=member.role or user.job_title,
-            results=results
+            if t:
+                results.append(PublicPresentationTalent(
+                    rank=ut.rank,
+                    talent=t.code,
+                    domain=t.domain.value if hasattr(t.domain, "value") else str(t.domain),
+                ))
+
+        presentation_members.append(PublicPresentationMember(
+            display_name=display_name,
+            is_leader=is_leader,
+            results=results,
         ))
 
-    return PublicTeamPresentationResponse(
-        id=str(team.id),
-        name=team.name,
-        organization=PresentationOrg(id=str(organization.id), name=organization.name),
-        members=presentation_members
+    # Fetch all 34 talents in one query
+    all_talents = db.query(Talent).order_by(Talent.domain, Talent.code).all()
+    talent_ids = [t.id for t in all_talents]
+    fallback_lang = "en" if lang != "en" else "pl"
+
+    # Batch fetch translations for requested lang + fallback lang in a single query (no N+1)
+    translations = (
+        db.query(TalentTranslation)
+        .filter(
+            TalentTranslation.talent_id.in_(talent_ids),
+            TalentTranslation.language.in_([lang, fallback_lang]),
+        )
+        .all()
+    )
+    # Map talent_id -> best matching translation
+    translation_map: dict[int, TalentTranslation] = {}
+    for tr in translations:
+        if tr.talent_id not in translation_map or tr.language == lang:
+            translation_map[tr.talent_id] = tr
+
+    talents_response = []
+    for t in all_talents:
+        tr = translation_map.get(t.id)
+        if tr:
+            t_trans = TalentTranslationResponse.model_validate(tr)
+        else:
+            # Safe fallback: never silently drop a talent column from matrix
+            t_trans = TalentTranslationResponse(
+                language=lang,
+                name=t.code.replace("_", " ").title(),
+                description=None,
+                short_description=None,
+            )
+        talents_response.append(TalentResponse(
+            id=t.id,
+            code=t.code,
+            domain=t.domain,
+            translation=t_trans,
+        ))
+
+    return PublicPresentationResponse(
+        team_name=team.name,
+        organization_name=org_name,
+        anonymized=is_anonymized,
+        members=presentation_members,
+        talents=talents_response,
     )

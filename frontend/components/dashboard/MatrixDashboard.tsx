@@ -9,7 +9,7 @@ import {
     teamTalentRanks, teamDomainScores, findTeamWeaknesses, findSPOF,
     teamResilience, uniqueContributions, complementaryPairs,
 } from '@/lib/team-algorithms';
-import { Grid3x3, PieChart, Search, BarChart3 } from 'lucide-react';
+import { Grid3x3, PieChart, Search, BarChart3, Crown } from 'lucide-react';
 import {
     PieChart as RePieChart, Pie, Cell, ResponsiveContainer,
     RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar, Legend,
@@ -33,6 +33,7 @@ interface Member {
     id: string | number;
     name: string;
     role?: string;
+    is_leader?: boolean;
     results: TalentResult[];
 }
 
@@ -238,7 +239,14 @@ export default function MatrixDashboard({ members, canSeeRisks = false, talents 
                                         return (
                                             <tr key={member.id} className="border-b border-slate-100 hover:bg-slate-50/50">
                                                 <td className="sticky left-0 bg-white z-10 px-3 py-2 font-medium text-slate-900 border-r border-slate-200 shadow-[1px_0_0_0_#e2e8f0]">
-                                                    {member.name}
+                                                    <div className="flex items-center gap-1.5">
+                                                        <span className="truncate">{member.name}</span>
+                                                        {member.is_leader && (
+                                                            <span className="inline-flex items-center justify-center shrink-0 w-4 h-4 rounded-full bg-amber-100 text-amber-600" title={t('manager')}>
+                                                                <Crown className="w-2.5 h-2.5" />
+                                                            </span>
+                                                        )}
+                                                    </div>
                                                 </td>
                                                 {GALLUP_TALENTS.map(talent => {
                                                     const rank = rankMap[talent.code];

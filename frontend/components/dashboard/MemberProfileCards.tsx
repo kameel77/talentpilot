@@ -4,7 +4,7 @@ import { useTranslations } from 'next-intl';
 import { getLocaleFromCookie } from '@/lib/locale';
 import { GALLUP_TALENTS, getDomainStyle, DOMAIN_LABELS, GallupDomain } from '@/lib/gallup-data';
 import { checkDomainSpecialist } from '@/lib/team-algorithms';
-import { Star } from 'lucide-react';
+import { Star, Crown } from 'lucide-react';
 
 interface TalentResult {
     id: string | number;
@@ -17,6 +17,7 @@ interface Member {
     id: string | number;
     name: string;
     role?: string;
+    is_leader?: boolean;
     results: TalentResult[];
 }
 
@@ -58,7 +59,14 @@ export default function MemberProfileCards({ members, topN }: MemberProfileCards
                     <div key={member.id} className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6">
                         <div className="flex items-start justify-between mb-4">
                             <div>
-                                <h3 className="text-sm font-semibold text-slate-900">{member.name || '—'}</h3>
+                                <div className="flex items-center gap-1.5">
+                                    <h3 className="text-sm font-semibold text-slate-900">{member.name || '—'}</h3>
+                                    {member.is_leader && (
+                                        <span className="inline-flex items-center justify-center shrink-0 w-4 h-4 rounded-full bg-amber-100 text-amber-600" title={t('manager')}>
+                                            <Crown className="w-2.5 h-2.5" />
+                                        </span>
+                                    )}
+                                </div>
                                 {member.role && <p className="text-xs text-slate-500">{member.role}</p>}
                             </div>
                             <div className="relative inline-flex">

@@ -148,6 +148,33 @@ export interface Talent {
     translation: TalentTranslation;
 }
 
+export interface TeamPresentationLinkResponse {
+    token: string | null;
+    url: string | null;
+    anonymized: boolean | null;
+    created_at: string | null;
+}
+
+export interface PublicPresentationTalent {
+    rank: number;
+    talent: string;
+    domain: string;
+}
+
+export interface PublicPresentationMember {
+    display_name: string;
+    is_leader: boolean;
+    results: PublicPresentationTalent[];
+}
+
+export interface PublicPresentationResponse {
+    team_name: string;
+    organization_name: string | null;
+    anonymized: boolean;
+    members: PublicPresentationMember[];
+    talents: Talent[];
+}
+
 export interface AdminTalent {
     id: number;
     code: string;
@@ -726,6 +753,25 @@ export const api = {
             });
             return response.data;
         },
+
+        getPresentationLink: async (id: number): Promise<TeamPresentationLinkResponse> => {
+            const response = await apiClient.get<TeamPresentationLinkResponse>(`/api/teams/${id}/presentation-link`);
+            return response.data;
+        },
+
+        createPresentationLink: async (id: number, anonymized: boolean = false): Promise<TeamPresentationLinkResponse> => {
+            const response = await apiClient.post<TeamPresentationLinkResponse>(`/api/teams/${id}/presentation-link`, { anonymized });
+            return response.data;
+        },
+
+        updatePresentationLink: async (id: number, anonymized: boolean): Promise<TeamPresentationLinkResponse> => {
+            const response = await apiClient.patch<TeamPresentationLinkResponse>(`/api/teams/${id}/presentation-link`, { anonymized });
+            return response.data;
+        },
+
+        deletePresentationLink: async (id: number): Promise<void> => {
+            await apiClient.delete(`/api/teams/${id}/presentation-link`);
+        },
     },
 
     // Users
@@ -1121,8 +1167,9 @@ export const api = {
             const response = await apiClient.get(`/api/public/${slugOrToken}`);
             return response.data;
         },
-        getPresentation: async (token: string) => {
-            const response = await apiClient.get(`/api/public/presentations/${token}`);
+        getPresentation: async (token: string, lang?: string): Promise<PublicPresentationResponse> => {
+            const url = `/api/public/presentations/${token}${lang ? `?lang=${encodeURIComponent(lang)}` : ''}`;
+            const response = await apiClient.get<PublicPresentationResponse>(url);
             return response.data;
         },
     },

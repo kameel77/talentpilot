@@ -9,11 +9,12 @@ import { api, tokenManager, Talent } from "@/lib/api";
 
 import MatrixDashboard from "@/components/dashboard/MatrixDashboard";
 import MemberReportUpload from "@/components/dashboard/MemberReportUpload";
+import PresentationLinkModal from "@/components/teams/PresentationLinkModal";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { UserPlus, Trash2, ChevronDown, Check, Crown, Edit2, Upload, Search, FileText, X, Loader2, AlertTriangle } from "lucide-react";
+import { UserPlus, Trash2, ChevronDown, Check, Crown, Edit2, Upload, Search, FileText, X, Loader2, AlertTriangle, Share2 } from "lucide-react";
 import { GALLUP_TALENTS, getDomainStyle, GallupDomain } from "@/lib/gallup-data";
 import { isPlaceholderEmail, getApiErrorMessage } from "@/lib/utils";
 
@@ -112,6 +113,7 @@ export default function TeamDetailPage() {
     };
     const [pdfImportItems, setPdfImportItems] = useState<PdfImportItem[]>([]);
     const [showPdfImport, setShowPdfImport] = useState(false);
+    const [showPresentationModal, setShowPresentationModal] = useState(false);
 
     const loadTeamData = useCallback(async () => {
         try {
@@ -430,6 +432,16 @@ export default function TeamDetailPage() {
                     )}
                 </div>
                 <div className="flex items-center gap-3">
+                    {isPrivileged && (
+                        <Button
+                            variant="secondary"
+                            onClick={() => setShowPresentationModal(true)}
+                            className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white shadow-sm hover:bg-slate-50"
+                        >
+                            <Share2 className="h-4 w-4 text-slate-600" />
+                            {t('presentationLink')}
+                        </Button>
+                    )}
                     <Button
                         variant="secondary"
                         onClick={triggerPdfImport}
@@ -537,6 +549,14 @@ export default function TeamDetailPage() {
                             </form>
                         </DialogContent>
                     </Dialog>
+                    {isPrivileged && team && (
+                        <PresentationLinkModal
+                            isOpen={showPresentationModal}
+                            onClose={() => setShowPresentationModal(false)}
+                            teamId={team.id}
+                            teamName={team.name}
+                        />
+                    )}
                 </div>
             </div>
 

@@ -903,6 +903,45 @@ class PublicTeamPresentationResponse(BaseModel):
     members: List[PresentationMember]
 
 
+# -------- Public Team Presentation (Zero PII) --------
+
+class PublicPresentationTalent(BaseModel):
+    rank: int
+    talent: str
+    domain: str
+
+
+class PublicPresentationMember(BaseModel):
+    display_name: str
+    is_leader: bool
+    results: List[PublicPresentationTalent]
+
+
+class PublicPresentationResponse(BaseModel):
+    team_name: str
+    organization_name: Optional[str] = None
+    anonymized: bool
+    members: List[PublicPresentationMember]
+    talents: List[TalentResponse]
+
+
+# -------- Team Presentation Link Management --------
+
+class TeamPresentationLinkResponse(BaseModel):
+    token: Optional[str] = None
+    url: Optional[str] = None
+    anonymized: Optional[bool] = None
+    created_at: Optional[datetime] = None
+
+
+class TeamPresentationLinkCreate(BaseModel):
+    anonymized: bool = False
+
+
+class TeamPresentationLinkUpdate(BaseModel):
+    anonymized: bool
+
+
 # ─────────────────────────────────────────────────────────────────────
 # Dashboard overview — replaces N+1 fetch pattern on /dashboard
 # ─────────────────────────────────────────────────────────────────────

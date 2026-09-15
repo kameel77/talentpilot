@@ -1,17 +1,23 @@
-import PresentationContent from '@/components/PresentationContent';
 import { Metadata } from 'next';
+import { getTranslations } from 'next-intl/server';
+import PublicPresentation from '@/components/presentation/PublicPresentation';
 
-export const metadata: Metadata = {
-    title: 'Wizytówka Zespołu | TalentPilot',
-    description: 'Profil mocnych stron zespołu',
-};
+export async function generateMetadata(): Promise<Metadata> {
+    const t = await getTranslations('teams');
+    return {
+        title: `${t('presentationBadge')} | TalentPilot`,
+        robots: {
+            index: false,
+            follow: false,
+        },
+    };
+}
 
 export default async function PresentationPage({
-    params
+    params,
 }: {
-    params: Promise<{ token: string }>
+    params: Promise<{ token: string }>;
 }) {
-    // Await params in Next.js 16
     const { token } = await params;
-    return <PresentationContent token={token} />;
+    return <PublicPresentation token={token} />;
 }

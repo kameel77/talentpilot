@@ -6,6 +6,8 @@ from typing import List
 from database import get_db
 from models import User, Team, UserRole, OrganizationAccess, Organization, UserTalent
 from services.email_service import send_team_added_email
+import secrets
+from datetime import datetime, timezone
 from schemas import (
     TeamCreate,
     TeamUpdate,
@@ -13,7 +15,10 @@ from schemas import (
     PublicTeamPresentationResponse,
     PresentationOrg,
     PresentationMember,
-    PresentationTalentResult
+    PresentationTalentResult,
+    TeamPresentationLinkResponse,
+    TeamPresentationLinkCreate,
+    TeamPresentationLinkUpdate
 )
 from auth import get_current_user, require_role, get_current_active_org_id
 from utils import compute_invitation_status
@@ -292,6 +297,140 @@ def get_team_matrix(
         organization=PresentationOrg(id=str(org.id), name=org.name),
         members=presentation_members
     )
+
+
+@router.get("/{team_id}/presentation-link", response_model=TeamPresentationLinkResponse)
+def get_presentation_link(
+    team_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_role(["admin", "manager", "coach"])),
+):
+    """Get the current presentation link metadata for a team."""
+    team = db.query(Team).filter(Team.id == team_id).first()
+    if not team:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Team not found"
+        )
+    accessible = _accessible_org_ids(db, current_user)
+    if team.organization_id not in accessible:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Access denied to this team"
+        )
+    if not team.presentation_token:
+        return TeamPresentationLinkResponse(
+            token=None,
+            url=None,
+            anonymized=None,
+            created_at=None,
+        )
+    url = f"{settings.frontend_url.rstrip('/')}/presentation/{team.presentation_token}"
+    return TeamPresentationLinkResponse(
+        token=team.presentation_token,
+        url=url,
+        anonymized=team.presentation_anonymized,
+        created_at=team.presentation_created_at,
+    )
+
+
+@router.post("/{team_id}/presentation-link", response_model=TeamPresentationLinkResponse)
+def create_or_rotate_presentation_link(
+    team_id: int,
+    data: TeamPresentationLinkCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_role(["admin", "manager", "coach"])),
+):
+    """Create or rotate a team presentation link. Rotating revokes the previous token."""
+    team = db.query(Team).filter(Team.id == team_id).first()
+    if not team:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Team not found"
+        )
+    accessible = _accessible_org_ids(db, current_user)
+    if team.organization_id not in accessible:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Access denied to this team"
+        )
+    new_token = secrets.token_urlsafe(32)
+    now = datetime.now(timezone.utc)
+    team.presentation_token = new_token
+    team.presentation_anonymized = data.anonymized
+    team.presentation_created_at = now
+    db.commit()
+    db.refresh(team)
+    url = f"{settings.frontend_url.rstrip('/')}/presentation/{team.presentation_token}"
+    return TeamPresentationLinkResponse(
+        token=team.presentation_token,
+        url=url,
+        anonymized=team.presentation_anonymized,
+        created_at=team.presentation_created_at,
+    )
+
+
+@router.patch("/{team_id}/presentation-link", response_model=TeamPresentationLinkResponse)
+def update_presentation_link_anonymized(
+    team_id: int,
+    data: TeamPresentationLinkUpdate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_role(["admin", "manager", "coach"])),
+):
+    """Update only the anonymized flag on an existing presentation link. Keeps token and created_at."""
+    team = db.query(Team).filter(Team.id == team_id).first()
+    if not team:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Team not found"
+        )
+    accessible = _accessible_org_ids(db, current_user)
+    if team.organization_id not in accessible:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Access denied to this team"
+        )
+    if not team.presentation_token:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Presentation link not found"
+        )
+    team.presentation_anonymized = data.anonymized
+    db.commit()
+    db.refresh(team)
+    url = f"{settings.frontend_url.rstrip('/')}/presentation/{team.presentation_token}"
+    return TeamPresentationLinkResponse(
+        token=team.presentation_token,
+        url=url,
+        anonymized=team.presentation_anonymized,
+        created_at=team.presentation_created_at,
+    )
+
+
+@router.delete("/{team_id}/presentation-link", status_code=status.HTTP_204_NO_CONTENT)
+def delete_presentation_link(
+    team_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_role(["admin", "manager", "coach"])),
+):
+    """Revoke team presentation link."""
+    team = db.query(Team).filter(Team.id == team_id).first()
+    if not team:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Team not found"
+        )
+    accessible = _accessible_org_ids(db, current_user)
+    if team.organization_id not in accessible:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Access denied to this team"
+        )
+    team.presentation_token = None
+    team.presentation_anonymized = False
+    team.presentation_created_at = None
+    db.commit()
+    return None
 
 
 @router.post("/{team_id}/generate-matrix", response_model=GenerateMatrixResponse)
