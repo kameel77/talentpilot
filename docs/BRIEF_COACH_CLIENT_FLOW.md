@@ -1,6 +1,6 @@
 # Implementation Brief #4 — Coach client flow: "Add client" everywhere, guided first steps
 
-**Status:** P1 implemented (2026-10-31, see DEVLOG), P2–P4 ready for implementation
+**Status:** P1 + P2 implemented (2026-10-31, see DEVLOG), P3–P4 ready for implementation
 **Owner:** implementing agent
 **Reviewer:** Kamil
 **Date:** 2026-10-31
@@ -105,6 +105,12 @@ Rules:
 ---
 
 ## 4. P2 — "First steps" checklist
+
+> **Implemented 2026-10-31 with deviations from the plan below:**
+> - 4 items, not 5: "Complete your profile" was dropped because `/dashboard/my-talents` redirects coaches to the dashboard (open decision, see DEVLOG).
+> - Item 4 = "prepare a team presentation" (done when any client team has a `presentation_token`). That is a backend fact, more reliable than "a team page was opened".
+> - Backend returns `first_steps { presentation_links, qa_queries, suggested_team }` on `coach-overview`. `coach_has_talents` was not added (see the item 1 note above).
+> - Deep link `?presentation=1` on the team page opens the presentation-link modal.
 
 A dismissible card at the top of the coach dashboard, items auto-completed from data (no manual ticks):
 

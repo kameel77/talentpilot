@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Check, Copy } from "lucide-react";
+import { setFirstStepFlag } from "@/lib/firstSteps";
 import { DOMAIN_CSS_KEY } from "@/lib/gallup-data";
 import { cn } from "@/lib/utils";
 import { TopTalent } from "./parseGallupPdf";
@@ -60,6 +61,7 @@ export function CopyProfileLinkButton({ person, label, copiedLabel, variant = "i
     const handleCopy = async () => {
         try {
             await navigator.clipboard.writeText(url);
+            setFirstStepFlag("link_copied");
             setCopied(true);
             setTimeout(() => setCopied(false), 2500);
         } catch {

@@ -125,3 +125,56 @@ def test_coach_overview_forbidden_for_non_coach(client, auth_headers_admin, auth
     for headers in (auth_headers_admin, auth_headers_user):
         response = client.get("/api/dashboard/coach-overview", headers=headers)
         assert response.status_code == 403
+
+
+def test_coach_overview_first_steps_empty_for_new_coach(client):
+    headers = _register_coach(client, email="fresh@example.com")
+    response = client.get("/api/dashboard/coach-overview", headers=headers)
+    assert response.status_code == 200, response.text
+    assert response.json()["first_steps"] == {
+        "presentation_links": 0,
+        "qa_queries": 0,
+        "suggested_team": None,
+    }
+
+
+def test_coach_overview_first_steps_reflects_teams_presentations_and_queries(client, db_session):
+    from models import UserQuery, user_teams
+
+    headers = _register_coach(client, email="steps@example.com")
+    _make_unlimited(db_session, "steps@example.com")
+    coach = db_session.query(User).filter(User.email == "steps@example.com").first()
+
+    org = client.post("/api/organizations", json={"name": "Acme"}, headers=headers).json()
+    small = Team(name="Small", organization_id=org["id"])
+    big = Team(name="Big", organization_id=org["id"], presentation_token="tok-123")
+    db_session.add_all([small, big])
+    db_session.commit()
+    members = [_add_user(db_session, org["id"], f"m{i}@acme.com") for i in range(3)]
+    db_session.execute(user_teams.insert(), [{"user_id": m.id, "team_id": big.id} for m in members])
+    db_session.execute(user_teams.insert(), [{"user_id": members[0].id, "team_id": small.id}])
+    db_session.add(UserQuery(
+        user_id=coach.id,
+        organization_id=coach.organization_id,
+        question="Jak pracować z Anną?",
+        question_hash="h1",
+        embedding=[0.1] * 1536,
+    ))
+    db_session.commit()
+
+    # A team in an org the coach has no access to must not leak into the result
+    stranger_org = Organization(name="Stranger")
+    db_session.add(stranger_org)
+    db_session.commit()
+    db_session.add(Team(name="Foreign", organization_id=stranger_org.id, presentation_token="tok-x"))
+    db_session.commit()
+
+    steps = client.get("/api/dashboard/coach-overview", headers=headers).json()["first_steps"]
+    assert steps["presentation_links"] == 1
+    assert steps["qa_queries"] == 1
+    assert steps["suggested_team"] == {
+        "id": big.id,
+        "organization_id": org["id"],
+        "name": "Big",
+        "members": 3,
+    }

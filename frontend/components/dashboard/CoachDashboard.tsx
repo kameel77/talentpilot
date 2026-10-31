@@ -20,6 +20,7 @@ import {
 import { api, tokenManager, CoachDashboardOverview, CoachClientOverview, User } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { AddClientDialog } from "@/components/clients/add-client/AddClientDialog";
+import { FirstStepsChecklist } from "@/components/dashboard/FirstStepsChecklist";
 
 export default function CoachDashboard() {
     const t = useTranslations("dashboard");
@@ -124,6 +125,8 @@ export default function CoachDashboard() {
                     </button>
                 </div>
             </div>
+
+            <FirstStepsChecklist data={data} onAddClient={() => setAddClientOpen(true)} />
 
             {/* KPI Grid */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">

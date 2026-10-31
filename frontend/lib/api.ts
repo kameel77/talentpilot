@@ -577,11 +577,25 @@ export interface CoachDashboardTotals {
     users_with_talents: number;
 }
 
+export interface CoachSuggestedTeam {
+    id: number;
+    organization_id: number;
+    name: string;
+    members: number;
+}
+
+export interface CoachFirstSteps {
+    presentation_links: number;
+    qa_queries: number;
+    suggested_team: CoachSuggestedTeam | null;
+}
+
 export interface CoachDashboardOverview {
     clients: CoachClientOverview[];
     individual_clients: number;
     individual_clients_with_talents: number;
     totals: CoachDashboardTotals;
+    first_steps?: CoachFirstSteps;
 }
 
 // Billing (Phase 2 — provider abstraction + fake provider, no Stripe yet)

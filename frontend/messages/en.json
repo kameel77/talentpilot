@@ -214,7 +214,25 @@
       "emptyTitle": "No clients yet",
       "emptyDesc": "Add your first organization or individual client to start working with talents.",
       "emptyCta": "Add your first client",
-      "addClient": "Add client"
+      "addClient": "Add client",
+      "firstSteps": {
+        "title": "First steps with TalentPilot",
+        "subtitle": "A few steps that show you how to work with a client in the app. They tick off automatically.",
+        "progress": "{done} of {total} completed",
+        "dismiss": "Hide",
+        "addClientTitle": "Add your first client",
+        "addClientDesc": "An individual or a company with a team. Gallup PDF reports are all you need.",
+        "addClientCta": "Add client",
+        "shareLinkTitle": "Send a client their profile link",
+        "shareLinkDesc": "Clients see their talents without creating an account — share the link via WhatsApp or email.",
+        "shareLinkCta": "Choose a client",
+        "shareLinkTeamCta": "Open the team",
+        "presentationTitle": "Prepare a team presentation for a workshop",
+        "presentationDesc": "Full-screen talent matrix, with an option to hide names. Show it during a team session.",
+        "presentationCta": "Create for “{team}”",
+        "needClientHint": "Available after you add your first client.",
+        "needTeamHint": "Available after you add a company client with people in a team."
+      }
     },
     "domains": {
       "executing": "Executing",
@@ -988,6 +1006,9 @@
     "openMatrix": "Open team matrix",
     "addAnother": "Add another client",
     "close": "Close",
-    "error": "Something went wrong. Please try again."
+    "error": "Something went wrong. Please try again.",
+    "nextTitle": "What next?",
+    "nextPresentation": "Prepare a team presentation for a workshop",
+    "nextPresentationDesc": "Full-screen talent matrix link — you can hide names."
   }
 }

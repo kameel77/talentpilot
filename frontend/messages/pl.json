@@ -214,7 +214,25 @@
       "emptyTitle": "Nie masz jeszcze klientów",
       "emptyDesc": "Dodaj pierwszą organizację lub klienta indywidualnego, aby zacząć pracę z talentami.",
       "emptyCta": "Dodaj pierwszego klienta",
-      "addClient": "Dodaj klienta"
+      "addClient": "Dodaj klienta",
+      "firstSteps": {
+        "title": "Pierwsze kroki z TalentPilot",
+        "subtitle": "Kilka kroków, po których wiesz, jak pracować z klientem w aplikacji. Odhaczają się same.",
+        "progress": "Ukończono {done} z {total}",
+        "dismiss": "Ukryj",
+        "addClientTitle": "Dodaj pierwszego klienta",
+        "addClientDesc": "Osobę prywatną albo firmę z zespołem. Wystarczą raporty Gallupa w PDF.",
+        "addClientCta": "Dodaj klienta",
+        "shareLinkTitle": "Wyślij klientowi link do profilu",
+        "shareLinkDesc": "Klient zobaczy swoje talenty bez zakładania konta — wyślij link na WhatsApp lub e-mailem.",
+        "shareLinkCta": "Wybierz klienta",
+        "shareLinkTeamCta": "Otwórz zespół",
+        "presentationTitle": "Przygotuj prezentację zespołu na warsztat",
+        "presentationDesc": "Matryca talentów na pełnym ekranie, z opcją ukrycia nazwisk. Pokaż ją na sesji z zespołem.",
+        "presentationCta": "Utwórz dla „{team}”",
+        "needClientHint": "Dostępne po dodaniu pierwszego klienta.",
+        "needTeamHint": "Dostępne po dodaniu klienta firmowego z osobami w zespole."
+      }
     },
     "domains": {
       "executing": "Wykonywanie",
@@ -988,6 +1006,9 @@
     "openMatrix": "Otwórz matrycę zespołu",
     "addAnother": "Dodaj kolejnego klienta",
     "close": "Zamknij",
-    "error": "Coś poszło nie tak. Spróbuj ponownie."
+    "error": "Coś poszło nie tak. Spróbuj ponownie.",
+    "nextTitle": "Co dalej?",
+    "nextPresentation": "Przygotuj prezentację zespołu na warsztat",
+    "nextPresentationDesc": "Link do matrycy talentów na pełny ekran — możesz ukryć nazwiska."
   }
 }
