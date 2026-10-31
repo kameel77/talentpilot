@@ -6,10 +6,11 @@
 ## 2026-10-31 — „Pierwsze kroki” coacha (Brief #4, P2)
 
 ### Decyzje
-1. **Lista 4 kroków na pulpicie coacha, odhaczana z danych:** dodaj klienta → wyślij link do profilu → przygotuj prezentację zespołu → zapytaj AI. Znika po ukończeniu lub po „Ukryj”.
+1. **Lista kroków na pulpicie coacha, odhaczana z danych:** dodaj klienta → wyślij link do profilu → przygotuj prezentację zespołu. Znika po ukończeniu lub po „Ukryj”.
+   - **Asystent AI celowo poza onboardingiem** (decyzja Kamila): najpierw dopracujemy jego działanie. Backend nadal zwraca `qa_queries`, więc krok wróci bez zmian API.
 2. **Fakty z backendu zamiast deklaracji:** `coach-overview` zwraca `first_steps { presentation_links, qa_queries, suggested_team }`. Prezentacja = istniejący `presentation_token` na zespole klienta, AI = `UserQuery` coacha, `suggested_team` = największy zespół klienta (cel CTA). Bez migracji.
 3. **Sygnały tylko z przeglądarki (skopiowany link, ukrycie listy) w localStorage**, per użytkownik, przez `lib/firstSteps.ts` (`useSyncExternalStore`, odświeżanie na żywo). Świadomy dług: do zastąpienia zdarzeniami analitycznymi w P4. Ryzyko: inny komputer = krok „link” nieodhaczony.
-4. **Tryb prezentacji wyciągnięty na wierzch:** `?presentation=1` na stronie zespołu otwiera modal linku. Prowadzi tam lista i ekran „Co dalej?” w przepływie „Dodaj klienta” (prezentacja zespołu + pytanie do AI o osobę/zespół).
+4. **Tryb prezentacji wyciągnięty na wierzch:** `?presentation=1` na stronie zespołu otwiera modal linku. Prowadzi tam lista i ekran „Co dalej?” w przepływie „Dodaj klienta” (dla firmy z osobami).
 5. **Krok „Twój profil” pominięty celowo.** `/dashboard/my-talents` przekierowuje coacha na pulpit (dodane 2026-07-03), mimo że link w menu przywrócono 2026-08-10 („restore coach access”). Naprawa była niepełna, czyli to bug. Decyzja o roli tej zakładki dla coacha czeka na Kamila.
 
 ### Weryfikacja

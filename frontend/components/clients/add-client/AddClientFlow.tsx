@@ -10,7 +10,6 @@ import {
     CheckCircle2,
     ChevronDown,
     ChevronRight,
-    MessageSquare,
     MonitorPlay,
     Plus,
     User as UserIcon,
@@ -362,28 +361,19 @@ export function AddClientFlow({ initialType, resume, onChange, onClose, onLeave 
                         )}
                     </div>
 
-                    {/* What next? — the value moments after adding a client */}
-                    <div className="border-t border-slate-200 pt-4 space-y-2">
-                        <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">{t("nextTitle")}</p>
-                        {type !== "person" && teamId && orgId && teamPeople.length > 0 && (
+                    {/* What next? — the value moment after adding a company client.
+                        The AI assistant is deliberately not promoted here until it is refined. */}
+                    {type !== "person" && teamId && orgId && teamPeople.length > 0 && (
+                        <div className="border-t border-slate-200 pt-4 space-y-2">
+                            <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">{t("nextTitle")}</p>
                             <NextStepLink
                                 icon={<MonitorPlay className="w-4 h-4" />}
                                 title={t("nextPresentation")}
                                 description={t("nextPresentationDesc")}
                                 onClick={() => leaveTo(`/dashboard/teams/${teamId}?presentation=1`, orgId)}
                             />
-                        )}
-                        <NextStepLink
-                            icon={<MessageSquare className="w-4 h-4" />}
-                            title={
-                                type === "person" && person
-                                    ? t("nextAskAiPerson", { name: person.fullName })
-                                    : t("nextAskAiTeam")
-                            }
-                            description={t("nextAskAiDesc")}
-                            onClick={() => leaveTo("/dashboard/qa")}
-                        />
-                    </div>
+                        </div>
+                    )}
                 </div>
             )}
 

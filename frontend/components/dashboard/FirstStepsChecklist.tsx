@@ -2,7 +2,7 @@
 
 import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
-import { CheckCircle2, Circle, Link2, MessageSquare, MonitorPlay, UserPlus, X } from "lucide-react";
+import { CheckCircle2, Circle, Link2, MonitorPlay, UserPlus, X } from "lucide-react";
 import { CoachDashboardOverview, tokenManager } from "@/lib/api";
 import { setFirstStepFlag, useFirstStepFlag } from "@/lib/firstSteps";
 import { cn } from "@/lib/utils";
@@ -24,7 +24,10 @@ interface StepItem {
 }
 
 /**
- * Coach "First steps": the four value moments after signup, ticked off
+ * The AI assistant is intentionally not a step until it has been refined
+ * (decision 2026-10-31); `first_steps.qa_queries` stays available for later.
+ *
+ * Coach "First steps": the value moments after signup, ticked off
  * automatically from data (backend facts + browser-side signals).
  * Hidden once complete or dismissed.
  */
@@ -37,7 +40,6 @@ export function FirstStepsChecklist({ data, onAddClient }: FirstStepsChecklistPr
     const steps = data.first_steps;
     const suggestedTeam = steps?.suggested_team ?? null;
     const hasClients = data.clients.length > 0 || data.individual_clients > 0;
-    const hasPeople = data.totals.people > 0;
 
     const openTeam = (query = "") => {
         if (!suggestedTeam) return;
@@ -76,16 +78,6 @@ export function FirstStepsChecklist({ data, onAddClient }: FirstStepsChecklistPr
             ...(suggestedTeam && suggestedTeam.members > 0
                 ? { cta: { label: t("presentationCta", { team: suggestedTeam.name }), onClick: () => openTeam("?presentation=1") } }
                 : { hint: t("needTeamHint") }),
-        },
-        {
-            key: "ai",
-            icon: <MessageSquare className="h-4 w-4" />,
-            done: (steps?.qa_queries ?? 0) > 0,
-            title: t("askAiTitle"),
-            description: t("askAiDesc"),
-            ...(hasPeople
-                ? { cta: { label: t("askAiCta"), onClick: () => router.push("/dashboard/qa") } }
-                : { hint: t("needClientHint") }),
         },
     ];
 

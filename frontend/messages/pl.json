@@ -217,7 +217,7 @@
       "addClient": "Dodaj klienta",
       "firstSteps": {
         "title": "Pierwsze kroki z TalentPilot",
-        "subtitle": "Cztery kroki, po których wiesz, jak pracować z klientem w aplikacji. Odhaczają się same.",
+        "subtitle": "Kilka kroków, po których wiesz, jak pracować z klientem w aplikacji. Odhaczają się same.",
         "progress": "Ukończono {done} z {total}",
         "dismiss": "Ukryj",
         "addClientTitle": "Dodaj pierwszego klienta",
@@ -230,9 +230,6 @@
         "presentationTitle": "Przygotuj prezentację zespołu na warsztat",
         "presentationDesc": "Matryca talentów na pełnym ekranie, z opcją ukrycia nazwisk. Pokaż ją na sesji z zespołem.",
         "presentationCta": "Utwórz dla „{team}”",
-        "askAiTitle": "Zapytaj Asystenta AI o klienta",
-        "askAiDesc": "Np. „Jak rozmawiać z Anną o feedbacku?” — odpowiedź na podstawie jej talentów.",
-        "askAiCta": "Zadaj pytanie",
         "needClientHint": "Dostępne po dodaniu pierwszego klienta.",
         "needTeamHint": "Dostępne po dodaniu klienta firmowego z osobami w zespole."
       }
@@ -1012,9 +1009,6 @@
     "error": "Coś poszło nie tak. Spróbuj ponownie.",
     "nextTitle": "Co dalej?",
     "nextPresentation": "Przygotuj prezentację zespołu na warsztat",
-    "nextPresentationDesc": "Link do matrycy talentów na pełny ekran — możesz ukryć nazwiska.",
-    "nextAskAiPerson": "Zapytaj Asystenta AI o: {name}",
-    "nextAskAiTeam": "Zapytaj Asystenta AI o zespół",
-    "nextAskAiDesc": "Pytania przed sesją, wskazówki do rozmowy, dynamika współpracy."
+    "nextPresentationDesc": "Link do matrycy talentów na pełny ekran — możesz ukryć nazwiska."
   }
 }
