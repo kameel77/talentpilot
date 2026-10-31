@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
 import Link from "next/link";
 import { KPICard } from "@/components/ui/KPICard";
@@ -15,32 +15,47 @@ import {
     UserRound,
     Building,
     ChevronRight,
+    Plus,
 } from "lucide-react";
 import { api, tokenManager, CoachDashboardOverview, CoachClientOverview, User } from "@/lib/api";
+import { Button } from "@/components/ui/button";
+import { AddClientDialog } from "@/components/clients/add-client/AddClientDialog";
 
 export default function CoachDashboard() {
     const t = useTranslations("dashboard");
     const tCoach = useTranslations("dashboard.coach");
     const tCommon = useTranslations("common");
-    const tOnboarding = useTranslations("onboarding");
 
     const [data, setData] = useState<CoachDashboardOverview | null>(null);
     const [user, setUser] = useState<User | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState("");
+    const [addClientOpen, setAddClientOpen] = useState(false);
+
+    const loadOverview = useCallback(async () => {
+        try {
+            setData(await api.dashboard.coachOverview());
+        } catch {
+            setError(t("loadError"));
+        } finally {
+            setLoading(false);
+        }
+    }, [t]);
 
     useEffect(() => {
         setUser(tokenManager.getUser());
-        (async () => {
-            try {
-                setData(await api.dashboard.coachOverview());
-            } catch {
-                setError(t("loadError"));
-            } finally {
-                setLoading(false);
-            }
-        })();
-    }, [t]);
+        loadOverview();
+    }, [loadOverview]);
+
+    // Background refresh while the add-client dialog is open — never swaps the
+    // page for an error state (that would unmount the dialog mid-flow).
+    const refreshOverview = useCallback(async () => {
+        try {
+            setData(await api.dashboard.coachOverview());
+        } catch {
+            // keep the last good data
+        }
+    }, []);
 
     if (loading) {
         return (
@@ -89,24 +104,26 @@ export default function CoachDashboard() {
                         {firstName ? t("greeting", { name: firstName }) : t("greetingFallback")} {tCoach("subtitle")}
                     </p>
                 </div>
-                <Link
-                    href="/dashboard/organizations"
-                    className="inline-flex items-center gap-2 px-6 py-3 bg-primary text-white rounded-xl font-bold text-sm shadow-lg shadow-primary/25 hover:bg-primary-dark transition-all group"
-                >
-                    {tCoach("manageClients")}
-                    <ArrowRight className="h-4 w-4 group-hover:translate-x-1 transition-transform" />
-                </Link>
-            </div>
-
-            {/* Onboarding banner — coach with no clients at all */}
-            {!hasAnyClients && (
-                <div className="flex items-center justify-between rounded-2xl border border-blue-200 bg-blue-50 px-6 py-4">
-                    <p className="text-sm font-medium text-blue-800">{tOnboarding("coach.resumeBanner")}</p>
-                    <Link href="/dashboard/onboarding" className="text-sm font-bold text-blue-700 hover:underline">
-                        {tOnboarding("coach.resumeCta")} →
-                    </Link>
+                <div className="flex flex-wrap items-center gap-3">
+                    {hasAnyClients && (
+                        <Link
+                            href="/dashboard/organizations"
+                            className="inline-flex items-center gap-2 px-5 py-3 rounded-xl border border-slate-200 bg-white text-slate-700 font-bold text-sm hover:bg-slate-50 transition-all group"
+                        >
+                            {tCoach("manageClients")}
+                            <ArrowRight className="h-4 w-4 group-hover:translate-x-1 transition-transform" />
+                        </Link>
+                    )}
+                    <button
+                        type="button"
+                        onClick={() => setAddClientOpen(true)}
+                        className="inline-flex items-center gap-2 px-6 py-3 bg-primary text-white rounded-xl font-bold text-sm shadow-lg shadow-primary/25 hover:bg-primary-dark transition-all"
+                    >
+                        <Plus className="h-4 w-4" />
+                        {tCoach("addClient")}
+                    </button>
                 </div>
-            )}
+            </div>
 
             {/* KPI Grid */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
@@ -153,13 +170,10 @@ export default function CoachDashboard() {
                         <Building className="h-12 w-12 text-slate-300 mx-auto mb-4" />
                         <h4 className="text-lg font-semibold text-slate-700">{tCoach("emptyTitle")}</h4>
                         <p className="mt-2 text-sm text-slate-500">{tCoach("emptyDesc")}</p>
-                        <Link
-                            href="/dashboard/onboarding"
-                            className="mt-6 inline-flex items-center gap-2 rounded-xl bg-primary px-6 py-3 text-sm font-semibold text-white hover:bg-blue-700 transition-all shadow-sm"
-                        >
+                        <Button onClick={() => setAddClientOpen(true)} className="mt-6 px-6 py-3 h-auto rounded-xl font-semibold">
+                            <Plus className="h-4 w-4 mr-2" />
                             {tCoach("emptyCta")}
-                            <ArrowRight className="h-4 w-4" />
-                        </Link>
+                        </Button>
                     </div>
                 ) : (
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
@@ -230,6 +244,8 @@ export default function CoachDashboard() {
                     <ArrowRight className="h-4 w-4" />
                 </Link>
             </div>
+
+            <AddClientDialog open={addClientOpen} onOpenChange={setAddClientOpen} onChange={refreshOverview} />
         </div>
     );
 }
