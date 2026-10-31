@@ -8,6 +8,7 @@ import { api } from "@/lib/api";
 import { Building, Plus, Loader2, Save, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import IndividualClientsTab from "@/components/clients/IndividualClientsTab";
+import { AddClientDialog } from "@/components/clients/add-client/AddClientDialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -52,6 +53,9 @@ function OrganizationsPageContent() {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState("");
     const [search, setSearch] = useState("");
+    // Coach: unified add-client flow instead of the bare "add organization" modal.
+    const [addClientOpen, setAddClientOpen] = useState(false);
+    const [individualsReloadKey, setIndividualsReloadKey] = useState(0);
 
     const query = search.trim().toLowerCase();
     const filteredOrganizations = query
@@ -87,6 +91,20 @@ function OrganizationsPageContent() {
             setLoading(false);
         }
     };
+
+    // Silent refresh after the add-client flow persists something — must not
+    // toggle the page-level spinner, which would unmount the open dialog.
+    const refreshAfterAddClient = async () => {
+        try {
+            const orgsData = await api.organizations.list();
+            setOrganizations(orgsData as Organization[]);
+        } catch {
+            // keep the current list
+        }
+        setIndividualsReloadKey((k) => k + 1);
+    };
+
+    const openAddClient = () => setAddClientOpen(true);
 
     const openModal = async () => {
         const canAdd = await api.billing.checkLimit('client_orgs');
@@ -139,12 +157,12 @@ function OrganizationsPageContent() {
                 <div>
                     <h1 className="text-3xl font-bold font-heading text-slate-900 tracking-tight">{orgsLabel}</h1>
                     <p className="mt-2 text-slate-500 max-w-2xl">
-                        {t('subtitle')}
+                        {isCoach ? tClients('subtitleCoach') : t('subtitle')}
                     </p>
                 </div>
-                <Button onClick={openModal}>
+                <Button onClick={isCoach ? openAddClient : openModal}>
                     <Plus className="h-4 w-4 mr-2" />
-                    {t('create')}
+                    {isCoach ? tClients('addClient') : t('create')}
                 </Button>
             </div>
 
@@ -198,9 +216,9 @@ function OrganizationsPageContent() {
                             <p className="mt-2 text-slate-500 max-w-xs mx-auto">
                                 {t('noOrgsMessage')}
                             </p>
-                            <Button onClick={openModal} className="mt-6">
+                            <Button onClick={isCoach ? openAddClient : openModal} className="mt-6">
                                 <Plus className="h-4 w-4 mr-2" />
-                                {t('create')}
+                                {isCoach ? tClients('addCompanyClient') : t('create')}
                             </Button>
                         </div>
                     ) : filteredOrganizations.length === 0 ? (
@@ -223,7 +241,7 @@ function OrganizationsPageContent() {
                                     </div>
                                     <div className="mt-8 flex items-center gap-2 text-sm text-slate-500">
                                         <Building className="h-4 w-4" />
-                                        <span>{org.tax_id ? `NIP: ${org.tax_id}` : "Brak NIP"}</span>
+                                        <span>{org.tax_id ? `NIP: ${org.tax_id}` : t('noTaxId')}</span>
                                     </div>
                                 </Link>
                             ))}
@@ -232,7 +250,22 @@ function OrganizationsPageContent() {
                 </>
             )}
 
-            {isCoach && activeTab === "individuals" && <IndividualClientsTab filter={search} />}
+            {isCoach && activeTab === "individuals" && (
+                <IndividualClientsTab
+                    filter={search}
+                    reloadKey={individualsReloadKey}
+                    onAddClient={openAddClient}
+                />
+            )}
+
+            {isCoach && (
+                <AddClientDialog
+                    open={addClientOpen}
+                    onOpenChange={setAddClientOpen}
+                    initialType={activeTab === "individuals" ? "person" : "org"}
+                    onChange={refreshAfterAddClient}
+                />
+            )}
 
             {/* Create Organization Modal */}
             <Dialog open={open} onOpenChange={setOpen}>

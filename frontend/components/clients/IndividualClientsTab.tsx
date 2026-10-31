@@ -3,16 +3,25 @@
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
-import { Loader2, UserRound, Copy, Check } from "lucide-react";
+import { Loader2, UserRound, Copy, Check, Plus } from "lucide-react";
 import { api, tokenManager, User, Team } from "@/lib/api";
 import { Button } from "@/components/ui/button";
+import { isPlaceholderEmail } from "@/lib/utils";
 
 interface ClientOrg {
     id: number;
     name: string;
 }
 
-export default function IndividualClientsTab({ filter = "" }: { filter?: string }) {
+interface IndividualClientsTabProps {
+    filter?: string;
+    /** Bump to reload the list (e.g. after the add-client flow created someone). */
+    reloadKey?: number;
+    /** Opens the add-client flow; rendered as the empty-state CTA. */
+    onAddClient?: () => void;
+}
+
+export default function IndividualClientsTab({ filter = "", reloadKey = 0, onAddClient }: IndividualClientsTabProps) {
     const t = useTranslations("clients");
     const me = tokenManager.getUser();
 
@@ -30,9 +39,9 @@ export default function IndividualClientsTab({ filter = "" }: { filter?: string 
     const [error, setError] = useState("");
     const [copiedLinkId, setCopiedLinkId] = useState<number | null>(null);
 
-    const load = useCallback(async () => {
+    const load = useCallback(async (showSpinner = true) => {
         if (!me) return;
-        setLoading(true);
+        if (showSpinner) setLoading(true);
         try {
             const [users, orgs] = await Promise.all([
                 api.users.list(undefined, me.organization_id),
@@ -47,6 +56,11 @@ export default function IndividualClientsTab({ filter = "" }: { filter?: string 
     }, []);
 
     useEffect(() => { load(); }, [load]);
+
+    // Silent reload when the host signals new data (no spinner flash).
+    useEffect(() => {
+        if (reloadKey > 0) load(false);
+    }, [reloadKey, load]);
 
     // Load teams whenever an existing org is selected in the modal
     useEffect(() => {
@@ -125,13 +139,27 @@ export default function IndividualClientsTab({ filter = "" }: { filter?: string 
     }
 
     if (individuals.length === 0) {
-        return <p className="text-slate-500 text-sm py-8 text-center">{t("empty")}</p>;
+        return (
+            <div className="rounded-3xl border border-dashed border-slate-300 bg-slate-50/50 p-12 text-center">
+                <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-white shadow-sm">
+                    <UserRound className="h-7 w-7 text-slate-400" />
+                </div>
+                <p className="text-slate-600 text-sm max-w-sm mx-auto">{t("empty")}</p>
+                {onAddClient && (
+                    <Button onClick={onAddClient} className="mt-6">
+                        <Plus className="h-4 w-4 mr-2" />
+                        {t("emptyCta")}
+                    </Button>
+                )}
+            </div>
+        );
     }
 
     const query = filter.trim().toLowerCase();
     const visibleIndividuals = query
         ? individuals.filter((u) =>
-            u.full_name.toLowerCase().includes(query) || u.email.toLowerCase().includes(query)
+            u.full_name.toLowerCase().includes(query) ||
+            (!isPlaceholderEmail(u.email) && u.email.toLowerCase().includes(query))
         )
         : individuals;
 
@@ -155,7 +183,9 @@ export default function IndividualClientsTab({ filter = "" }: { filter?: string 
                             </div>
                             <div className="min-w-0">
                                 <p className="font-semibold text-slate-800 truncate">{u.full_name}</p>
-                                <p className="text-xs text-slate-500 truncate">{u.email}</p>
+                                {!isPlaceholderEmail(u.email) && (
+                                    <p className="text-xs text-slate-500 truncate">{u.email}</p>
+                                )}
                             </div>
                         </div>
                         <div className="flex items-center gap-2 shrink-0">

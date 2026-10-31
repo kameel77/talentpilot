@@ -3,6 +3,37 @@
 > Dziennik decyzji i istotnych zmian. Wpisy od najnowszych.
 > Uwaga: docelowe miejsce devloga to vault (`/documents/vault/`) przez skill `/devlog-vault` — w tej sesji niedostępny (folder niepodmontowany), stąd wpis w repo. Do scalenia z vaultem przy okazji.
 
+## 2026-10-31 — „Dodaj klienta” dla coacha (Brief #4, P1)
+
+### Problem
+Po pierwszym kliencie coach tracił prowadzenie: klienta indywidualnego nie dało się dodać poza kreatorem (brak przycisku w zakładce „Indywidualni”, kreator jednorazowy, `/dashboard/users` poza nawigacją coacha), a drugi klient firmowy wymagał 4 ekranów w 3 kontekstach. Szczegóły i P2–P4: `docs/BRIEF_COACH_CLIENT_FLOW.md`.
+
+### Decyzje
+1. **Jeden przepływ, dwie powłoki.** `components/clients/add-client/AddClientFlow.tsx` (osoba / firma) używany w dialogu (pulpit coacha, lista klientów, puste stany) i w kreatorze onboardingu (`CoachWizard` = nagłówek powitalny + ten sam przepływ + „Pomiń”). Zachowane wznawianie onboardingu (firma bez zespołu / pusty zespół).
+2. **Firma = nazwa + pierwszy zespół na jednym ekranie** (domyślnie „Zespół główny”). NIP i adres nie są pytane przy tworzeniu — coach fakturuje poza aplikacją; pola zostają w „Edytuj dane firmy”.
+3. **Stały licznik kroków** (osoba 3, firma 4), „Wstecz” do momentu zapisania czegokolwiek, potem tylko do przodu (bez duplikatów).
+4. **Prawdziwy drag & drop** wielu PDF z listą do przeglądu; błędy per wiersz, ponowienie nie duplikuje profilu (zapamiętany `userId` po udanym `createGhostInvite`). To samo dla pojedynczej osoby.
+5. **Limit planu sprawdzany przy wyborze typu klienta** (modal zanim coach cokolwiek wpisze) oraz z realnym N przy imporcie wielu PDF.
+6. **Kontekst organizacji zmieniany dopiero przy „Otwórz matrycę”** — wszystkie wywołania API w przepływie mają jawne `team_id` / `organization_id`.
+7. **Odświeżanie list bez spinnera** po każdej zmianie (spinner na poziomie strony odmontowałby otwarty dialog).
+
+### Poprawki przy okazji (uzasadnione zakresem)
+- Lista klientów indywidualnych pokazywała syntetyczne adresy `ghost+…@placeholder.talentpilot.local` — teraz ukryte (`isPlaceholderEmail`), także w wyszukiwaniu. Problem rósłby wraz z P1 (więcej klientów bez e-maila).
+- Nazwy talentów w podglądzie PDF: backendowe `translated_rankings` jest kluczowane nazwą, nie kodem, więc stary kreator nigdy z niego nie korzystał; teraz jawnie `GALLUP_TALENTS` (SSoT). Parsowanie PDF używa języka UI zamiast sztywnego `pl`.
+- Usunięto zdublowany baner „Dokończ konfigurację” z pulpitu (dla 0 klientów prowadził do tego samego przepływu co pusty stan) i 48 martwych kluczy `onboarding.coach.*` (PL/EN, parytet kluczy zachowany).
+
+### Weryfikacja
+- `npm run lint` — 0 błędów, 7 ostrzeżeń (wszystkie istniały wcześniej); `npm run build` — OK.
+- E2E w Chromium na lokalnym backendzie (SQLite + talenty z seeda, parse PDF zamockowany na poziomie przeglądarki — brak prawdziwego raportu Gallupa w sandboxie): rejestracja coacha → firma + 3 PDF (plik .txt odrzucony) → matryca z 3 osobami; pulpit → osoba z PDF → link → publiczna wizytówka 200; zakładka „Indywidualni” bez adresów placeholder; druga firma bez osób z listy klientów; dialog na 375 px.
+- Dodatkowo: wersja EN dialogu; plan Free z wygasłym trialem → modal limitu przy wyborze „Firma”, przepływ zostaje na kroku 1.
+- Nie sprawdzone: prawdziwy PDF Gallupa przez dialog (ta sama ścieżka API co wcześniej) — do weryfikacji na DEV.
+
+### Dług / następne kroki
+- Strona zespołu (`teams/[id]`) ma nadal własny import wielu PDF (dodaje od razu, bez przeglądu) — migracja do `PdfBatchImport` w P3.
+- Globalny przełącznik organizacji (P5) zostaje — po „Otwórz matrycę” nagłówek pokazuje klienta, co jest poprawne, ale model „przełączania organizacji” nadal wymaga rewizji.
+
+---
+
 ## 2026-08-10 — Trial produktowy, limity Free i UI płatności (Brief #3, faza 2c)
 
 ### Decyzje
