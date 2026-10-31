@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { Button } from '@/components/ui/button';
 import { TalentImportDialog } from '@/components/talent-import/TalentImportDialog';
@@ -33,6 +32,7 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import Link from 'next/link';
+import { CoachProfileCard } from '@/components/coach/CoachProfileCard';
 
 interface ManualFields {
     superpowers: string;
@@ -253,13 +253,7 @@ function ManualSection({
 export default function MyTalentsPage() {
     const t = useTranslations('myTalents');
     const locale = getLocaleFromCookie();
-    const router = useRouter();
-
-    useEffect(() => {
-        if (tokenManager.getUser()?.role === 'coach') {
-            router.replace('/dashboard');
-        }
-    }, [router]);
+    const tCoach = useTranslations('coachProfile');
 
     const [talentImportOpen, setTalentImportOpen] = useState(false);
     const [myTalents, setMyTalents] = useState<UserTalent[]>([]);
@@ -384,6 +378,7 @@ export default function MyTalentsPage() {
     };
 
     const hasTalents = myTalents.length > 0;
+    const isCoach = currentUser?.role === 'coach';
 
     const getDominantDomain = (): GallupDomain | null => {
         if (!hasTalents) return null;
@@ -412,11 +407,12 @@ export default function MyTalentsPage() {
                 userId={currentUser?.id}
             />
 
-            {/* Header */}
+            {/* Header — coaches see this page as "My coach profile" (their own
+                talents + how they sign client-facing artefacts). */}
             <div className="flex items-center justify-between">
                 <div>
-                    <h1 className="text-headline">{t('title')}</h1>
-                    <p className="text-body">{t('pageSubtitle')}</p>
+                    <h1 className="text-headline">{isCoach ? tCoach('pageTitle') : t('title')}</h1>
+                    <p className="text-body">{isCoach ? tCoach('pageSubtitle') : t('pageSubtitle')}</p>
                 </div>
                 {hasTalents && (
                     <Button variant="outline" onClick={() => setTalentImportOpen(true)}>
@@ -425,6 +421,8 @@ export default function MyTalentsPage() {
                     </Button>
                 )}
             </div>
+
+            {isCoach && <CoachProfileCard hasTalents={hasTalents} />}
 
             {!hasTalents ? (
                 <EmptyTalentsView onImport={() => setTalentImportOpen(true)} />

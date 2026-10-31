@@ -3,6 +3,31 @@
 > Dziennik decyzji i istotnych zmian. Wpisy od najnowszych.
 > Uwaga: docelowe miejsce devloga to vault (`/documents/vault/`) przez skill `/devlog-vault` — w tej sesji niedostępny (folder niepodmontowany), stąd wpis w repo. Do scalenia z vaultem przy okazji.
 
+## 2026-10-31 — „Mój profil coacha” i podpis coacha na materiałach klientów (Brief #4, A + B)
+
+### Decyzje
+1. **„Moje talenty” → „Mój profil coacha” (A).** Usunięto przekierowanie coacha z `/dashboard/my-talents` (bug: link w menu przywrócony 2026-08-10, przekierowanie z 2026-07-03 zostało). Coach widzi swoje talenty, instrukcję obsługi i kartę „Twój podpis na materiałach klientów”: podgląd 1:1 z tym, co widzi klient, lista braków (certyfikat, kontakt, zdjęcie, talenty) i przełącznik podpisu. Na liście „Pierwsze kroki” jest nowy krok 2 „Uzupełnij swój profil coacha” (`first_steps.coach_has_talents`).
+2. **Podpis coacha (B).** `services/coach_signature.py` wyznacza coacha klienta (właściciel workspace'u dla klientów indywidualnych, najwcześniej przypisany coach z `OrganizationAccess` dla firm). Podpis pojawia się w dwóch miejscach:
+   - `/aboutme/{token}` klienta: pełna karta „Profil przygotował(a)” z certyfikatem, kontaktem i linkiem do wizytówki coacha;
+   - `/presentation/{token}`: wersja minimalna (imię, certyfikat, link do wizytówki), bo endpoint prezentacji ma kontrakt zero-PII (test sprawdza brak „email”/„@”).
+3. **Prywatność:** podpis pokazuje tylko to, co coach odsłania na własnej wizytówce (`show_photo/email/phone/certification`). Przełącznik `public_profile_settings.show_coach_signature` jest domyślnie włączony, bez migracji (JSON). Coach nie podpisuje własnej wizytówki. Adresy placeholder nigdy nie wychodzą. Linki od użytkownika (LinkedIn, Gallup) renderowane są tylko jako http(s).
+4. **Domyślnie włączony i darmowy.** To decyzja produktowa do potwierdzenia: podpis jest kanałem dystrybucji, więc w planie Free warto rozważyć stopkę „powered by TalentPilot”, a w Pro pełny branding coacha (logo, kolory). Dziś bez ograniczeń planu.
+
+### Naprawione przy okazji (blokowało B i P2)
+- **Prezentacja zespołu była pusta dla zespołów zaimportowanych przez coacha.** Osoby dodane z PDF to profile ghost (`is_active=False`), a endpoint prezentacji przepuszczał tylko `is_active`. Teraz reguła jest taka jak dla wizytówek: `is_active OR is_ghost`; dezaktywowane konta nadal ukryte. Test regresji w `test_coach_signature.py`.
+- `/aboutme` pobiera dane z `cache: "no-store"`, żeby zmiany prywatności i podpisu były widoczne po odświeżeniu (wykryte w E2E).
+- Ustawienia wizytówki zachowują `show_coach_signature` przy zapisie innych przełączników.
+
+### Weryfikacja
+- Backend: `pytest tests` → 205 passed, 3 skipped (+6 testów w `test_coach_signature.py`: podpis dla klienta indywidualnego i firmowego, prywatność i opt-out, brak podpisu na własnej wizytówce i w organizacji bez coacha, prezentacja bez PII, profile ghost w prezentacji).
+- Frontend: lint (te same 7 ostrzeżeń co wcześniej), `tsc`, build, parytet PL/EN.
+- E2E (Chromium, lokalny backend): krok profilu na liście → „Mój profil coacha” bez przekierowania → braki 4 → 1 po uzupełnieniu → wizytówka klienta z podpisem, certyfikatem i telefonem → link do wizytówki coacha (200, bez autopodpisu) → prezentacja z podpisem i bez „@”/„email” w API → wyłączenie podpisu ukrywa go u klienta.
+
+### Następne
+- C (dopasowanie coach–klient w porównaniu i AI) odłożone na później, razem z dopracowaniem Asystenta AI.
+
+---
+
 ## 2026-10-31 — „Pierwsze kroki” coacha (Brief #4, P2)
 
 ### Decyzje

@@ -234,8 +234,11 @@ def _coach_first_steps(db: Session, coach: User, client_ids: list[int]) -> Coach
     qa_queries = (
         db.query(func.count(UserQuery.id)).filter(UserQuery.user_id == coach.id).scalar() or 0
     )
+    coach_has_talents = (
+        db.query(UserTalent.user_id).filter(UserTalent.user_id == coach.id).first() is not None
+    )
     if not client_ids:
-        return CoachFirstSteps(qa_queries=qa_queries)
+        return CoachFirstSteps(qa_queries=qa_queries, coach_has_talents=coach_has_talents)
 
     presentation_links = (
         db.query(func.count(Team.id))
@@ -264,6 +267,7 @@ def _coach_first_steps(db: Session, coach: User, client_ids: list[int]) -> Coach
         )
 
     return CoachFirstSteps(
+        coach_has_talents=coach_has_talents,
         presentation_links=presentation_links,
         qa_queries=qa_queries,
         suggested_team=suggested_team,

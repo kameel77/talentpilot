@@ -13,6 +13,7 @@ from schemas import (
     TalentTranslationResponse
 )
 from rate_limiter import public_rate_limiter
+from services.coach_signature import build_coach_signature, build_presentation_signature
 
 import sqlalchemy as sa
 
@@ -136,6 +137,7 @@ def get_public_profile(slug_or_token: str, db: Session = Depends(get_db)):
         feedback_style_en=user.feedback_style_en if s.get("show_feedback_style", True) else None,
         gallup_certified=user.gallup_certified if s.get("show_certification", True) else False,
         gallup_profile_url=user.gallup_profile_url if s.get("show_certification", True) else None,
+        prepared_by=build_coach_signature(db, user.organization, subject_user_id=user.id),
     )
 
 
@@ -168,10 +170,12 @@ def get_presentation(
     if response is not None:
         response.headers["X-Robots-Tag"] = "noindex, nofollow"
 
-    # Filter active members with talents
+    # Members with talents. Ghost profiles (people a coach added from a PDF,
+    # without an account) count too — same rule as get_public_profile above.
+    # Deactivated real accounts (is_active=False, is_ghost=False) stay hidden.
     active_members = [
         m for m in team.members
-        if m.is_active and len(m.user_talents) > 0
+        if (m.is_active or m.is_ghost) and len(m.user_talents) > 0
     ]
     # Sort strictly by member.id ascending to avoid leaking identity via alphabetical ordering
     active_members.sort(key=lambda m: m.id)
@@ -248,4 +252,5 @@ def get_presentation(
         show_risks=team.presentation_show_risks,
         members=presentation_members,
         talents=talents_response,
+        prepared_by=build_presentation_signature(db, team.organization),
     )

@@ -799,6 +799,27 @@ class PublicTalentItem(BaseModel):
     model_config = {"from_attributes": True}
 
 
+class PublicCoachSignature(BaseModel):
+    """"Prepared by" footer on client-facing artefacts (see services/coach_signature.py)."""
+    full_name: str
+    avatar_url: Optional[str] = None
+    gallup_certified: bool = False
+    gallup_profile_url: Optional[str] = None
+    email: Optional[str] = None
+    phone: Optional[str] = None
+    linkedin_url: Optional[str] = None
+    # Slug or token of the coach's own public business card (/aboutme/{handle}).
+    profile_handle: Optional[str] = None
+
+
+class PublicPresentationCoach(BaseModel):
+    """Minimal coach signature for team presentations — keeps the endpoint's
+    zero-PII contract: no contact fields; contact lives on the coach's card."""
+    full_name: str
+    gallup_certified: bool = False
+    profile_handle: Optional[str] = None
+
+
 class PublicProfileResponse(BaseModel):
     """Public business card — only fields permitted by owner's privacy settings."""
     full_name: str
@@ -819,6 +840,7 @@ class PublicProfileResponse(BaseModel):
     feedback_style_en: Optional[str] = None
     gallup_certified: bool = False
     gallup_profile_url: Optional[str] = None
+    prepared_by: Optional[PublicCoachSignature] = None
 
 
 # -------- External Provision --------
@@ -924,6 +946,7 @@ class PublicPresentationResponse(BaseModel):
     show_risks: bool = False
     members: List[PublicPresentationMember]
     talents: List[TalentResponse]
+    prepared_by: Optional[PublicPresentationCoach] = None
 
 
 # -------- Team Presentation Link Management --------
@@ -1007,6 +1030,7 @@ class CoachFirstSteps(BaseModel):
     Only facts the backend already stores; client-side signals (e.g. a copied
     profile link) are tracked in the browser until funnel analytics exist.
     """
+    coach_has_talents: bool = False
     presentation_links: int = 0
     qa_queries: int = 0
     suggested_team: Optional[CoachSuggestedTeam] = None

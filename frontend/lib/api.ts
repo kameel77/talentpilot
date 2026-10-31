@@ -70,7 +70,21 @@ export interface OrganizationUpdateData {
 }
 
 /** Per-field visibility of the public business card (`/aboutme/{handle}`). */
+/** "Prepared by" coach signature on client-facing public pages. */
+export interface PublicCoachSignature {
+    full_name: string;
+    gallup_certified: boolean;
+    profile_handle?: string | null;
+    avatar_url?: string | null;
+    gallup_profile_url?: string | null;
+    email?: string | null;
+    phone?: string | null;
+    linkedin_url?: string | null;
+}
+
 export interface PublicProfileSettings {
+    /** Coach only: show the "prepared by" signature on clients' public pages (default true). */
+    show_coach_signature?: boolean;
     show_photo: boolean;
     show_email: boolean;
     show_phone: boolean;
@@ -175,6 +189,7 @@ export interface PublicPresentationResponse {
     show_risks: boolean;
     members: PublicPresentationMember[];
     talents: Talent[];
+    prepared_by?: PublicCoachSignature | null;
 }
 
 export interface AdminTalent {
@@ -585,6 +600,7 @@ export interface CoachSuggestedTeam {
 }
 
 export interface CoachFirstSteps {
+    coach_has_talents: boolean;
     presentation_links: number;
     qa_queries: number;
     suggested_team: CoachSuggestedTeam | null;

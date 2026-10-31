@@ -2,7 +2,7 @@
 
 import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
-import { CheckCircle2, Circle, Link2, MonitorPlay, UserPlus, X } from "lucide-react";
+import { BadgeCheck, CheckCircle2, Circle, Link2, MonitorPlay, UserPlus, X } from "lucide-react";
 import { CoachDashboardOverview, tokenManager } from "@/lib/api";
 import { setFirstStepFlag, useFirstStepFlag } from "@/lib/firstSteps";
 import { cn } from "@/lib/utils";
@@ -56,6 +56,15 @@ export function FirstStepsChecklist({ data, onAddClient }: FirstStepsChecklistPr
             title: t("addClientTitle"),
             description: t("addClientDesc"),
             cta: { label: t("addClientCta"), onClick: onAddClient },
+        },
+        {
+            // Before sharing links: the coach's signature appears on client materials.
+            key: "profile",
+            icon: <BadgeCheck className="h-4 w-4" />,
+            done: steps?.coach_has_talents ?? false,
+            title: t("profileTitle"),
+            description: t("profileDesc"),
+            cta: { label: t("profileCta"), onClick: () => router.push("/dashboard/my-talents") },
         },
         {
             key: "link",

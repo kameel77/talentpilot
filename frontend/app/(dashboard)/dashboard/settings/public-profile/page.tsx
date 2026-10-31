@@ -29,6 +29,8 @@ const DEFAULT_SETTINGS: PublicProfileSettings = {
 function readSettings(raw?: Partial<PublicProfileSettings>): PublicProfileSettings {
     if (!raw) return DEFAULT_SETTINGS;
     return {
+        // Coach signature toggle lives on "My coach profile" — preserve it here.
+        ...(raw.show_coach_signature !== undefined && { show_coach_signature: Boolean(raw.show_coach_signature) }),
         show_photo: Boolean(raw.show_photo ?? true),
         show_email: Boolean(raw.show_email ?? true),
         show_phone: Boolean(raw.show_phone ?? true),
