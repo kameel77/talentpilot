@@ -17,6 +17,7 @@ from models import (
     Team,
     User,
     UserRole,
+    UserQuery,
     UserTalent,
     user_teams,
 )
@@ -24,6 +25,8 @@ from schemas import (
     CoachClientOverview,
     CoachDashboardOverview,
     CoachDashboardTotals,
+    CoachFirstSteps,
+    CoachSuggestedTeam,
     DashboardMember,
     DashboardOverview,
     TeamDomainCounts,
@@ -221,4 +224,47 @@ def get_coach_dashboard_overview(
         individual_clients=individual_clients,
         individual_clients_with_talents=individual_clients_with_talents,
         totals=totals,
+        first_steps=_coach_first_steps(db, current_user, client_ids),
+    )
+
+
+def _coach_first_steps(db: Session, coach: User, client_ids: list[int]) -> CoachFirstSteps:
+    """Facts for the "First steps" checklist: presentation links on client
+    teams, the coach's own AI questions, and the largest client team to open."""
+    qa_queries = (
+        db.query(func.count(UserQuery.id)).filter(UserQuery.user_id == coach.id).scalar() or 0
+    )
+    if not client_ids:
+        return CoachFirstSteps(qa_queries=qa_queries)
+
+    presentation_links = (
+        db.query(func.count(Team.id))
+        .filter(Team.organization_id.in_(client_ids), Team.presentation_token.isnot(None))
+        .scalar()
+        or 0
+    )
+
+    member_count = func.count(user_teams.c.user_id)
+    largest = (
+        db.query(Team, member_count)
+        .outerjoin(user_teams, user_teams.c.team_id == Team.id)
+        .filter(Team.organization_id.in_(client_ids))
+        .group_by(Team.id)
+        .order_by(member_count.desc(), Team.id.asc())
+        .first()
+    )
+    suggested_team = None
+    if largest is not None:
+        team, members = largest
+        suggested_team = CoachSuggestedTeam(
+            id=team.id,
+            organization_id=team.organization_id,
+            name=team.name,
+            members=members,
+        )
+
+    return CoachFirstSteps(
+        presentation_links=presentation_links,
+        qa_queries=qa_queries,
+        suggested_team=suggested_team,
     )

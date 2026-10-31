@@ -113,7 +113,11 @@ export default function TeamDetailPage() {
     };
     const [pdfImportItems, setPdfImportItems] = useState<PdfImportItem[]>([]);
     const [showPdfImport, setShowPdfImport] = useState(false);
-    const [showPresentationModal, setShowPresentationModal] = useState(false);
+    // `?presentation=1` deep link (coach "First steps" checklist / add-client
+    // flow) opens the presentation-link modal once the team has loaded.
+    const [showPresentationModal, setShowPresentationModal] = useState(
+        () => typeof window !== "undefined" && new URLSearchParams(window.location.search).get("presentation") === "1"
+    );
 
     const loadTeamData = useCallback(async () => {
         try {

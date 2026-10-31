@@ -7,6 +7,7 @@ import { Loader2, UserRound, Copy, Check, Plus } from "lucide-react";
 import { api, tokenManager, User, Team } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { isPlaceholderEmail } from "@/lib/utils";
+import { setFirstStepFlag } from "@/lib/firstSteps";
 
 interface ClientOrg {
     id: number;
@@ -95,6 +96,7 @@ export default function IndividualClientsTab({ filter = "", reloadKey = 0, onAdd
         if (!tokenOrSlug) return;
         const url = `${window.location.origin}/aboutme/${tokenOrSlug}`;
         navigator.clipboard.writeText(url);
+        setFirstStepFlag("link_copied");
         setCopiedLinkId(u.id);
         setTimeout(() => setCopiedLinkId((prev) => (prev === u.id ? null : prev)), 2500);
     };

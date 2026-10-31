@@ -993,9 +993,29 @@ class CoachDashboardTotals(BaseModel):
     users_with_talents: int
 
 
+class CoachSuggestedTeam(BaseModel):
+    """The client team a coach should open next (largest team across client orgs)."""
+    id: int
+    organization_id: int
+    name: str
+    members: int
+
+
+class CoachFirstSteps(BaseModel):
+    """Data behind the coach dashboard "First steps" checklist.
+
+    Only facts the backend already stores; client-side signals (e.g. a copied
+    profile link) are tracked in the browser until funnel analytics exist.
+    """
+    presentation_links: int = 0
+    qa_queries: int = 0
+    suggested_team: Optional[CoachSuggestedTeam] = None
+
+
 class CoachDashboardOverview(BaseModel):
     """Single-call aggregate for the coach dashboard landing page."""
     clients: List[CoachClientOverview]
     individual_clients: int
     individual_clients_with_talents: int
     totals: CoachDashboardTotals
+    first_steps: CoachFirstSteps = CoachFirstSteps()

@@ -3,6 +3,22 @@
 > Dziennik decyzji i istotnych zmian. Wpisy od najnowszych.
 > Uwaga: docelowe miejsce devloga to vault (`/documents/vault/`) przez skill `/devlog-vault` — w tej sesji niedostępny (folder niepodmontowany), stąd wpis w repo. Do scalenia z vaultem przy okazji.
 
+## 2026-10-31 — „Pierwsze kroki” coacha (Brief #4, P2)
+
+### Decyzje
+1. **Lista 4 kroków na pulpicie coacha, odhaczana z danych:** dodaj klienta → wyślij link do profilu → przygotuj prezentację zespołu → zapytaj AI. Znika po ukończeniu lub po „Ukryj”.
+2. **Fakty z backendu zamiast deklaracji:** `coach-overview` zwraca `first_steps { presentation_links, qa_queries, suggested_team }`. Prezentacja = istniejący `presentation_token` na zespole klienta, AI = `UserQuery` coacha, `suggested_team` = największy zespół klienta (cel CTA). Bez migracji.
+3. **Sygnały tylko z przeglądarki (skopiowany link, ukrycie listy) w localStorage**, per użytkownik, przez `lib/firstSteps.ts` (`useSyncExternalStore`, odświeżanie na żywo). Świadomy dług: do zastąpienia zdarzeniami analitycznymi w P4. Ryzyko: inny komputer = krok „link” nieodhaczony.
+4. **Tryb prezentacji wyciągnięty na wierzch:** `?presentation=1` na stronie zespołu otwiera modal linku. Prowadzi tam lista i ekran „Co dalej?” w przepływie „Dodaj klienta” (prezentacja zespołu + pytanie do AI o osobę/zespół).
+5. **Krok „Twój profil” pominięty celowo.** `/dashboard/my-talents` przekierowuje coacha na pulpit (dodane 2026-07-03), mimo że link w menu przywrócono 2026-08-10 („restore coach access”). Naprawa była niepełna, czyli to bug. Decyzja o roli tej zakładki dla coacha czeka na Kamila.
+
+### Weryfikacja
+- Backend: `pytest tests` → 199 passed, 3 skipped (+2 nowe testy `first_steps`, w tym brak wycieku zespołów z cudzych organizacji).
+- Frontend: lint bez nowych ostrzeżeń, `tsc` czysty, `npm run build` OK, parytet kluczy PL/EN.
+- E2E (Chromium, lokalny backend SQLite, parsowanie PDF zamockowane): nowy coach 0/4 → firma z checklisty → „Co dalej?” → strona zespołu z otwartym modalem → link wygenerowany → 2/4 → osoba + skopiowany link → 3/4 na żywo → zapytanie AI → lista znika; „Ukryj” przetrwa przeładowanie; widok 390 px.
+
+---
+
 ## 2026-10-31 — „Dodaj klienta” dla coacha (Brief #4, P1)
 
 ### Problem

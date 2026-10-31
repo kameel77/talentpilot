@@ -3,7 +3,18 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { ArrowLeft, ArrowRight, Building, CheckCircle2, ChevronDown, Plus, User as UserIcon } from "lucide-react";
+import {
+    ArrowLeft,
+    ArrowRight,
+    Building,
+    CheckCircle2,
+    ChevronDown,
+    ChevronRight,
+    MessageSquare,
+    MonitorPlay,
+    Plus,
+    User as UserIcon,
+} from "lucide-react";
 import { api, tokenManager } from "@/lib/api";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -350,6 +361,29 @@ export function AddClientFlow({ initialType, resume, onChange, onClose, onLeave 
                             </Button>
                         )}
                     </div>
+
+                    {/* What next? — the value moments after adding a client */}
+                    <div className="border-t border-slate-200 pt-4 space-y-2">
+                        <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">{t("nextTitle")}</p>
+                        {type !== "person" && teamId && orgId && teamPeople.length > 0 && (
+                            <NextStepLink
+                                icon={<MonitorPlay className="w-4 h-4" />}
+                                title={t("nextPresentation")}
+                                description={t("nextPresentationDesc")}
+                                onClick={() => leaveTo(`/dashboard/teams/${teamId}?presentation=1`, orgId)}
+                            />
+                        )}
+                        <NextStepLink
+                            icon={<MessageSquare className="w-4 h-4" />}
+                            title={
+                                type === "person" && person
+                                    ? t("nextAskAiPerson", { name: person.fullName })
+                                    : t("nextAskAiTeam")
+                            }
+                            description={t("nextAskAiDesc")}
+                            onClick={() => leaveTo("/dashboard/qa")}
+                        />
+                    </div>
                 </div>
             )}
 
@@ -359,6 +393,35 @@ export function AddClientFlow({ initialType, resume, onChange, onClose, onLeave 
                 </div>
             )}
         </div>
+    );
+}
+
+function NextStepLink({
+    icon,
+    title,
+    description,
+    onClick,
+}: {
+    icon: React.ReactNode;
+    title: string;
+    description: string;
+    onClick: () => void;
+}) {
+    return (
+        <button
+            type="button"
+            onClick={onClick}
+            className="w-full flex items-center gap-3 p-3 rounded-xl border border-slate-200 hover:border-primary hover:bg-blue-50/40 text-left transition group"
+        >
+            <span className="h-8 w-8 rounded-lg bg-blue-50 text-primary flex items-center justify-center shrink-0">
+                {icon}
+            </span>
+            <span className="flex-1 min-w-0">
+                <span className="block text-sm font-semibold text-slate-800">{title}</span>
+                <span className="block text-xs text-slate-500">{description}</span>
+            </span>
+            <ChevronRight className="w-4 h-4 text-slate-300 group-hover:text-primary shrink-0" />
+        </button>
     );
 }
 
