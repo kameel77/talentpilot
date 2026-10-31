@@ -151,7 +151,7 @@ export default function DashboardLayout({
         // report and edit the user manual behind their public business card,
         // which is a selling asset for them (previously reachable only from the
         // old monolithic settings screen).
-        { name: t("myTalents"), href: "/dashboard/my-talents", icon: Sparkles },
+        { name: isCoach ? t("myProfileCoach") : t("myTalents"), href: "/dashboard/my-talents", icon: Sparkles },
         { name: t("qa"), href: "/dashboard/qa", icon: MessageSquare },
         { name: isCoach ? t("coachTeams") : t("teams"), href: "/dashboard/teams", icon: Users },
         { name: t("compare"), href: "/dashboard/compare", icon: GitCompare },

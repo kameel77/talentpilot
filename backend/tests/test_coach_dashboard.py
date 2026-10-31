@@ -132,6 +132,7 @@ def test_coach_overview_first_steps_empty_for_new_coach(client):
     response = client.get("/api/dashboard/coach-overview", headers=headers)
     assert response.status_code == 200, response.text
     assert response.json()["first_steps"] == {
+        "coach_has_talents": False,
         "presentation_links": 0,
         "qa_queries": 0,
         "suggested_team": None,
@@ -169,7 +170,11 @@ def test_coach_overview_first_steps_reflects_teams_presentations_and_queries(cli
     db_session.add(Team(name="Foreign", organization_id=stranger_org.id, presentation_token="tok-x"))
     db_session.commit()
 
+    db_session.add(UserTalent(user_id=coach.id, talent_id=_make_talent(db_session).id, rank=1))
+    db_session.commit()
+
     steps = client.get("/api/dashboard/coach-overview", headers=headers).json()["first_steps"]
+    assert steps["coach_has_talents"] is True
     assert steps["presentation_links"] == 1
     assert steps["qa_queries"] == 1
     assert steps["suggested_team"] == {

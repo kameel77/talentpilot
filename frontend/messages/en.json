@@ -174,7 +174,8 @@
     "knowledgeFaq": "FAQ",
     "knowledgeMerytoryka": "Content",
     "knowledgeInstructions": "Instructions",
-    "myWorkspace": "My workspace"
+    "myWorkspace": "My workspace",
+    "myProfileCoach": "My coach profile"
   },
   "dashboard": {
     "greeting": "Hi, {name}!",
@@ -231,7 +232,10 @@
         "presentationDesc": "Full-screen talent matrix, with an option to hide names. Show it during a team session.",
         "presentationCta": "Create for “{team}”",
         "needClientHint": "Available after you add your first client.",
-        "needTeamHint": "Available after you add a company client with people in a team."
+        "needTeamHint": "Available after you add a company client with people in a team.",
+        "profileTitle": "Complete your coach profile",
+        "profileDesc": "Your talents and signature appear on the materials you send to clients.",
+        "profileCta": "My profile"
       }
     },
     "domains": {
@@ -1010,5 +1014,23 @@
     "nextTitle": "What next?",
     "nextPresentation": "Prepare a team presentation for a workshop",
     "nextPresentationDesc": "Full-screen talent matrix link — you can hide names."
+  },
+  "coachProfile": {
+    "pageTitle": "My coach profile",
+    "pageSubtitle": "Your talents and how you sign the materials your clients receive.",
+    "signatureTitle": "Your signature on client materials",
+    "signatureDesc": "Client profiles and team presentations show who prepared them. Every link you share promotes your coaching practice.",
+    "editData": "Edit details and certification",
+    "previewLabel": "What your client sees",
+    "checksTitle": "To complete: {count}",
+    "checksComplete": "Your signature is complete",
+    "checkCertified": "Gallup coach certification",
+    "checkContact": "Contact: phone or LinkedIn",
+    "checkPhoto": "Profile photo",
+    "checkTalents": "Your talents (coach profile)",
+    "toggleLabel": "Show my signature to clients",
+    "toggleDesc": "On client profiles (with contact details) and team presentations (without contact details).",
+    "privacyLink": "Which contact details are visible? Profile settings →",
+    "saveError": "Could not save the setting."
   }
 }

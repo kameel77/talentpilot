@@ -5,6 +5,7 @@ import { useTranslations } from 'next-intl';
 import { api, PublicPresentationResponse } from '@/lib/api';
 import { getLocaleFromCookie } from '@/lib/locale';
 import MatrixDashboard from '@/components/dashboard/MatrixDashboard';
+import { CoachSignatureInline } from '@/components/public/CoachSignature';
 import { Users, Building2, AlertCircle, ShieldAlert, Sparkles } from 'lucide-react';
 
 interface PublicPresentationProps {
@@ -155,8 +156,14 @@ export default function PublicPresentation({ token }: PublicPresentationProps) {
                             </span>
                         </div>
                     </div>
-                    <div className="text-xs text-slate-400 self-start sm:self-auto font-medium">
-                        TalentPilot
+                    <div className="self-start sm:self-auto sm:text-right space-y-1">
+                        {data.prepared_by && (
+                            <CoachSignatureInline
+                                signature={data.prepared_by}
+                                lang={getLocaleFromCookie() === 'en' ? 'en' : 'pl'}
+                            />
+                        )}
+                        <div className="text-xs text-slate-400 font-medium">TalentPilot</div>
                     </div>
                 </header>
 

@@ -174,7 +174,8 @@
     "knowledgeFaq": "FAQ",
     "knowledgeMerytoryka": "Merytoryka",
     "knowledgeInstructions": "Instrukcje",
-    "myWorkspace": "Mój workspace"
+    "myWorkspace": "Mój workspace",
+    "myProfileCoach": "Mój profil coacha"
   },
   "dashboard": {
     "greeting": "Cześć, {name}!",
@@ -231,7 +232,10 @@
         "presentationDesc": "Matryca talentów na pełnym ekranie, z opcją ukrycia nazwisk. Pokaż ją na sesji z zespołem.",
         "presentationCta": "Utwórz dla „{team}”",
         "needClientHint": "Dostępne po dodaniu pierwszego klienta.",
-        "needTeamHint": "Dostępne po dodaniu klienta firmowego z osobami w zespole."
+        "needTeamHint": "Dostępne po dodaniu klienta firmowego z osobami w zespole.",
+        "profileTitle": "Uzupełnij swój profil coacha",
+        "profileDesc": "Twoje talenty i podpis pojawią się na materiałach, które wysyłasz klientom.",
+        "profileCta": "Mój profil"
       }
     },
     "domains": {
@@ -1010,5 +1014,23 @@
     "nextTitle": "Co dalej?",
     "nextPresentation": "Przygotuj prezentację zespołu na warsztat",
     "nextPresentationDesc": "Link do matrycy talentów na pełny ekran — możesz ukryć nazwiska."
+  },
+  "coachProfile": {
+    "pageTitle": "Mój profil coacha",
+    "pageSubtitle": "Twoje talenty i to, jak podpisujesz materiały, które dostają Twoi klienci.",
+    "signatureTitle": "Twój podpis na materiałach klientów",
+    "signatureDesc": "Wizytówki klientów i prezentacje zespołów pokazują, kto je przygotował. Każdy link, który wysyłasz, promuje Twoją praktykę coachingową.",
+    "editData": "Edytuj dane i certyfikat",
+    "previewLabel": "Tak widzi to klient",
+    "checksTitle": "Do uzupełnienia: {count}",
+    "checksComplete": "Podpis jest kompletny",
+    "checkCertified": "Certyfikat coacha Gallup",
+    "checkContact": "Kontakt: telefon lub LinkedIn",
+    "checkPhoto": "Zdjęcie profilowe",
+    "checkTalents": "Twoje talenty (wizytówka coacha)",
+    "toggleLabel": "Pokazuj mój podpis klientom",
+    "toggleDesc": "Na wizytówkach klientów (z kontaktem) i w prezentacjach zespołów (bez danych kontaktowych).",
+    "privacyLink": "Które dane kontaktowe są widoczne? Ustawienia wizytówki →",
+    "saveError": "Nie udało się zapisać ustawienia."
   }
 }

@@ -1,6 +1,6 @@
 # Implementation Brief #4 — Coach client flow: "Add client" everywhere, guided first steps
 
-**Status:** P1 + P2 implemented (2026-10-31, see DEVLOG), P3–P4 ready for implementation
+**Status:** P1, P2, A, B implemented (2026-10-31, see DEVLOG); P3–P4 ready; AI assistant excluded from onboarding until refined
 **Owner:** implementing agent
 **Reviewer:** Kamil
 **Date:** 2026-10-31
@@ -41,6 +41,9 @@ The first minutes of the coach journey work: role choice, PDF-first wizard, bulk
 | **P2** | **"First steps" checklist** on the coach dashboard, auto-completed from data, plus a "What next?" block on the flow's done screen. | Hand-holding beyond the first client (F4) | 1–2 d |
 | **P3** | Remaining polish: coach-only "name only" company creation everywhere, migrate the team page bulk import to the shared component, i18n leftovers. | Consistency, one implementation of bulk import | 0.5–1 d |
 | **P4** | Funnel analytics: 6 events. | Measure instead of guess (F6) | 0.5 d |
+| **A** *(added 2026-10-31)* | "My coach profile": remove the coach redirect from `/dashboard/my-talents`, add a signature card and a checklist step | Fixes a navigation bug; coach presents themself | done |
+| **B** *(added 2026-10-31)* | Coach signature ("prepared by") on client profiles and team presentations, privacy-aware, opt-out | Every shared link promotes the coach and TalentPilot | done |
+| C *(later)* | Coach–client fit in Compare 1:1 and the AI assistant | Differentiator | after the AI assistant is refined |
 | P5 *(next iteration, not in this brief)* | **Client folder**: `/organizations/[id]` as the single home of a company client, active org set implicitly, client name visible in the header. | Fixes F3 | 3–5 d, higher regression risk |
 
 Non-goals: backend changes (none required for P1–P3), billing changes, session notes (see `COACH_PRODUCT_DIRECTIONS.md`).

@@ -20,6 +20,8 @@ import {
   BadgeCheck,
 } from "lucide-react";
 import { cn, isPlaceholderEmail } from "@/lib/utils";
+import type { PublicCoachSignature } from "@/lib/api";
+import { CoachSignatureCard } from "@/components/public/CoachSignature";
 import { GALLUP_TALENTS, DOMAIN_CSS_KEY, GallupDomain, DOMAIN_LABELS_SHORT as DOMAIN_LABEL } from "@/lib/gallup-data";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
@@ -51,6 +53,7 @@ interface PublicProfile {
   feedback_style_en: string | null;
   gallup_certified: boolean;
   gallup_profile_url: string | null;
+  prepared_by?: PublicCoachSignature | null;
 }
 
 const T = {
@@ -120,7 +123,8 @@ export default function WizytowkaPage() {
 
   useEffect(() => {
     if (!token) return;
-    fetch(`${API_BASE}/api/public/${token}`)
+    // no-store: privacy/signature changes must show up on the next reload.
+    fetch(`${API_BASE}/api/public/${token}`, { cache: "no-store" })
       .then((r) => {
         if (r.status === 404) { setNotFound(true); return null; }
         return r.json();
@@ -425,6 +429,11 @@ export default function WizytowkaPage() {
             )}
           </div>
         </div>
+
+        {/* ════════════════ Coach signature — who prepared this profile ════════════════ */}
+        {profile.prepared_by && (
+          <CoachSignatureCard signature={profile.prepared_by} lang={lang} className="mt-8" />
+        )}
 
         {/* ════════════════ CTA — below grid ════════════════ */}
         <div className="mt-8 rounded-2xl overflow-hidden shadow-sm border border-slate-200">
